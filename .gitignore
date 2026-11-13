@@ -1,0 +1,19 @@
+# Terraform: local state and provider cache must never be committed. State can hold secrets.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Python backend
+__pycache__/
+.venv/
+.env
+
+# Terraform plan files can contain secret values
+tfplan
+*.tfplan
+
+# Build output
+backend/build/
+.pytest_cache/
