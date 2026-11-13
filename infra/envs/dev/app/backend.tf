@@ -1,10 +1,6 @@
-# Stores this stack's state in the S3 bucket from infra/bootstrap, with locking.
+# Stores this stack's state in S3 with DynamoDB locking.
+# The bucket, key, region and lock table are passed in by infra/scripts/deploy.sh, so the same code
+# works in any AWS account. Nothing account-specific is written here.
 terraform {
-  backend "s3" {
-    bucket         = "pragyaprep-tfstate-552808407801"
-    key            = "dev/app.tfstate"
-    region         = "ap-south-1"
-    dynamodb_table = "pragyaprep-tflock"
-    encrypt        = true
-  }
+  backend "s3" {}
 }

@@ -19,6 +19,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Dat
 13. [Testing approach](#13-testing-approach)
 14. [Cost summary](#14-cost-summary)
 15. [Known limits and when to revisit](#15-known-limits-and-when-to-revisit)
+16. [Account portability](#16-account-portability)
 
 ---
 
@@ -256,7 +257,34 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 | Files can be shared for 5 minutes | Piracy becomes a concern (CloudFront signed cookies, watermarking, DRM) |
 | S3 direct delivery cost | Monthly downloads pass about 100 GB (add CloudFront) |
 | No delete-course or delete-user routes | Admin needs cleanup (four smoke-test courses remain in dev) |
-| Single account, shared with another project | Before prod (separate accounts per environment) |
+| Single account, shared with another project | Before prod (use `new-account.sh`, see section 16) |
 | `AdministratorAccess` for the CLI user | Setup settles (narrow the permissions) |
 | Backend and infra have no CI | Before a second contributor joins |
 | Prod environment does not exist yet | After the frontend is built |
+
+---
+
+## 16. Account portability
+
+**Chosen:** The Terraform code holds no account ID or bucket name. Two scripts do the account-specific work:
+- `infra/scripts/deploy.sh <account> <env>` works out the account ID, creates that account's state bucket and lock table, builds the Lambda, and applies the app stack. It passes the state settings to Terraform with `-backend-config`, and `backend.tf` is an empty `backend "s3" {}`.
+- `infra/scripts/new-account.sh <name> <email>` uses a small Terraform stack (`infra/org`) to create a member account in AWS Organizations, assign the SSO user admin access, and add the local CLI profile. Then `deploy.sh` builds everything in it.
+- Each account is a folder under `infra/accounts/` with an `account.env` (profile and region). Moving means adding a folder and running the script.
+- The Lambda zip build is reproducible, so a deploy updates the Lambda only when the code really changed.
+
+**Alternatives considered:**
+- A separate copy of the Terraform code per account (drifts apart over time).
+- Terraform workspaces (one state bucket and one set of credentials for all accounts, which mixes environments).
+- Hardcoding the bucket name in each `backend.tf` (what we had first; every move meant editing several files).
+- A full multi-account tool such as AWS Control Tower or Account Factory for Terraform (more than a one-person project needs).
+
+**Why:** Moving or adding an account becomes one command, and it can be repeated and reviewed. The same code produces dev and prod, so they don't drift apart.
+
+**Trade-offs:**
+- **Data is not moved.** The scripts build an empty copy. DynamoDB and S3 data need a separate copy step (AWS Backup or export and import, and `aws s3 sync`).
+- A bootstrap state file lives locally per account (`infra/accounts/<name>/bootstrap.tfstate`, not committed). Losing it means importing the bucket and table back into Terraform.
+- The account factory needs the management account's credentials, and `AdministratorAccess` to the new account for the CLI user, which is broad.
+- `new-account.sh` is tested only up to validation. It has not yet created a real account.
+- The account factory never closes an account. Removing an entry only detaches it from the organization.
+- New accounts start with a Lambda concurrency limit of about 10, which may need an increase before real traffic.
+- Secrets are generated per account into `~/.config/pragyaprep/`. To keep existing logins valid after a move, copy the secrets file across.
