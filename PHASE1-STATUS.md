@@ -27,11 +27,12 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | F1 | **Frontend slice:** each institute's branding, the registration page, the login page (emailed code and status messages), the admin's review queue, the admin's course list, and a student home page | **Tested live** | 112 automated tests pass. I drove every screen in a real browser against the sandbox, then against the live dev API (registered a test student, approved it, and removed it). The browser found three problems that I fixed |
 | P1 | **Platform admin page** (`/platform-admin`): the platform admin views, adds and edits institutes and their one admin (name, colour, active or suspended, admin name and email). No delete. The platform admin itself is still created only by script | **Tested live** | 59 backend and 25 frontend tests. Driven in a real browser against the sandbox. Deployed to dev: with a short-lived platform-admin token I created a test institute (welcome email sent), suspended it and recoloured it, saw the duplicate refused and DELETE answer 405, then removed its rows. `link-admin` run for aaptprep. No errors in the Lambda log. The page itself was not opened against dev |
 | P2 | **Correct a student's details:** the admin edits any detail of a registration at any status, including the email (the record moves to the new email, the old email stops working, the new address is emailed). Only changed fields are sent, and a taken email is refused | **Tested live** | 23 backend and 11 frontend tests. Browser check in the sandbox. On dev: registered a test student, approved, a bad edit was refused with both errors at once, the email was changed, the old email then said "not registered", and the test row was removed. No Lambda errors |
+| P3 | **Institute logos:** the platform admin adds, replaces and removes an institute's logo (PNG or JPG, up to 1 MB) on the Edit form. It shows next to the name at the top of every page, including login | **Tested live** | 30 backend and 10 frontend tests (419 and 200 in all). On dev with real S3: uploaded a real PNG from the platform page, saw it in the preview and in AaptPrep's top bar, then removed it. Back to no logo, no stray files, no Lambda errors |
 | M4 | **Content and access (API):** the admin adds PDF and MP4 files to a course (straight to S3, then checked), gives an approved student access (renewable, ends by the course's access length), and takes it away. A student sees their courses and opens a file through a 5-minute link | **Tested live** | 42 new backend tests (389 in all). On dev with real S3: a real PDF and MP4 were accepted, a fake PDF was removed from S3, a student had no access before the grant and got a working link after, a byte-range download returned 206, and a revoke closed the link. Test rows and files removed. No Lambda errors. No screens yet (F2, F3) |
-| M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | Not started | |
+| M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | **Moved to Phase 2** | Decided on 17 Nov 2026. Until then the admin gives access by hand (built in M4) |
 | F2a | **Content screens (the screens for M4):** the admin's **Files** page for each course (upload with progress, delete), **Course access** on a student's details (give, renew, remove), and the student's **My courses** page (PDFs open in a new tab, videos play on the page) | **Tested live** | 34 new frontend tests (190 in all). Driven in a real browser against dev with real S3: uploaded a real PDF and MP4 from the page, gave a test student access from the registrations screen, then as that student played the video (it played and seeking worked). Test files and student removed. No Lambda errors |
-| F2 | **Frontend: student, the rest** (the payment page with screenshot upload; the course list and viewers are done in F2a) | Not started | |
-| F3 | **Frontend: tenant admin, the rest** (payments queue and payment QR and settings; content upload and access are done in F2a) | Not started | |
+| F2 | **Frontend: student payment page** (fee, QR code, screenshot upload) | **Moved to Phase 2** | Goes with M5. The course list and viewers are done in F2a |
+| F3 | **Frontend: tenant admin payments** (payments queue, QR code and settings) | **Moved to Phase 2** | Goes with M5. Content upload and access are done in F2a |
 | M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | Not started | |
 | M7 | **Frontend hosting** (S3 and CloudFront) and allowed origins | Not started | |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
@@ -120,7 +121,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `389 passed`.
+You should see `419 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -289,6 +290,21 @@ Open <http://localhost:4200/aaptprep/login> and log in as Ritesh (`sachin.arpit.
 
 The origin `http://localhost:4200` must be in the bucket's allowed origins, which it is for dev. If you serve the screens from another address, add it to `cors_origins` in `dev.tfvars` and deploy, or uploads will fail in the browser.
 
+### P3 (logos): what to try
+As platform admin, on dev: `npx ng serve --configuration live` (from `frontend`), then log in at <http://localhost:4200/platform/login> as `sachin.arpit@gmail.com`.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | **Edit** on an institute | A **Logo** section: "No logo yet" |
+| 2 | Choose a PNG or JPG (up to 1 MB), click **Upload logo** | A progress bar, then "Updated the logo of ...", and a preview. It is saved at once, without **Save** |
+| 3 | Open `/<institute>/login` | The logo sits next to the name in the top bar |
+| 4 | Try a `.gif` or `.svg` | "A logo must be a PNG or JPG picture." |
+| 5 | Rename a text file to `fake.png` and upload it | "That isn't a real PNG or JPG picture, so it was removed." |
+| 6 | **Replace logo** with another picture | The new one shows, and the old file is deleted |
+| 7 | **Remove logo** | Back to the name alone |
+
+Remember to remove any test logo from a real institute afterwards.
+
 ### What you can't test yet
 Paying for a course (M5), and its screens (the rest of F2 and F3).
 
@@ -331,7 +347,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 389 passed, 0 failed. Frontend: 190 passed, 0 failed. Total: 579.**
+**Backend, run on my machine: 419 passed, 0 failed. Frontend: 200 passed, 0 failed. Total: 619.**
 
 | Backend area | Tests |
 |---|---|
@@ -348,6 +364,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | P1 Platform admin API (institutes: list, add, edit, replace admin, no delete, who may call it) | 59 |
 | P2 Correcting a student's details and email | 23 |
 | M4 Files, access and student links (including that a corrected email keeps access) | 42 |
+| P3 Logos (who may, types and size, checking contents, replace, remove, the public address) | 30 |
 
 | Frontend area (F1) | Tests |
 |---|---|
@@ -363,6 +380,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | F2a Course access on a student's details (show, give, remove, errors) | 7 |
 | F2a Student My courses (list, open a PDF, play a video, renew a link, give up on a broken video, access ended) | 10 |
 | F2a Upload service and size format | 5 |
+| P3 Logo on the platform edit form and in the top bar | 10 |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

@@ -189,3 +189,5 @@ progress { height: 0.9rem; }
 .access { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
 .access h3 { font-size: 1rem; margin: 0 0 0.5rem; }
 .access-row { padding: 0.35rem 0; }
+.logo { height: 2rem; width: auto; max-width: 9rem; object-fit: contain; vertical-align: middle; margin-right: 0.5rem; background: #fff; border-radius: 4px; padding: 2px; }
+.logo-preview { height: 3rem; width: auto; max-width: 12rem; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; padding: 3px; background: #fff; }

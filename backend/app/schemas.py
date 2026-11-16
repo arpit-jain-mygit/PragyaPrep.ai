@@ -164,6 +164,7 @@ class InstituteOut(BaseModel):
     name: str
     status: str
     primary_color: str
+    logo_url: str | None = None
     created_at: str = ""
     admin: InstituteAdminOut | None = None
 
@@ -247,3 +248,12 @@ class FileLinkOut(BaseModel):
     expires_in: int
     content_type: str
     title: str
+
+
+class LogoStartIn(BaseModel):
+    filename: str
+    size: int
+
+
+class LogoUploadOut(BaseModel):
+    upload: UploadFormOut

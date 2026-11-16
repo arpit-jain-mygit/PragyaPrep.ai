@@ -134,6 +134,11 @@ def set_tenant_status(repo: Repo, slug: str, status: str) -> None:
 
 # ---- The platform admin's view of institutes ----
 
+def logo_url(tenant: dict) -> str | None:
+    logo = (tenant.get("branding") or {}).get("logo")
+    return f"/api/logo/{tenant['slug']}?v={logo['version']}" if logo else None
+
+
 def describe(repo: Repo, tenant: dict) -> dict:
     """An institute as the platform admin sees it: its details and who its admin is."""
     admin = None
@@ -147,6 +152,7 @@ def describe(repo: Repo, tenant: dict) -> dict:
         "name": tenant["name"],
         "status": tenant["status"],
         "primary_color": tenant["branding"]["primary_color"],
+        "logo_url": logo_url(tenant),
         "created_at": tenant.get("created_at", ""),
         "admin": admin,
     }

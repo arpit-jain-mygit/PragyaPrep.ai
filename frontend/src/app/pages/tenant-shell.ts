@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { logoSrc } from '../core/format';
 import { SessionService } from '../core/session.service';
 import { TenantService } from '../core/tenant.service';
 
@@ -25,6 +26,7 @@ import { TenantService } from '../core/tenant.service';
       <header class="topbar">
         <div class="topbar-inner">
           <a class="brand-name" [routerLink]="homeLink()">
+            @if (logo(info.branding.logo_url); as src) { <img class="logo" [src]="src" alt="" /> }
             {{ info.branding.display_name }}
           </a>
           <nav class="nav" aria-label="Main">
@@ -57,6 +59,7 @@ import { TenantService } from '../core/tenant.service';
   `,
 })
 export class TenantShell {
+  readonly logo = logoSrc;
   readonly tenants = inject(TenantService);
   private readonly sessions = inject(SessionService);
   private readonly router = inject(Router);

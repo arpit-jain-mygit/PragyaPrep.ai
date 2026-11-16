@@ -1,5 +1,7 @@
 # PragyaPrep: Features (Phase 1)
 
+> **Phase note (17 Nov 2026): payments and their review are in Phase 2.** In Phase 1 the tenant admin gives a student access to a course by hand. The payment sections below describe Phase 2.
+>
 > **Status: draft for review.** This version has three proposed changes: multi-tenancy, login by email one-time code (OTP) after admin approval, and registration with manual payment review. Items marked **(proposed)** need your approval before any code changes. The first tenant is **aaptprep**.
 
 ## Platform and tenants (proposed)
@@ -101,6 +103,7 @@ The login page shows these messages straight away. When an email isn't registere
 - **View** every institute with its status, admin and created date.
 - **Create** an institute together with its one admin. The admin is approved straight away and gets an email.
 - **Edit** an institute's name, colour and status (active or suspended), and its admin's name or email. Replacing the admin emails the new one and switches the old one off. The short name can't be changed.
+- **Logo:** add, replace or remove an institute's logo (PNG or JPG, up to 1 MB). It shows next to the institute's name at the top of every page.
 - **No delete** anywhere in the screens or the API. To pause an institute, suspend it.
 
 ## Student

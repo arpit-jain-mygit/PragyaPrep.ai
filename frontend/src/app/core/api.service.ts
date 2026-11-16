@@ -25,6 +25,7 @@ import {
   RegistrationForm,
   Session,
   TenantInfo,
+  UploadForm,
 } from './models';
 
 /** Turn whatever went wrong into one simple shape the screens can show. */
@@ -185,6 +186,18 @@ export class ApiService {
 
   createInstitute(body: InstituteCreate): Promise<InstituteResult> {
     return this.post('/api/platform/institutes', body);
+  }
+
+  startLogoUpload(slug: string, body: { filename: string; size: number }): Promise<{ upload: UploadForm }> {
+    return this.post(`/api/platform/institutes/${encodeURIComponent(slug)}/logo`, body);
+  }
+
+  finishLogoUpload(slug: string): Promise<Institute> {
+    return this.post(`/api/platform/institutes/${encodeURIComponent(slug)}/logo/complete`);
+  }
+
+  removeLogo(slug: string): Promise<Institute> {
+    return this.post(`/api/platform/institutes/${encodeURIComponent(slug)}/logo/remove`);
   }
 
   updateInstitute(slug: string, body: InstituteUpdate): Promise<InstituteResult> {

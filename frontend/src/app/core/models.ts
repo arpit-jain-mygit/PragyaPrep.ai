@@ -126,6 +126,8 @@ export interface Institute {
   name: string;
   status: 'active' | 'suspended';
   primary_color: string;
+  /** Where the logo is asked for, relative to the API, or null when there is none. */
+  logo_url: string | null;
   created_at: string;
   admin: InstituteAdmin | null;
 }

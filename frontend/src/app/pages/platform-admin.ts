@@ -2,8 +2,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
-import { formatDate } from '../core/format';
+import { formatDate, logoSrc } from '../core/format';
 import { ApiError, Institute, InstituteUpdate } from '../core/models';
+import { UploadService } from '../core/upload.service';
 
 interface Notice {
   kind: 'ok' | 'warn';
@@ -140,6 +141,31 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
                         <div>They will be called <strong>{{ draft.admin_name.trim() || '(no name yet)' }}</strong>. Change the name above if this is a different person.</div>
                       </div>
                     }
+                    <div class="field logo-field" [attr.data-logo]="institute.slug">
+                      <span class="label">Logo</span>
+                      @if (logo(institute.logo_url); as src) {
+                        <div class="row">
+                          <img class="logo-preview" [src]="src" [alt]="'Current logo of ' + institute.name" />
+                          <button class="btn danger small" type="button" [disabled]="logoBusy()" (click)="removeLogo(institute)">Remove logo</button>
+                        </div>
+                      } @else {
+                        <p class="muted small">No logo yet. The name is shown on its own.</p>
+                      }
+                      <label class="sr-only" [attr.for]="'logo-' + institute.slug">Choose a logo picture</label>
+                      <input [id]="'logo-' + institute.slug" name="logo" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" (change)="logoPicked($event)" [disabled]="logoBusy()" />
+                      @if (logoBusy()) {
+                        <div role="status">
+                          @if (logoStage() === 'sending') {
+                            <label [attr.for]="'logo-bar-' + institute.slug">Uploading… {{ logoPercent() }}%</label>
+                            <progress [id]="'logo-bar-' + institute.slug" max="100" [value]="logoPercent()" style="width: 100%"></progress>
+                          } @else { <span class="muted">Checking the picture…</span> }
+                        </div>
+                      }
+                      <div class="actions">
+                        <button class="btn secondary small" type="button" [disabled]="logoBusy() || !logoFile" (click)="uploadLogo(institute)">{{ institute.logo_url ? 'Replace logo' : 'Upload logo' }}</button>
+                      </div>
+                      <div class="hint">A PNG or JPG picture, up to 1 MB. It shows next to the name at the top of every page. It is saved straight away, without pressing Save.</div>
+                    </div>
                     <p class="hint">Institutes can't be deleted here. To pause one, set it to Suspended.</p>
                     <div class="actions">
                       <button class="btn" type="button" [disabled]="saving()" (click)="saveEdit(institute)">
@@ -197,6 +223,13 @@ export class PlatformAdmin implements OnInit {
   form = emptyForm();
   draft: Draft = { name: '', primary_color: DEFAULT_COLOR, status: 'active', admin_name: '', admin_email: '' };
 
+  readonly logo = logoSrc;
+  private readonly uploader = inject(UploadService);
+  readonly logoBusy = signal(false);
+  readonly logoStage = signal<'sending' | 'checking'>('sending');
+  readonly logoPercent = signal(0);
+  logoFile: File | null = null;
+
   readonly date = formatDate;
   readonly name = fullName;
 
@@ -223,7 +256,61 @@ export class PlatformAdmin implements OnInit {
     this.adding.set(true);
   }
 
+  logoPicked(event: Event): void {
+    this.logoFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  /** Three steps, like any upload: ask, send to storage, then have the API check the picture. It applies at once. */
+  async uploadLogo(institute: Institute): Promise<void> {
+    const file = this.logoFile;
+    if (!file || this.logoBusy()) return;
+    this.logoBusy.set(true);
+    this.error.set(null);
+    this.notice.set(null);
+    this.logoPercent.set(0);
+    this.logoStage.set('sending');
+    try {
+      const started = await this.api.startLogoUpload(institute.slug, { filename: file.name, size: file.size });
+      await this.uploader.send(started.upload, file, (percent) => this.logoPercent.set(percent));
+      this.logoStage.set('checking');
+      await this.api.finishLogoUpload(institute.slug);
+      this.notice.set({ kind: 'ok', text: `Updated the logo of ${institute.name}.` });
+      this.logoFile = null;
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.logoBusy.set(false);
+    }
+    await this.refreshList();
+  }
+
+  async removeLogo(institute: Institute): Promise<void> {
+    if (this.logoBusy()) return;
+    this.logoBusy.set(true);
+    this.error.set(null);
+    this.notice.set(null);
+    try {
+      await this.api.removeLogo(institute.slug);
+      this.notice.set({ kind: 'ok', text: `Removed the logo of ${institute.name}.` });
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.logoBusy.set(false);
+    }
+    await this.refreshList();
+  }
+
+  /** The edit form stays open, with what was typed, while the list behind it is refreshed. */
+  private async refreshList(): Promise<void> {
+    try {
+      this.institutes.set(await this.api.institutes());
+    } catch (error) {
+      this.error.set(error as ApiError);
+    }
+  }
+
   startEdit(institute: Institute): void {
+    this.logoFile = null;
     this.draft = {
       name: institute.name,
       primary_color: institute.primary_color,

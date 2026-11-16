@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
-import { API, all, clickButton, sessionFor, settle, setupTestBed, text } from '../testing';
+import { API, DEMO, all, clickButton, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { Landing } from './landing';
 import { NotFound } from './not-found';
 import { StudentHome } from './student-home';
@@ -182,5 +182,25 @@ describe('Page not found', () => {
     await settle(fixture);
     expect(text(fixture)).toContain("We couldn't find that page");
     expect(all<HTMLAnchorElement>(fixture, 'a')[0].getAttribute('href')).toContain('/demo/login');
+  });
+
+  it('shows the institute\'s logo next to its name when it has one', async () => {
+    const env = setupTestBed();
+    env.tenants.info.set({ ...DEMO, branding: { ...DEMO.branding, logo_url: '/api/logo/demo?v=ab12' } });
+    const fixture = TestBed.createComponent(TenantShell);
+    fixture.detectChanges();
+    await settle(fixture);
+    const image = el<HTMLImageElement>(fixture, '.topbar img.logo');
+    expect(image.getAttribute('src')).toBe(`${API}/api/logo/demo?v=ab12`);
+    expect(image.getAttribute('alt')).toBe(''); // the name beside it says who this is
+    expect(text(fixture)).toContain('Demo Institute');
+  });
+
+  it('shows just the name when there is no logo', async () => {
+    setupTestBed();
+    const fixture = TestBed.createComponent(TenantShell);
+    fixture.detectChanges();
+    await settle(fixture);
+    expect(all(fixture, '.topbar img').length).toBe(0);
   });
 });

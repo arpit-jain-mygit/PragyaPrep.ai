@@ -28,6 +28,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 22. [Correcting a student's details](#22-correcting-a-students-details)
 23. [Course content and access (step M4)](#23-course-content-and-access-step-m4)
 24. [Content screens (step F2a)](#24-content-screens-step-f2a)
+25. [Institute logos](#25-institute-logos)
 
 ---
 
@@ -47,7 +48,9 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 
 ## 2. Phase 1 scope
 
-**Chosen:** Video and PDF content for many institutes (multi-tenant), with registration, admin approval, login by emailed code, and manual payment review. Roles are platform admin, tenant admin and student.
+**Chosen:** Video and PDF content for many institutes (multi-tenant), with registration, admin approval, login by emailed code, and access given by the institute's admin by hand. Roles are platform admin, tenant admin and student.
+
+**Update (17 Nov 2026):** Payments and manual payment review (section 19) moved to **Phase 2**. In Phase 1 the admin gives access by hand, which is built (section 23), so students can already watch content. Section 19 still describes the design for Phase 2.
 
 **Deferred:** mock tests and exams, AI features, Parent and Mentor roles, migration from the existing platform. (Registration with manual payment review was deferred earlier and is now proposed for Phase 1, see section 19.)
 
@@ -787,3 +790,35 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 - M5 arrives: the payment page goes on the student's side, and the payments queue on the admin's.
 - Videos are large: resumable uploads and a progress that survives a refresh.
 - Content needs order or sections: drag to reorder and group files.
+
+---
+
+## 25. Institute logos
+
+**Status:** Built and tested (30 backend and 10 frontend tests, and a live check on dev with real S3).
+
+**Chosen:** The platform admin adds, replaces and removes an institute's logo from the Edit form on the Institutes page. It shows beside the institute's name at the top of every page. The institute's own admin can't change it.
+
+**Alternatives considered:** letting the institute admin upload it (you decided branding stays with the platform admin), a public bucket or CDN link (opens the whole bucket's policy for one small file), serving the picture's bytes through the API (works, but passes every image through Lambda), and accepting SVG (can carry scripts).
+
+### 25.1 Decisions
+
+- **Same upload pattern as course files:** ask, send straight to S3 with a signed form, then the API checks. Only a real PNG or JPEG becomes the logo, judged by its first bytes, up to 1 MB. A failed check deletes the file and keeps the old logo.
+- **PNG and JPG only.** SVG is left out on purpose, since it can carry scripts.
+- **Public, because it shows before login.** `GET /api/logo/<institute>` needs no sign-in and answers with a redirect to a signed link, so the bucket stays private. The redirect may be kept by browsers for 5 minutes and the link behind it lasts an hour.
+- **The page learns the address from the institute info it already loads.** The address carries a short version tag that changes with each new logo, so browsers never show a stale one.
+- **A replaced or removed logo's file is deleted.** Each logo is stored under the institute's own folder, `<institute>/branding/`.
+- **Removal is a POST, not a DELETE.** The platform API has no DELETE at all, and a test keeps it that way. Removing a logo leaves the institute itself untouched.
+- **It saves at once,** separately from the form's Save, and the form keeps what has been typed.
+- **Shown beside the name,** on a small white tile so any logo stays readable on any institute colour, and with empty alt text since the name next to it says who it is.
+
+### 25.2 Trade-offs
+
+- A logo upload that is never completed leaves its file in S3 until the next upload or removal. It is at most 1 MB each, and a cleanup rule can be added later.
+- A logo with a transparent background sits on a white tile, which may look boxy on some colours.
+- No cropping or resizing. The picture is shown at a fixed height, keeping its shape.
+
+### 25.3 Revisit when
+
+- Institutes want to change their own logo: add the same form to the institute admin's pages.
+- A domain and CDN exist: serve logos from there, with long caching.

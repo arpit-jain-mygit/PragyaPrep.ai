@@ -3,11 +3,13 @@
 Everything here needs a platform admin signed in at the platform tenant (X-Tenant: platform)."""
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import tenants
-from app.deps import PLATFORM_ADMIN, get_current_member, get_mailer, get_repo, require_roles
+from app import logos, tenants
+from app.config import Settings
+from app.deps import PLATFORM_ADMIN, get_current_member, get_mailer, get_repo, get_settings, get_storage, require_roles
 from app.mailer import Email, Mailer, send_quietly
 from app.repo import Repo
-from app.schemas import InstituteCreateIn, InstituteOut, InstituteResultOut, InstituteUpdateIn
+from app.schemas import InstituteCreateIn, InstituteOut, InstituteResultOut, InstituteUpdateIn, LogoStartIn, LogoUploadOut
+from app.storage import ContentStorage
 
 router = APIRouter(prefix="/api/platform", tags=["platform admin"], dependencies=[Depends(require_roles(PLATFORM_ADMIN))])
 
@@ -79,3 +81,45 @@ def change_institute(
         raise HTTPException(status_code=422, detail=str(error))
     notified = _notify(repo, mailer, institute, new_admin) if new_admin else None
     return {"institute": institute, "new_admin_notified": notified}
+
+
+# ---- The institute's logo ----
+
+NOT_FOUND = "We couldn't find that institute."
+
+
+@router.post("/institutes/{slug}/logo", response_model=LogoUploadOut)
+def start_logo_upload(
+    slug: str,
+    body: LogoStartIn,
+    repo: Repo = Depends(get_repo),
+    storage: ContentStorage = Depends(get_storage),
+    settings: Settings = Depends(get_settings),
+):
+    """Say which picture you are adding (PNG or JPG, up to 1 MB). You get a signed form: post the picture to it, then call 'complete'."""
+    try:
+        return {"upload": logos.start_upload(repo, storage, settings, slug, body.filename, body.size)}
+    except tenants.InstituteNotFound:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    except tenants.ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.post("/institutes/{slug}/logo/complete", response_model=InstituteOut)
+def finish_logo_upload(slug: str, repo: Repo = Depends(get_repo), storage: ContentStorage = Depends(get_storage)):
+    """Check the picture that was uploaded. Only a real PNG or JPG becomes the logo, and it replaces the old one."""
+    try:
+        return tenants.describe(repo, logos.finish_upload(repo, storage, slug))
+    except tenants.InstituteNotFound:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
+    except tenants.ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.post("/institutes/{slug}/logo/remove", response_model=InstituteOut)
+def remove_logo(slug: str, repo: Repo = Depends(get_repo), storage: ContentStorage = Depends(get_storage)):
+    """Take the logo away. This is a POST, not a DELETE, because the platform API offers no delete at all. The institute is untouched."""
+    try:
+        return tenants.describe(repo, logos.remove(repo, storage, slug))
+    except tenants.InstituteNotFound:
+        raise HTTPException(status_code=404, detail=NOT_FOUND)

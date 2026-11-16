@@ -1,17 +1,18 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Institute } from '../core/models';
+import { UploadService } from '../core/upload.service';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { PlatformAdmin } from './platform-admin';
 
 const LIST = `${API}/api/platform/institutes`;
 
 const ALPHA: Institute = {
-  slug: 'alpha', name: 'Alpha Institute', status: 'active', primary_color: '#2563eb', created_at: '2027-01-15T08:00:00+00:00',
+  slug: 'alpha', name: 'Alpha Institute', status: 'active', primary_color: '#2563eb', logo_url: null, created_at: '2027-01-15T08:00:00+00:00',
   admin: { email: 'ann@alpha.example.com', first_name: 'Ann', last_name: 'Lee', status: 'approved' },
 };
 const BETA: Institute = {
-  slug: 'beta', name: 'Beta Academy', status: 'suspended', primary_color: '#0f766e', created_at: '2027-02-01T08:00:00+00:00', admin: null,
+  slug: 'beta', name: 'Beta Academy', status: 'suspended', primary_color: '#0f766e', logo_url: null, created_at: '2027-02-01T08:00:00+00:00', admin: null,
 };
 
 async function open(institutes: Institute[] = [ALPHA, BETA]) {
@@ -333,5 +334,134 @@ describe('Platform admin page: editing an institute', () => {
     await settle(env.fixture);
     expect(text(env.fixture)).toContain('new@beta.example.com will become the admin');
     expect(text(env.fixture)).not.toContain('will be switched off');
+  });
+});
+
+describe('Platform admin page: logos', () => {
+  const WITH_LOGO: Institute = { ...ALPHA, logo_url: '/api/logo/alpha?v=ab12cd34' };
+
+  async function openEdit(institutes: Institute[] = [ALPHA]) {
+    const env = await open(institutes);
+    const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue(undefined);
+    clickButton(env.fixture, 'Edit');
+    await settle(env.fixture);
+    return { ...env, send };
+  }
+
+  function pick(fixture: Parameters<typeof el>[0], file: File) {
+    const input = el<HTMLInputElement>(fixture, '#logo-alpha');
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+  }
+
+  it('says there is no logo yet, and keeps Upload switched off until a picture is chosen', async () => {
+    const { fixture } = await openEdit();
+    expect(text(fixture)).toContain('No logo yet.');
+    expect(all(fixture, '.logo-preview').length).toBe(0);
+    const upload = all<HTMLButtonElement>(fixture, '.logo-field button').find((b) => b.textContent?.trim() === 'Upload logo')!;
+    expect(upload.disabled).toBe(true);
+    pick(fixture, new File(['x'], 'logo.png'));
+    await settle(fixture);
+    expect(upload.disabled).toBe(false);
+  });
+
+  it('shows the current logo, with Replace and Remove', async () => {
+    const { fixture } = await openEdit([WITH_LOGO]);
+    expect(el<HTMLImageElement>(fixture, '.logo-preview').getAttribute('src')).toBe(`${API}/api/logo/alpha?v=ab12cd34`);
+    const labels = all(fixture, '.logo-field button').map((b) => b.textContent?.trim());
+    expect(labels).toEqual(['Remove logo', 'Replace logo']);
+  });
+
+  it('uploads in three steps and shows the new logo straight away', async () => {
+    const { fixture, http, send } = await openEdit();
+    const file = new File(['png'], 'logo.png', { type: 'image/png' });
+    pick(fixture, file);
+    await settle(fixture);
+    clickButton(fixture, 'Upload logo');
+
+    const ask = http.expectOne(`${LIST}/alpha/logo`);
+    expect(ask.request.body).toEqual({ filename: 'logo.png', size: file.size });
+    const form = { url: 'https://s3.example/up', fields: { key: 'k' } };
+    ask.flush({ upload: form });
+    await settle(fixture);
+    expect(send).toHaveBeenCalledWith(form, file, expect.any(Function));
+
+    http.expectOne(`${LIST}/alpha/logo/complete`).flush(WITH_LOGO);
+    await settle(fixture);
+    answerReload(http, [WITH_LOGO]);
+    await settle(fixture);
+
+    expect(text(fixture)).toContain('Updated the logo of Alpha Institute.');
+    expect(all(fixture, '.logo-preview').length).toBe(1);
+    expect(all(fixture, '#name-alpha').length).toBe(1); // the edit form is still open
+  });
+
+  it("keeps what was typed in the form while the logo is uploaded", async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#name-alpha', 'Alpha Classes');
+    pick(fixture, new File(['x'], 'logo.png'));
+    await settle(fixture);
+    clickButton(fixture, 'Upload logo');
+    http.expectOne(`${LIST}/alpha/logo`).flush({ upload: { url: 'u', fields: {} } });
+    await settle(fixture);
+    http.expectOne(`${LIST}/alpha/logo/complete`).flush(WITH_LOGO);
+    await settle(fixture);
+    answerReload(http, [WITH_LOGO]);
+    await settle(fixture);
+    expect(el<HTMLInputElement>(fixture, '#name-alpha').value).toBe('Alpha Classes');
+  });
+
+  it('shows the progress while the picture goes up', async () => {
+    const { fixture, http, send } = await openEdit();
+    let report: (percent: number) => void = () => undefined;
+    send.mockImplementation((_form, _file, onProgress) => new Promise(() => { report = onProgress; }));
+    pick(fixture, new File(['x'], 'logo.png'));
+    await settle(fixture);
+    clickButton(fixture, 'Upload logo');
+    http.expectOne(`${LIST}/alpha/logo`).flush({ upload: { url: 'u', fields: {} } });
+    await settle(fixture);
+    report(60);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Uploading… 60%');
+  });
+
+  it("shows the API's reason for a wrong file, and refreshes", async () => {
+    const { fixture, http, send } = await openEdit();
+    pick(fixture, new File(['x'], 'logo.gif'));
+    await settle(fixture);
+    clickButton(fixture, 'Upload logo');
+    http.expectOne(`${LIST}/alpha/logo`).flush({ detail: 'A logo must be a PNG or JPG picture.' }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    answerReload(http, [ALPHA]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('A logo must be a PNG or JPG picture.');
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("shows the check's message when the picture is not real", async () => {
+    const { fixture, http } = await openEdit();
+    pick(fixture, new File(['x'], 'fake.png'));
+    await settle(fixture);
+    clickButton(fixture, 'Upload logo');
+    http.expectOne(`${LIST}/alpha/logo`).flush({ upload: { url: 'u', fields: {} } });
+    await settle(fixture);
+    http.expectOne(`${LIST}/alpha/logo/complete`).flush({ detail: "That isn't a real PNG or JPG picture, so it was removed." }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    answerReload(http, [ALPHA]);
+    await settle(fixture);
+    expect(text(fixture)).toContain("isn't a real PNG or JPG");
+  });
+
+  it('removes the logo', async () => {
+    const { fixture, http } = await openEdit([WITH_LOGO]);
+    clickButton(fixture, 'Remove logo');
+    const request = http.expectOne(`${LIST}/alpha/logo/remove`);
+    expect(request.request.method).toBe('POST');
+    request.flush(ALPHA);
+    await settle(fixture);
+    answerReload(http, [ALPHA]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Removed the logo of Alpha Institute.');
+    expect(all(fixture, '.logo-preview').length).toBe(0);
   });
 });

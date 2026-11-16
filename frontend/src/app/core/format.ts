@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Access } from './models';
 
 /** 10000 becomes "₹10,000", using the Indian way of grouping digits. */
@@ -59,4 +60,9 @@ export function formatSize(bytes: number | null): string {
     unit++;
   }
   return `${value >= 10 ? Math.round(value) : Math.round(value * 10) / 10} ${units[unit]}`;
+}
+
+/** A logo's address as the API gave it (like "/api/logo/aaptprep?v=ab12") becomes one a page can load. */
+export function logoSrc(path: string | null | undefined): string | null {
+  return path ? environment.apiBase + path : null;
 }
