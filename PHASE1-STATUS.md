@@ -34,7 +34,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | F2 | **Frontend: student payment page** (fee, QR code, screenshot upload) | **Moved to Phase 2** | Goes with M5. The course list and viewers are done in F2a |
 | F3 | **Frontend: tenant admin payments** (payments queue, QR code and settings) | **Moved to Phase 2** | Goes with M5. Content upload and access are done in F2a |
 | M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | Not started | |
-| M7 | **Frontend hosting** (S3 and CloudFront) and allowed origins | Not started | |
+| M7 | **Frontend hosting:** the Angular app on S3 behind CloudFront (HTTPS, deep links work on refresh, the bucket is private), a one-command `deploy-web.sh`, and the site's address added to the allowed origins for the API and S3 uploads | **Tested live** | Address: https://d1szng4oy9m4an.cloudfront.net. Checked with curl (deep links, security headers, a year's caching for hashed files and none for `index.html`, the bucket refuses direct reads, CORS from the site) and in a real browser (login page with the institute's colour and logo, admin screens, a real PDF upload and delete from that address). No Lambda errors |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -84,7 +84,7 @@ npx ng serve --configuration live
 ```
 Open <http://localhost:4200/aaptprep>. The dropdown has CLAT, IPMAT and CAT. Register with an email you can read (a Gmail address with a `+` works, like `you+test1@gmail.com`), and the receipt arrives by email. To review it, log in as Ritesh (`sachin.arpit.learning@gmail.com`) with a code from his inbox. If you leave a test registration in the real data, tell me and I'll remove it.
 
-**What is not there yet:** a student can't pay or see courses (M5, F2), there is no content upload (M4, F3), no logo, and the screens only run on your computer. Hosting comes later.
+**What is not there yet:** a student can't pay (Phase 2), and there is no custom domain yet.
 
 ### Option 1: the API only, on your own computer (the local sandbox)
 This runs the whole API on your computer with a fake, in-memory AWS. It costs nothing, sends no real email, and resets when you stop it. It is the same code that runs in AWS. **Login codes are printed in the terminal window, where an email would normally arrive.**
@@ -304,6 +304,25 @@ As platform admin, on dev: `npx ng serve --configuration live` (from `frontend`)
 | 7 | **Remove logo** | Back to the name alone |
 
 Remember to remove any test logo from a real institute afterwards.
+
+### M7 (hosting): what to try
+The dev website is at **https://d1szng4oy9m4an.cloudfront.net**. Open it on any device. There is no start page content yet, so use an institute's address:
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Open `https://d1szng4oy9m4an.cloudfront.net/aaptprep/login` | AaptPrep's login page, in its colour, with its logo |
+| 2 | Log in as Ritesh (`sachin.arpit.learning@gmail.com`, code by email) | The Registrations page |
+| 3 | Refresh the browser on any page | The same page again, not an error |
+| 4 | Open `/platform/login` and log in as Arpit | The Institutes page |
+| 5 | Add a file to a course (as in F2a) | It uploads. This tests that storage accepts uploads from the website's address |
+
+To put a new version of the screens on the website, from the repo root:
+
+```bash
+infra/scripts/deploy-web.sh main dev
+```
+
+If the Lambda or the allowed origins change, run `infra/scripts/deploy.sh main dev --yes` first.
 
 ### What you can't test yet
 Paying for a course (M5), and its screens (the rest of F2 and F3).

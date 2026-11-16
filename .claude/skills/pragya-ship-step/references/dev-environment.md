@@ -20,6 +20,7 @@ Everything below was used and worked during Phase 1. Check a command still exist
 | Infra | `infra/scripts/deploy.sh`, stacks under `infra/envs/dev/` |
 | AWS | account `552808407801`, region `ap-south-1`, SSO profile `pragyaprep-dev` |
 | Dev API | `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south-1.on.aws` |
+| Dev website | `https://d1szng4oy9m4an.cloudfront.net` (bucket `pragyaprep-web-dev-552808407801`, published by `infra/scripts/deploy-web.sh main dev`) |
 | Table | `pragyaprep-dev` |
 | Bucket | `pragyaprep-content-dev-552808407801` (files under `<institute>/...`) |
 | Lambda log group | `/aws/lambda/pragyaprep-dev-api` |
@@ -51,6 +52,7 @@ Sandbox data: institute `demo` (admin `demo-admin@example.com`), `closed` (suspe
 Browser tips that worked:
 - Open the page once with `?api=http://localhost:8001` so it talks to the sandbox on 8001.
 - To sign in without the email step, call `verify-code` from the page with `fetch`, then store `{session, expiresAt}` under `localStorage['pragyaprep.session.<institute>']`.
+- The website on CloudFront is HTTPS, so a page there can fetch a local helper server only if the helper answers the preflight with `Access-Control-Allow-Private-Network: true`.
 - For live dev, mint a token (below) into a JSON file, serve the folder with a tiny local Python server that adds `Access-Control-Allow-Origin: *`, and have the page fetch the JSON and store it. This keeps tokens out of chat.
 - Attach a file to an `<input type=file>` from a script: fetch the file from the local server, build a `File`, put it in a `DataTransfer`, set `input.files`, and dispatch a `change` event.
 - `form_input` sometimes doesn't update Angular's model. Prefer clicking and typing, or `find` then `form_input`, and check with a script.
@@ -75,6 +77,12 @@ Deploy the backend (rebuilds the Lambda zip and applies):
 
 ```bash
 infra/scripts/deploy.sh main dev --yes
+```
+
+After a frontend change that should be live, publish the website (it builds, copies, and clears CloudFront's cache):
+
+```bash
+infra/scripts/deploy-web.sh main dev
 ```
 
 For data created before a feature existed, run a script against dev with `AWS_PROFILE=pragyaprep-dev PRAGYA_TABLE_NAME=pragyaprep-dev PYTHONPATH=.` from `backend/`, for example `scripts/manage_tenants.py link-admin --slug aaptprep --email ...`.

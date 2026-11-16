@@ -20,6 +20,11 @@ locals {
   account_id    = data.aws_caller_identity.current.account_id
   function_name = "pragyaprep-dev-api"
   ssm_prefix    = "/pragyaprep/dev"
+
+  # The website's own address is always allowed to call the API and to upload to S3, besides the addresses
+  # in cors_origins (which are for working on your own computer).
+  site_url     = "https://${aws_cloudfront_distribution.web.domain_name}"
+  cors_origins = distinct(concat(var.cors_origins, [local.site_url]))
 }
 
 # ---- Data: one DynamoDB table (see backend/app/repo.py for the key layout) ----
@@ -96,7 +101,7 @@ resource "aws_s3_bucket_cors_configuration" "content" {
 
   cors_rule {
     allowed_methods = ["GET", "POST", "PUT"]
-    allowed_origins = var.cors_origins
+    allowed_origins = local.cors_origins
     allowed_headers = ["*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
@@ -234,8 +239,8 @@ resource "aws_lambda_function" "api" {
       PRAGYA_BUCKET_NAME   = aws_s3_bucket.content.bucket
       PRAGYA_AWS_REGION    = var.region
       PRAGYA_SSM_PREFIX    = local.ssm_prefix
-      PRAGYA_FRONTEND_URL  = var.frontend_url
-      PRAGYA_CORS_ORIGINS  = jsonencode(var.cors_origins)
+      PRAGYA_FRONTEND_URL  = local.site_url
+      PRAGYA_CORS_ORIGINS  = jsonencode(local.cors_origins)
       PRAGYA_EMAIL_BACKEND = "ses"
       PRAGYA_EMAIL_SENDER  = var.email_sender
     }

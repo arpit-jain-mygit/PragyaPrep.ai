@@ -29,6 +29,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 23. [Course content and access (step M4)](#23-course-content-and-access-step-m4)
 24. [Content screens (step F2a)](#24-content-screens-step-f2a)
 25. [Institute logos](#25-institute-logos)
+26. [Hosting the website (step M7)](#26-hosting-the-website-step-m7)
 
 ---
 
@@ -822,3 +823,35 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 - Institutes want to change their own logo: add the same form to the institute admin's pages.
 - A domain and CDN exist: serve logos from there, with long caching.
+
+---
+
+## 26. Hosting the website (step M7)
+
+**Status:** Built and tested live on dev: https://d1szng4oy9m4an.cloudfront.net
+
+**Chosen:** The Angular app's files sit in a private S3 bucket, and CloudFront serves them over HTTPS at CloudFront's own address. The API stays at its Lambda URL, and the website calls it from the browser. A script, `infra/scripts/deploy-web.sh`, builds and publishes the website.
+
+**Alternatives considered:** Amplify Hosting (easy, but another service to learn and pay for, with less control), serving the website from the Lambda that serves the API (mixes two jobs and sends every file through Lambda), a public S3 website endpoint (no HTTPS, and it needs a public bucket), and waiting for a domain (blocks everyone from trying the product).
+
+### 26.1 Decisions
+
+- **The bucket is private,** and only this CloudFront distribution can read it, through an origin access control. A direct request to the bucket is refused.
+- **Deep links work on refresh.** The app has its own pages like `/aaptprep/login`. When someone refreshes, S3 has no such file, so 403 and 404 answers are turned into the app itself (with a 200). The app then shows the right page.
+- **Caching follows the files.** Most file names contain a hash of their contents, so they are kept for a year and never change. `index.html` is marked no-cache, so a new version shows up at once. The cache is also cleared on every deploy.
+- **Old files stay on purpose.** Someone with the page open can still load the parts they need until they refresh. Old files can be tidied up occasionally.
+- **Safety headers come from the AWS-managed policy:** HTTPS only, no framing, no content sniffing, and a strict referrer policy.
+- **The site's address is always an allowed origin** for the API and for S3 uploads, added in Terraform, so a new address never needs a manual edit. The addresses for working on your own computer stay in `cors_origins`.
+- **The institute still comes from the address path** (`/aaptprep/...`), as before, until a domain exists.
+
+### 26.2 Trade-offs
+
+- **The address is not memorable** (`d1szng4oy9m4an.cloudfront.net`). A real domain, with its own certificate, fixes that.
+- **A missing script or style file also answers with the app and a 200,** because of the refresh rule. The browser refuses it as the wrong type, so it fails safely, but the error looks odd.
+- **The production build talks to the dev API,** because it uses `environment.live.ts`. The prod environment (M8) needs its own settings file.
+- **No CSP header yet.** The safety headers above are in place, and a content security policy can be added when the set of addresses is final.
+
+### 26.3 Revisit when
+
+- A domain is chosen: add a certificate and the domain to CloudFront, read the institute from the hostname, and add the domain to the allowed origins.
+- M8 creates a prod environment: a second bucket and distribution, and its own API address in the build.
