@@ -51,6 +51,8 @@ def main() -> None:
             bucket_name="local-content",
             create_resources=True,
             secret_key="local-dev-secret-key-that-is-long-enough-for-hmac",
+            # The Angular dev server may run on any of these local ports.
+            cors_origins=[f"http://localhost:{port}" for port in range(4200, 4211)],
         )
         app = create_app(settings)
 

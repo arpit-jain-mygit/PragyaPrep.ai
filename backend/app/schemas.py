@@ -141,3 +141,45 @@ class DecisionIn(BaseModel):
 class DecisionOut(BaseModel):
     registration: RegistrationOut
     email_sent: bool
+
+
+# ---- Platform admin: institutes ----
+
+class InstituteAdminOut(BaseModel):
+    email: str
+    first_name: str = ""
+    last_name: str = ""
+    status: str
+
+
+class InstituteOut(BaseModel):
+    slug: str
+    name: str
+    status: str
+    primary_color: str
+    created_at: str = ""
+    admin: InstituteAdminOut | None = None
+
+
+class InstituteCreateIn(BaseModel):
+    slug: str
+    name: str
+    admin_name: str
+    admin_email: str
+    primary_color: str = "#2563eb"
+
+
+class InstituteUpdateIn(BaseModel):
+    """Only the fields that are sent are changed. The short name can't be changed."""
+
+    name: str | None = None
+    primary_color: str | None = None
+    status: str | None = None
+    admin_name: str | None = None
+    admin_email: str | None = None
+
+
+class InstituteResultOut(BaseModel):
+    institute: InstituteOut
+    # Whether the new admin's welcome email went out. None when no new admin was made.
+    new_admin_notified: bool | None = None

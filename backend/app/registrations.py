@@ -6,7 +6,7 @@ from datetime import date
 from app import clock
 from app.config import Settings
 from app.limits import check_limit, fingerprint
-from app.mailer import Email, Mailer
+from app.mailer import Email, Mailer, send_quietly
 from app.repo import ConflictError, Repo, TenantRepo, now_iso
 from app.tenants import ValidationError, normalize_email
 
@@ -155,16 +155,6 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
 
 # ---- Emails ----
 
-def _send_quietly(mailer: Mailer, email: Email) -> bool:
-    """Send an email, but never let a failure undo the registration or the decision. Returns whether it went out."""
-    try:
-        mailer.send(email)
-        return True
-    except Exception:
-        logger.exception("Could not send a registration email")
-        return False
-
-
 def _received_email(tenant: dict, record: dict) -> Email:
     name = tenant["branding"]["display_name"]
     return Email(
@@ -252,7 +242,7 @@ def register(settings: Settings, repo: Repo, tenant: dict, form: dict, ip: str, 
     else:
         raise AlreadyRegistered(_already_registered_message(existing, institute_name))
 
-    _send_quietly(mailer, _received_email(tenant, record))
+    send_quietly(mailer, _received_email(tenant, record))
     return record
 
 
@@ -289,7 +279,7 @@ def decide(
     updated = scoped.get_member(email)
     email_sent = False
     if action == "approve":
-        email_sent = _send_quietly(mailer, _approved_email(tenant, updated))
+        email_sent = send_quietly(mailer, _approved_email(tenant, updated))
     elif action == "reject":
-        email_sent = _send_quietly(mailer, _rejected_email(tenant, updated, reason))
+        email_sent = send_quietly(mailer, _rejected_email(tenant, updated, reason))
     return updated, email_sent

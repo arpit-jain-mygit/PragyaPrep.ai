@@ -23,6 +23,8 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 17. [Multi-tenancy (proposed)](#17-multi-tenancy-proposed)
 18. [Registration approval and email OTP login (proposed)](#18-registration-approval-and-email-otp-login-proposed)
 19. [Registration, payment review and course access (proposed)](#19-registration-payment-review-and-course-access-proposed)
+20. [Frontend (step F1)](#20-frontend-step-f1)
+21. [Platform admin page](#21-platform-admin-page)
 
 ---
 
@@ -623,3 +625,68 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 - **The queue** lists students by status, newest first, using an index that follows each person's status. It returns up to 200 per status for now, which is plenty for one institute, and paging can come later.
 - **A suspended student's session ends at once,** because every request checks that the person is still approved.
 
+---
+
+## 20. Frontend (step F1)
+
+**Status:** Built and tested (112 tests, a real browser against the sandbox, and a live check against the dev API). It runs on your computer only. Hosting is a later step.
+
+**Chosen:** An Angular app (version 22) in `frontend/`, using standalone components and signals, with no UI library and plain CSS. It has these screens: the start page, the institute frame, registration, login, a student home, the admin's registrations queue, and the admin's courses.
+
+**Alternatives considered:** React or Vue (the owner's stack is Angular), a UI kit such as Angular Material or Tailwind (faster to start, but more to learn, to theme per institute, and to keep up to date), and server-rendered pages (simpler, but a poorer fit for the interactive admin screens).
+
+**Why:** Angular matches the stack you asked for. Plain CSS with a few colour variables is enough for a small set of screens, keeps the bundle small (about 77 KB sent over the network on first load), and lets each institute's colour apply with one variable.
+
+### 20.1 Decisions inside the frontend
+
+- **The institute comes from the address, for now.** Pages live under `/<institute>/...`, for example `/aaptprep/login`. One build serves every institute. When a domain exists, the institute will be read from the hostname instead, and the address prefix will go.
+- **The institute's look is applied at load.** The page asks the API for the institute's name and colour, sets a main colour, and picks white or dark text by contrast so buttons stay readable in any colour. An unknown or switched-off institute gets a plain explanation instead of a broken page.
+- **Sessions are kept per institute** in the browser's local storage, together with when they end. Signing in at one institute doesn't sign you in at another, which matches the API. A session the API refuses is cleared, and the person is sent to the login page with a message.
+- **One interceptor adds the institute and the sign-in** to every call to our API, and leaves calls to other sites alone.
+- **The server is the judge of the form.** The registration page does no checks of its own. It shows the API's message under each field and a summary on top, moves the cursor to the first mistake, and clears a field's message as soon as the person edits it. This keeps the rules in one place.
+- **The login page shows the status messages straight away,** with a Register button when the email isn't registered, a countdown before a new code can be requested, and a reminder to check spam.
+- **Pages protect themselves,** but the API is the real protection. A guard keeps a signed-out person off signed-in pages and a student off admin pages. The API refuses them anyway.
+- **Accessible by default:** every field has a label, mistakes are marked for screen readers, and focus is visible. The layout works from phone width up.
+- **Two environments:** the local test version (API on port 8000, or any port with `?api=` added once) and the live dev environment. The `?api=` override exists only in the local version.
+
+### 20.2 Trade-offs
+
+- **Sessions in local storage can be read by a script that runs on the page** (cross-site scripting). Cookies that scripts can't read are safer against that, but need the API and the screens on one site and protection against forged requests. This is worth revisiting when hosting is set up.
+- **One build for all institutes means the logo and colours load after the page**, so there is a brief default look. A hostname-based setup later can fix this.
+- **Only the screens needed so far exist.** There is no platform admin screen, no logo upload, no payment or course screens for students, and no content upload. Those come with later steps.
+- **The browser found three bugs the tests missed** (layout margin, an escaped slash in a link, and stale error messages). Tests check behaviour, so a real look at the page is still needed for each new screen.
+
+### 20.3 Revisit when
+
+- A domain exists: read the institute from the hostname, and decide on cookies for sessions.
+- An institute needs a logo or a different look: add logo upload and more branding fields.
+- The number of screens grows: consider shared components for forms and tables.
+
+---
+
+## 21. Platform admin page
+
+**Status:** Built and tested (59 backend and 25 frontend tests, and a real browser against the sandbox). Not yet deployed to dev.
+
+**Chosen:** The platform admin gets a page at `/platform-admin` to view, add and edit institutes and their one admin. The platform admin itself is still created only by the `manage_tenants.py platform-admin` script. Nothing can be deleted from the screens or the API.
+
+**Alternatives considered:** keep everything in scripts (safe, but the owner needs a terminal for every new institute), allow delete (one wrong click loses an institute's students and payments, so suspend is offered instead), and let the platform admin create other platform admins (more power on screen than is needed, and the first one is easy to make with the script).
+
+### 21.1 Decisions
+
+- **The platform admin is a member of the reserved `platform` institute** and signs in like anyone else, by emailed code. The API checks the role on every route of `/api/platform`.
+- **Replacing an institute's admin creates the new admin first, then switches the old one off** (suspended, with a reason), so the institute is never left without an admin. It is refused if the new email is already registered at that institute.
+- **The screen warns before a switch** and always sends the name shown, so a new admin can't quietly inherit the old admin's name.
+- **Everything is checked before anything is written,** and the welcome emails never fail the action (a warning is shown if one could not be sent).
+- **The short name is permanent,** because it is part of every key and address.
+
+### 21.2 Trade-offs
+
+- One admin per institute, as agreed. A second admin needs a change here later.
+- Institutes created before this feature have no admin recorded, so `link-admin` is run once for them.
+- The platform admin can't see an institute's students or courses, only who runs it.
+
+### 21.3 Revisit when
+
+- Institutes need several admins, or the platform needs several platform admins.
+- Billing or plans per institute are added.

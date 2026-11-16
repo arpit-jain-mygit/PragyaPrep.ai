@@ -12,6 +12,9 @@ Run from the backend folder, with AWS credentials in the environment. For the de
   .venv/bin/python scripts/manage_tenants.py add-course --slug aaptprep --name CLAT --fee 10000 --access unlimited
   .venv/bin/python scripts/manage_tenants.py add-course --slug aaptprep --name CAT --fee 8000 --access days=365
   .venv/bin/python scripts/manage_tenants.py list-courses --slug aaptprep
+  .venv/bin/python scripts/manage_tenants.py link-admin --slug aaptprep --email admin@example.com
+
+The platform admin is created only here. Institutes and their admin can also be managed on the /platform-admin page.
 """
 import argparse
 import sys
@@ -47,6 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     list_courses = commands.add_parser("list-courses", help="List an institute's courses")
     list_courses.add_argument("--slug", required=True)
+
+    link = commands.add_parser("link-admin", help="Record who an existing institute's admin is (for older institutes)")
+    link.add_argument("--slug", required=True)
+    link.add_argument("--email", required=True)
 
     platform = commands.add_parser("platform-admin", help="Create the platform tenant and its admin")
     platform.add_argument("--email", required=True)
@@ -86,7 +93,7 @@ def main(argv: list[str] | None = None, repo: Repo | None = None) -> int:
     try:
         if args.command == "list":
             for tenant in repo.list_tenants():
-                print(f"{tenant['slug']:<20} {tenant['status']:<10} {tenant['name']}")
+                print(f"{tenant['slug']:<20} {tenant['status']:<10} {tenant['name']:<24} {tenant.get('admin_email', '')}")
         elif args.command == "create":
             tenant = tenants.create_tenant(
                 repo, args.slug, args.name, args.admin_email, args.admin_name, args.primary_color
@@ -105,6 +112,9 @@ def main(argv: list[str] | None = None, repo: Repo | None = None) -> int:
             for course in repo.scoped(args.slug).list_courses():
                 shown = "open" if course.get("active", True) else "hidden"
                 print(f"{course['name']:<20} fee {course['fee']:<8} {_describe(course['access']):<22} {shown}")
+        elif args.command == "link-admin":
+            tenants.link_admin(repo, args.slug, args.email)
+            print(f"'{args.slug}' admin recorded as {args.email.strip().lower()}")
         elif args.command == "platform-admin":
             tenants.ensure_platform_admin(repo, args.email, args.name)
             print(f"Platform admin ready: {args.email.strip().lower()}")

@@ -1,9 +1,12 @@
 """Sending email. Amazon SES in AWS, the terminal on your computer, and a list in memory in tests."""
+import logging
 from dataclasses import dataclass
 
 import boto3
 
 from app.config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -72,3 +75,14 @@ def make_mailer(settings: Settings) -> Mailer:
             raise ValueError("PRAGYA_EMAIL_SENDER is required when PRAGYA_EMAIL_BACKEND is 'ses'.")
         return SesMailer(boto3.client("sesv2", region_name=settings.aws_region), settings.email_sender)
     raise ValueError(f"Unknown email backend: {settings.email_backend!r}")
+
+
+def send_quietly(mailer: Mailer, email: Email) -> bool:
+    """Send an email, but never let a failure undo whatever the person just did. Returns whether it went out."""
+    try:
+        mailer.send(email)
+        return True
+    except Exception:
+        logger.exception("Could not send an email")
+        return False
+

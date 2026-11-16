@@ -6,7 +6,7 @@ from app.aws import ensure_bucket, ensure_table, load_secrets, make_s3, make_tab
 from app.config import Settings
 from app.mailer import make_mailer
 from app.repo import Repo
-from app.routers import auth, courses, registration, tenant
+from app.routers import auth, courses, platform, registration, tenant
 from app.storage import ContentStorage
 
 
@@ -36,6 +36,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health():
         return {"status": "ok"}
 
-    for module in (tenant, auth, courses, registration):
+    for module in (tenant, auth, courses, registration, platform):
         app.include_router(module.router)
     return app

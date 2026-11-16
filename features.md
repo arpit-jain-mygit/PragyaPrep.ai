@@ -89,10 +89,13 @@ The login page shows these messages straight away. When an email isn't registere
 - Upload and delete PDF and MP4 files in a course.
 - See and edit the tenant's own branding: display name, logo and primary colour.
 
-## Platform admin (proposed)
-- Create a tenant with its one tenant admin.
-- Change a tenant admin's email, for example if they lose their mailbox.
-- List tenants, suspend and reactivate a tenant.
+## Platform admin
+- Created only by a script, never from the screens.
+- Has its own page at `/platform-admin`, after logging in at `/platform/login`.
+- **View** every institute with its status, admin and created date.
+- **Create** an institute together with its one admin. The admin is approved straight away and gets an email.
+- **Edit** an institute's name, colour and status (active or suspended), and its admin's name or email. Replacing the admin emails the new one and switches the old one off. The short name can't be changed.
+- **No delete** anywhere in the screens or the API. To pause an institute, suspend it.
 
 ## Student
 - Register, then log in with an emailed code once approved.

@@ -1,0 +1,184 @@
+/* PragyaPrep look and feel. Each institute sets --brand (its main colour) and --brand-text (a readable text colour on it). */
+
+:root {
+  --brand: #2563eb;
+  --brand-text: #ffffff;
+  --ink: #111827;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --page: #f5f6f8;
+  --card: #ffffff;
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --ok: #166534;
+  --ok-bg: #f0fdf4;
+  --warn: #92400e;
+  --warn-bg: #fffbeb;
+  --info: #1e40af;
+  --info-bg: #eff6ff;
+  --radius: 10px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--ink);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--page);
+  line-height: 1.5;
+  font-size: 16px;
+}
+
+h1 { font-size: 1.6rem; margin: 0 0 0.25rem; line-height: 1.25; }
+h2 { font-size: 1.2rem; margin: 0 0 0.5rem; }
+p { margin: 0 0 0.75rem; }
+a { color: var(--brand); }
+
+/* ---- Layout ---- */
+
+.topbar {
+  background: var(--brand);
+  color: var(--brand-text);
+  padding: 0 1rem;
+}
+.topbar-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.topbar a, .topbar button.linklike { color: var(--brand-text); }
+.brand-name { font-weight: 700; font-size: 1.15rem; text-decoration: none; margin-right: auto; padding: 0.5rem 0; }
+.nav { display: flex; align-items: center; gap: 0.25rem 1rem; flex-wrap: wrap; }
+.nav a { text-decoration: none; padding: 0.4rem 0.1rem; border-bottom: 2px solid transparent; }
+.nav a.active { border-bottom-color: var(--brand-text); font-weight: 600; }
+.nav .who { opacity: 0.9; font-size: 0.9rem; }
+
+.page { max-width: 64rem; margin: 1.5rem auto; padding: 0 1rem; }
+.narrow { max-width: 34rem; }
+.center { text-align: center; }
+.footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 1.5rem 1rem 2rem; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+.row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.spread { justify-content: space-between; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+@media (max-width: 40rem) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ---- Forms ---- */
+
+.field { margin-bottom: 0.9rem; }
+.field label, .label { display: block; font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
+.req { color: var(--danger); }
+.hint { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+input[type='text'], input[type='email'], input[type='tel'], input[type='date'], input[type='number'],
+select, textarea {
+  width: 100%;
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #c8ccd4;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+textarea { min-height: 4.5rem; resize: vertical; }
+input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 45%, white);
+  outline-offset: 1px;
+}
+input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+.error-text { color: var(--danger); font-size: 0.85rem; margin-top: 0.2rem; }
+.check { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.9rem; }
+.check input { width: 1.1rem; height: 1.1rem; }
+.code-input { font-size: 1.6rem; letter-spacing: 0.4rem; text-align: center; max-width: 14rem; }
+
+/* ---- Buttons ---- */
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--brand);
+  background: var(--brand);
+  color: var(--brand-text);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn:hover:not(:disabled) { filter: brightness(0.93); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.secondary { background: #fff; color: var(--brand); }
+.btn.danger { background: #fff; color: var(--danger); border-color: var(--danger); }
+.btn.small { padding: 0.3rem 0.7rem; font-size: 0.875rem; }
+button.linklike { background: none; border: 0; font: inherit; cursor: pointer; text-decoration: underline; padding: 0.4rem 0; color: var(--brand); }
+
+/* ---- Messages ---- */
+
+.alert { border-radius: 8px; padding: 0.7rem 0.9rem; margin-bottom: 1rem; border: 1px solid; }
+.alert.error { background: var(--danger-bg); color: var(--danger); border-color: #fecaca; }
+.alert.ok { background: var(--ok-bg); color: var(--ok); border-color: #bbf7d0; }
+.alert.warn { background: var(--warn-bg); color: var(--warn); border-color: #fde68a; }
+.alert.info { background: var(--info-bg); color: var(--info); border-color: #bfdbfe; }
+.alert p:last-child { margin-bottom: 0; }
+
+.chip { display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 0.1rem 0.55rem; border-radius: 999px; text-transform: capitalize; }
+.chip.pending { background: var(--warn-bg); color: var(--warn); }
+.chip.approved { background: var(--ok-bg); color: var(--ok); }
+.chip.rejected { background: var(--danger-bg); color: var(--danger); }
+.chip.suspended { background: #f3f4f6; color: #374151; }
+.chip.hidden { background: #f3f4f6; color: #374151; }
+.chip.open { background: var(--ok-bg); color: var(--ok); }
+
+/* ---- Tabs, lists and tables ---- */
+
+.tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.tab {
+  font: inherit; background: none; border: 0; border-bottom: 3px solid transparent;
+  padding: 0.5rem 0.9rem; cursor: pointer; color: var(--muted); text-transform: capitalize;
+}
+.tab[aria-selected='true'] { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
+
+.item { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 1rem; margin-bottom: 0.75rem; }
+.item-head { display: flex; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; align-items: flex-start; }
+.item-title { font-weight: 700; }
+.details { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; margin: 0.75rem 0 0; font-size: 0.92rem; }
+.details dt { color: var(--muted); }
+.details dd { margin: 0; }
+.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+
+table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+th, td { text-align: left; padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { background: #f9fafb; font-size: 0.85rem; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+
+.empty { text-align: center; color: var(--muted); padding: 2rem 1rem; }
+
+/* Text for screen readers only. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* A small dot showing an institute's colour. */
+.swatch { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.2); vertical-align: -0.1rem; margin-right: 0.4rem; }
+input[type='color'] { width: 3.2rem; height: 2.3rem; padding: 0.15rem; border: 1px solid #c8ccd4; border-radius: 8px; background: #fff; cursor: pointer; }

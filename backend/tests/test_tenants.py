@@ -38,7 +38,7 @@ def test_bad_short_names_are_refused(make_tenant, slug):
         make_tenant(slug)
 
 
-@pytest.mark.parametrize("slug", ["platform", "admin", "api", "www", "login"])
+@pytest.mark.parametrize("slug", ["platform", "platform-admin", "admin", "api", "www", "login"])
 def test_reserved_short_names_are_refused(make_tenant, slug):
     with pytest.raises(tenants.ValidationError, match="reserved"):
         make_tenant(slug)
@@ -216,3 +216,21 @@ def test_script_course_errors_exit_with_failure(repo, make_tenant, capsys):
     ) == 1
     errors = capsys.readouterr().err
     assert "already exists" in errors and "No institute" in errors and "Access must be" in errors
+
+
+def test_script_lists_each_institutes_admin(repo, make_tenant, capsys):
+    make_tenant("aaptprep", admin_email="ritesh@example.com")
+    manage_tenants.main(["list"], repo)
+    assert "ritesh@example.com" in capsys.readouterr().out
+
+
+def test_script_records_the_admin_of_an_older_institute_and_checks_it(repo, make_tenant, add_member, capsys):
+    make_tenant("aaptprep", admin_email="ritesh@example.com")
+    repo.update_tenant("aaptprep", admin_email="")  # as if made before admins were recorded
+    add_member("aaptprep", "asha@example.com")
+
+    assert manage_tenants.main(["link-admin", "--slug", "aaptprep", "--email", "Ritesh@Example.com"], repo) == 0
+    assert repo.get_tenant("aaptprep")["admin_email"] == "ritesh@example.com"
+
+    assert manage_tenants.main(["link-admin", "--slug", "aaptprep", "--email", "asha@example.com"], repo) == 1
+    assert "is not the admin" in capsys.readouterr().err

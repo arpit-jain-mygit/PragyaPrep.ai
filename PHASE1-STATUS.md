@@ -17,24 +17,73 @@ How we work: one step at a time. I build it, test it myself (automated tests, th
 | Accepted | You tested it and are happy |
 
 ## Steps
+M means backend (the API, data and email). F means frontend (screens in a browser). We changed the order so that you can click through each part in a browser as it is built, not only call the API.
+
 | # | Step | Status | Evidence |
 |---|---|---|---|
 | M1 | **Tenant foundation:** tenants, tenant-prefixed data, tenant lookup from a header, create-tenant script, isolation tests | **Tested live** | 62 automated tests; tenant lookup checked on the live dev API |
 | M2 | **Email OTP login and roles:** emailed 6-digit codes, status messages, rate limits, sessions per tenant, Amazon SES | **Tested live** | 130 automated tests pass (65 of them new for M2). On the live dev API, a real code reached Ritesh's inbox and signing in with it worked |
 | M3 | **Course list, registration and admin review:** each institute's courses (fee and access length), the registration form with checks, the admin's queue to approve, reject, suspend and reactivate, and the emails | **Tested live** | 263 automated tests pass (133 of them new for M3). On the live dev API I registered a test student, approved, suspended and reactivated them, and removed them again. CLAT, IPMAT and CAT are loaded into aaptprep |
-| M4 | **Content and access:** PDF and MP4 upload into a course, and access for a student that ends when the course's access length runs out (the course list itself was built in M3) | Not started | |
-| M5 | **Payments:** QR code, screenshot upload, admin verify or reject, access granted on verify | Not started | |
-| M6 | **Deploy to dev and test end to end through the API:** includes creating the aaptprep tenant | Not started | |
-| M7 | **Frontend: login, register, status pages** | Not started | |
-| M8 | **Frontend: student** (courses, video and PDF viewers, payment upload) | Not started | |
-| M9 | **Frontend: tenant admin** (registrations, payments, courses, uploads, settings) | Not started | |
-| M10 | **Frontend hosting** (S3 and CloudFront) and allowed origins | Not started | |
-| M11 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
+| F1 | **Frontend slice:** each institute's branding, the registration page, the login page (emailed code and status messages), the admin's review queue, the admin's course list, and a student home page | **Tested live** | 112 automated tests pass. I drove every screen in a real browser against the sandbox, then against the live dev API (registered a test student, approved it, and removed it). The browser found three problems that I fixed |
+| P1 | **Platform admin page** (`/platform-admin`): the platform admin views, adds and edits institutes and their one admin (name, colour, active or suspended, admin name and email). No delete. The platform admin itself is still created only by script | **Tested live** | 59 backend and 25 frontend tests. Driven in a real browser against the sandbox. Deployed to dev: with a short-lived platform-admin token I created a test institute (welcome email sent), suspended it and recoloured it, saw the duplicate refused and DELETE answer 405, then removed its rows. `link-admin` run for aaptprep. No errors in the Lambda log. The page itself was not opened against dev |
+| M4 | **Content and access (API):** PDF and MP4 upload into a course, and access for a student that ends when the course's access length runs out | Not started | |
+| M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | Not started | |
+| F2 | **Frontend: student** (course list, video and PDF viewers, payment page with screenshot upload) | Not started | |
+| F3 | **Frontend: tenant admin** (payments queue, content upload, payment QR and settings) | Not started | |
+| M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | Not started | |
+| M7 | **Frontend hosting** (S3 and CloudFront) and allowed origins | Not started | |
+| M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
 After I finish a step, I'll tell you how to test it, and I keep the instructions here.
 
-### Option 1: on your own computer (the local sandbox)
+### Easiest: use the screens (F1)
+From F1 on, you can test in a browser, like a real user. You need two terminal windows.
+
+**Terminal 1: the API (a local test version, with a fake AWS and no real email)**
+```bash
+cd /Users/arpit/Documents/claude/transcription-workspace/PragyaPrep.ai/backend
+PYTHONPATH=. .venv/bin/python scripts/dev_server.py
+```
+Login codes and emails are printed in this window.
+
+**Terminal 2: the screens**
+```bash
+cd /Users/arpit/Documents/claude/transcription-workspace/PragyaPrep.ai/frontend
+npm install     # first time only
+npm start
+```
+
+Open <http://localhost:4200/demo>. (If port 8000 is busy, start the API with `PORT=8001` in front of the command, and open `http://localhost:4200/demo/login?api=http://localhost:8001` once.)
+
+Every page belongs to an institute named in the address: `/demo/...` here, `/aaptprep/...` for the real one.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Open `/demo` | The login page, with a blue header saying **Demo Institute** |
+| 2 | Click **Register**, then **Register** with nothing filled in | A red message under **every** field, a summary at the top, and the cursor on the first mistake |
+| 3 | Fill in the form (try a mobile like `+91 98765 43210`) and choose a course | A **Thank you** page. A receipt email appears in Terminal 1 |
+| 4 | Click **Go to log in**, then **Send me a code** | A blue message: "Your registration is waiting for approval." No code is sent |
+| 5 | Log in as `demo-admin@example.com`: ask for a code, read it in Terminal 1, type it in, click **Log in** | The **Registrations** page, with your new registration first |
+| 6 | Click **Show details** on it, then **Approve** | A green message "Approved ... We emailed them." An approval email appears in Terminal 1 |
+| 7 | Click **Reject** on `pending2@example.com`, type a reason, confirm | The email in Terminal 1 includes your reason |
+| 8 | Open the **Approved**, **Rejected**, **Suspended** and **All** tabs. Try **Suspend** and **Reactivate** | Each person moves to the right tab |
+| 9 | Click **Courses**. Edit a course (for example make CAT last 180 days), add a course, hide one | The change shows straight away. A hidden course disappears from the registration dropdown |
+| 10 | Click **Sign out**. Log in as your new student with a code from Terminal 1 | A **Welcome** page with the approved message |
+| 11 | While signed in as the student, type `/demo/admin/registrations` in the address | You are sent back to the student's home page |
+| 12 | Open `/nobody/login` and `/closed/register` | "Institute not found", and "This institute isn't active right now" |
+| 13 | Make the browser window narrow, or use the browser's phone view | One column, with large fields |
+
+**To use the screens against the real, live dev environment (real data and real email):**
+```bash
+cd frontend
+npx ng serve --configuration live
+```
+Open <http://localhost:4200/aaptprep>. The dropdown has CLAT, IPMAT and CAT. Register with an email you can read (a Gmail address with a `+` works, like `you+test1@gmail.com`), and the receipt arrives by email. To review it, log in as Ritesh (`sachin.arpit.learning@gmail.com`) with a code from his inbox. If you leave a test registration in the real data, tell me and I'll remove it.
+
+**What is not there yet:** a student can't pay or see courses (M5, F2), there is no content upload (M4, F3), no logo, and the screens only run on your computer. Hosting comes later.
+
+### Option 1: the API only, on your own computer (the local sandbox)
 This runs the whole API on your computer with a fake, in-memory AWS. It costs nothing, sends no real email, and resets when you stop it. It is the same code that runs in AWS. **Login codes are printed in the terminal window, where an email would normally arrive.**
 
 ```bash
@@ -61,7 +110,7 @@ The sandbox starts with these, so there is something to try straight away:
 | `rejected@example.com` | rejected |
 | `suspended@example.com` | suspended |
 
-### Option 2: live in AWS (dev)
+### Option 2: the API only, live in AWS (dev)
 The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south-1.on.aws`. Open `/docs` on that address for the same interactive page. The institutes here are the real ones: `aaptprep` (admin Ritesh, `sachin.arpit.learning@gmail.com`) and `platform` (Arpit, `sachin.arpit@gmail.com`). Codes arrive by real email.
 
 ### Run the automated tests
@@ -69,7 +118,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `263 passed`.
+You should see `324 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -168,6 +217,22 @@ After registering, try **POST /api/auth/request-code** with Meera's email. It sh
 
 **Part E: live in AWS.** The institute is `aaptprep` and the real admin is Ritesh (`sachin.arpit.learning@gmail.com`). The dropdown already has CLAT, IPMAT and CAT. You can register with any email address you can read (for example a Gmail address with a `+` in it, like `you+test1@gmail.com`), and the receipt arrives by real email. To review it, sign in as Ritesh with an emailed code, as in M2. Tell me afterwards if you want a test registration removed.
 
+### P1 (platform admin page): what to try
+The platform admin is still created only by the script (`manage_tenants.py platform-admin`). The page is for everything after that.
+
+In the sandbox (same two terminals as above), open <http://localhost:4200/platform/login> and log in as `owner@example.com` with the code from Terminal 1. You land on `/platform-admin`.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Look at the table | `demo` and `closed`, each with status, admin and created date |
+| 2 | **Add an institute** with a short name like `sunrise`, a name, a colour, an admin name and email | "Created ... We emailed ...", the new row, and a welcome email in Terminal 1 |
+| 3 | Add another with the same short name, or a bad email | A red message, and the form stays open |
+| 4 | **Edit** it: change the colour, set it to **Suspended** | The swatch changes. Opening `/sunrise/login` shows "isn't active right now". Set it back to Active |
+| 5 | **Edit**, type a different admin email | A yellow note saying who becomes admin and who is switched off. **Save and switch admin** emails the new admin. The old admin now sees "Your access is paused" at login |
+| 6 | Look for a delete button | There is none, and the API answers 405 to DELETE |
+
+Live: run `ng serve --configuration live`, open `/platform/login`, and sign in as Arpit (`sachin.arpit@gmail.com`). The older `aaptprep` record shows "No admin on record" until `link-admin --slug aaptprep --email sachin.arpit.learning@gmail.com` has been run once against dev.
+
 ### What you can't test yet
 Paying for a course and getting access (M5), and uploading content (M4).
 
@@ -210,32 +275,39 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**All automated tests, run on my machine: 263 passed, 0 failed.**
+**Backend, run on my machine: 324 passed, 0 failed. Frontend: 145 passed, 0 failed. Total: 469.**
 
-| Area | Tests |
+| Backend area | Tests |
 |---|---|
-| Tenants: creating, validating, finding, suspending, platform admin, the script (including the new course commands) | 44 |
+| Tenants: creating, validating, finding, suspending, platform admin, the script (including the course commands) | 44 |
 | Isolation between institutes | 20 |
 | Old-data cleanup script | 4 |
 | M2 Login codes | 31 |
 | M2 Sessions and roles | 15 |
 | M2 Rate limits | 11 |
 | M2 Email sender | 7 |
-| **M3** Courses: the public dropdown, admin add and change, hiding, renaming, unique names, access lengths, two institutes kept apart | 33 |
-| **M3** Registration: every field's checks, all mistakes at once, mobile formats, age range, genders, PIN codes, courses, duplicates in each status, re-registering after a rejection, a limit of 10 forms an hour per connection, a failed receipt email | 65 |
-| **M3** Review: the queue and its filters, approve, reject with a reason, suspend, reactivate, moves that aren't allowed, who can decide, emails, two institutes kept apart | 33 |
+| M3 Courses | 33 |
+| M3 Registration | 65 |
+| M3 Review | 33 |
+| P1 Platform admin API (institutes: list, add, edit, replace admin, no delete, who may call it) | 59 |
 
-**One real bug the tests caught in M3:** a course's "days" setting came back as the text `"180"` instead of the number 180, because DynamoDB returns numbers in a special form and my converter missed values nested inside a record. Fixed and covered by tests.
+| Frontend area (F1) | Tests |
+|---|---|
+| Services, guards and helpers: who is signed in per institute, the interceptor (institute and sign-in headers, ending a refused session), the institute's colour and readable text colour, error tidying, fees and dates | 30 |
+| Registration page: fields, courses with fees, WhatsApp toggle, sending, every kind of error, messages clearing as you fix them, limits | 16 |
+| Login page: each status message, the Register buttons, code step, wrong code, countdown, redirects by role | 21 |
+| Admin registrations: tabs, details, approve, reject with a reason, suspend, reactivate, refused moves, email warnings | 17 |
+| Admin courses: list, add (all three access types), edit, hide, refused changes | 12 |
+| Page frame, student home, start page, not found: links by role, sign out, unknown or switched-off institute | 18 |
+| Platform admin page: list, add, edit, admin replacement warning, errors, no delete | 25 |
 
-**M3 in the sandbox, over real HTTP (19 steps):** the dropdown, a registration, "pending" at login, a duplicate refused, an empty form and a two-mistake form, the admin queue, a student refused at the admin queue, approve, the student signing in, reject with a reason, an impossible move refused, suspend and the session ending, reactivate, adding and hiding a course.
+**F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 
-**M3 on the live dev API:**
-- Loaded **CLAT, IPMAT and CAT** into `aaptprep` (fee 10000, unlimited access), and the live dropdown shows them.
-- Registered a clearly named test student (`sachin.arpit+m3test@gmail.com`): 201 pending. A second try: 409. An empty form: 422. The test student's login said "pending".
-- The admin queue listed the test student. Approve: the email went out. Approving again: 409. The student's login then said `code_sent`.
-- Suspend: the student's login said "paused". Reactivate worked.
-- The Lambda log shows no email failures.
-- **I removed the test student afterwards.** The table now holds only real data.
-- For the admin calls I used a session made with the dev signing key, because the real admin login was already proven live in M2.
+**F1 against the live dev API:** the page showed the real institute's name, **AaptPrep**, and its real courses. I registered a clearly labelled test student, approved it from the admin screen ("We emailed them"), saw no email failures in the Lambda log, and **removed the test student afterwards**. For the admin screen I used a session made with the dev signing key, since the real admin login was proven in M2.
+
+**Three problems the browser found that the tests had missed, all fixed:**
+1. The admin pages sat against the left edge, because only the register and login cards had a page container. Now every page is inside one.
+2. The institute's name in the top bar linked to `/demo/admin%2Fregistrations` (a slash escaped), because I gave the address as one piece. Now each part is separate, and a test checks the address.
+3. After a failed submit, the red message under a field stayed even after fixing it. Now it clears when you edit that field, and the summary goes when none are left.
 
 **Not committed yet.**
