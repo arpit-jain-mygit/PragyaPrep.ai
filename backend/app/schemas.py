@@ -190,3 +190,60 @@ class InstituteResultOut(BaseModel):
     institute: InstituteOut
     # Whether the new admin's welcome email went out. None when no new admin was made.
     new_admin_notified: bool | None = None
+
+
+# ---- Course files and access ----
+
+class FileOut(BaseModel):
+    id: str
+    course_id: str
+    title: str
+    kind: str
+    content_type: str
+    size: int | None = None
+    status: str
+    created_at: str = ""
+
+
+class FileStartIn(BaseModel):
+    filename: str
+    size: int
+    title: str | None = None
+
+
+class UploadFormOut(BaseModel):
+    url: str
+    fields: dict[str, str]
+
+
+class FileStartOut(BaseModel):
+    file: FileOut
+    upload: UploadFormOut
+
+
+class AccessGrantIn(BaseModel):
+    course_id: str
+
+
+class AccessOut(BaseModel):
+    course_id: str
+    course_name: str
+    granted_at: str
+    granted_by: str
+    source: str
+    expires_at: str | None = None
+    active: bool
+
+
+class MyCourseOut(BaseModel):
+    id: str
+    name: str
+    expires_at: str | None = None
+    files: list[FileOut]
+
+
+class FileLinkOut(BaseModel):
+    url: str
+    expires_in: int
+    content_type: str
+    title: str

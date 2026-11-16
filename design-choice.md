@@ -26,6 +26,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 20. [Frontend (step F1)](#20-frontend-step-f1)
 21. [Platform admin page](#21-platform-admin-page)
 22. [Correcting a student's details](#22-correcting-a-students-details)
+23. [Course content and access (step M4)](#23-course-content-and-access-step-m4)
 
 ---
 
@@ -718,3 +719,37 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 - M5 adds payments and M4 adds access: move those rows in the same step.
 - Students need to edit their own details after logging in.
+
+---
+
+## 23. Course content and access (step M4)
+
+**Status:** Built and tested (42 tests, and a live check on dev with real S3). No screens yet.
+
+**Chosen:** The admin adds PDF and MP4 files to a course. The browser sends the file straight to S3 using a signed form, then tells the API it is done, and the API checks it. The admin gives an approved student access to a course by hand (a verified payment will do the same in M5). A student opens a file through a link that works for 5 minutes.
+
+**Alternatives considered:** sending files through the API (Lambda has a small request size limit, so videos would not fit), trusting the file ending alone (a renamed file would be stored and served), keeping a student's access in a separate table (one more place to move on an email change), and long-lived public links (a shared link would keep working).
+
+### 23.1 Decisions
+
+- **Two steps for an upload:** ask, then complete. A file is `uploading` and invisible to students until the API has seen it in S3 and checked that its first bytes match (a PDF starts with `%PDF-`, an MP4 has `ftyp`). A file that fails is deleted from S3 and from the table.
+- **Only PDF and MP4,** decided by the file ending and then confirmed by the contents. Each file lives under its institute's folder, `<institute>/courses/<course>/<file>`.
+- **Half-finished uploads clear themselves:** their row has an expiry time of a day, which is removed when the file is checked.
+- **Access is stored with the student** (`ACCESS#<course>` under their key), so it moves with them when the admin corrects their email. It records who gave it, when, how (by hand for now) and when it ends.
+- **Expiry is judged when the student asks,** so access ends at the right moment with no background job. A course set to "N days" counts from the grant, and one set to "until a date" ends at the end of that day in India. Giving access again renews it.
+- **A student without access gets "not found",** the same answer as for a file that doesn't exist, so nobody can learn what exists. A suspended student is refused before any of this, because every request checks they are still approved.
+- **Where a file is stored is never shown** to a student. They only get the short-lived link.
+- **The admin can delete a file** (it is removed from S3 too), and can take a student's access away. Both close the student's link at once.
+
+### 23.2 Trade-offs
+
+- **A link can be shared during its 5 minutes,** and a downloaded PDF can be copied. Stopping that fully needs DRM or watermarking, which is out of scope. The short life limits the damage.
+- **A student cannot yet open files from a screen.** That comes with F2.
+- **No resumable or multi-part upload yet.** A single signed upload handles files up to 5 GB, but a dropped connection means starting that file again. Worth revisiting for long lecture videos.
+- **No video processing:** files are served as uploaded, with seeking through byte ranges (checked live).
+
+### 23.3 Revisit when
+
+- M5 adds payments: a verified payment calls the same grant, with the source set to payment.
+- Videos are large or students are on weak connections: resumable uploads and adaptive streaming.
+- Content needs ordering, sections or free previews.

@@ -227,6 +227,10 @@ class TenantRepo:
         """Give a person a new email. The email is part of the key, so this writes the row under the new key,
         then removes the old one. Raises ConflictError if the new email is already in use."""
         _put_new(self.table, self._member_item(member))
+        new_email = member["email"]
+        for access in self.list_access(old_email):
+            self.put_access(new_email, {k: v for k, v in access.items() if k not in ("PK", "SK")})
+            self.delete_access(old_email, access["course_id"])
         self.table.delete_item(Key=self._member_key(old_email))
 
     def replace_rejected_member(self, member: dict) -> bool:
@@ -243,6 +247,57 @@ class TenantRepo:
                 return False
             raise
         return True
+
+    # ---- Course files: a course's PDFs and videos, stored under the course's own key ----
+
+    def _file_key(self, course_id: str, file_id: str) -> dict:
+        return {"PK": self._course_key(course_id)["PK"], "SK": f"FILE#{file_id}"}
+
+    def create_file(self, file: dict) -> None:
+        _put_new(self.table, {**self._file_key(file["course_id"], file["id"]), **file})
+
+    def get_file(self, course_id: str, file_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._file_key(course_id, file_id)).get("Item"))
+
+    def list_files(self, course_id: str) -> list[dict]:
+        """A course's files, oldest first."""
+        response = self.table.query(
+            KeyConditionExpression=Key("PK").eq(self._course_key(course_id)["PK"]) & Key("SK").begins_with("FILE#"),
+        )
+        return sorted((_plain(item) for item in response["Items"]), key=lambda f: (f.get("created_at", ""), f["id"]))
+
+    def finish_file(self, course_id: str, file_id: str, size: int) -> None:
+        """Mark an upload as arrived and checked. A half-finished upload has an expiry time, which this removes."""
+        self.table.update_item(
+            Key=self._file_key(course_id, file_id),
+            UpdateExpression="SET #status = :ready, #size = :size REMOVE #ttl",
+            ExpressionAttributeNames={"#status": "status", "#size": "size", "#ttl": "ttl"},
+            ExpressionAttributeValues={":ready": "ready", ":size": size},
+        )
+
+    def delete_file(self, course_id: str, file_id: str) -> None:
+        self.table.delete_item(Key=self._file_key(course_id, file_id))
+
+    # ---- Access: which courses a student may open, and until when. Stored with the student ----
+
+    def _access_key(self, email: str, course_id: str) -> dict:
+        return {"PK": self._member_key(email)["PK"], "SK": f"ACCESS#{course_id}"}
+
+    def put_access(self, email: str, access: dict) -> None:
+        """Give (or renew) access to a course. A later grant replaces the earlier one."""
+        self.table.put_item(Item={**self._access_key(email, access["course_id"]), **access})
+
+    def get_access(self, email: str, course_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._access_key(email, course_id)).get("Item"))
+
+    def list_access(self, email: str) -> list[dict]:
+        response = self.table.query(
+            KeyConditionExpression=Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with("ACCESS#"),
+        )
+        return sorted((_plain(item) for item in response["Items"]), key=lambda a: a.get("granted_at", ""))
+
+    def delete_access(self, email: str, course_id: str) -> None:
+        self.table.delete_item(Key=self._access_key(email, course_id))
 
     # ---- Login codes ----
 

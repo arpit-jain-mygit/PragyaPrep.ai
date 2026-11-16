@@ -27,7 +27,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | F1 | **Frontend slice:** each institute's branding, the registration page, the login page (emailed code and status messages), the admin's review queue, the admin's course list, and a student home page | **Tested live** | 112 automated tests pass. I drove every screen in a real browser against the sandbox, then against the live dev API (registered a test student, approved it, and removed it). The browser found three problems that I fixed |
 | P1 | **Platform admin page** (`/platform-admin`): the platform admin views, adds and edits institutes and their one admin (name, colour, active or suspended, admin name and email). No delete. The platform admin itself is still created only by script | **Tested live** | 59 backend and 25 frontend tests. Driven in a real browser against the sandbox. Deployed to dev: with a short-lived platform-admin token I created a test institute (welcome email sent), suspended it and recoloured it, saw the duplicate refused and DELETE answer 405, then removed its rows. `link-admin` run for aaptprep. No errors in the Lambda log. The page itself was not opened against dev |
 | P2 | **Correct a student's details:** the admin edits any detail of a registration at any status, including the email (the record moves to the new email, the old email stops working, the new address is emailed). Only changed fields are sent, and a taken email is refused | **Tested live** | 23 backend and 11 frontend tests. Browser check in the sandbox. On dev: registered a test student, approved, a bad edit was refused with both errors at once, the email was changed, the old email then said "not registered", and the test row was removed. No Lambda errors |
-| M4 | **Content and access (API):** PDF and MP4 upload into a course, and access for a student that ends when the course's access length runs out | Not started | |
+| M4 | **Content and access (API):** the admin adds PDF and MP4 files to a course (straight to S3, then checked), gives an approved student access (renewable, ends by the course's access length), and takes it away. A student sees their courses and opens a file through a 5-minute link | **Tested live** | 42 new backend tests (389 in all). On dev with real S3: a real PDF and MP4 were accepted, a fake PDF was removed from S3, a student had no access before the grant and got a working link after, a byte-range download returned 206, and a revoke closed the link. Test rows and files removed. No Lambda errors. No screens yet (F2, F3) |
 | M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | Not started | |
 | F2 | **Frontend: student** (course list, video and PDF viewers, payment page with screenshot upload) | Not started | |
 | F3 | **Frontend: tenant admin** (payments queue, content upload, payment QR and settings) | Not started | |
@@ -119,7 +119,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `347 passed`.
+You should see `389 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -248,8 +248,21 @@ In the sandbox, log in as `demo-admin@example.com` and open **Registrations**.
 
 The student's status stays as it was. A student's own **My profile** page comes with F2.
 
+### M4 (content and access): what to try
+Use the sandbox's API page, <http://localhost:8000/docs> (or 8001), with `X-Tenant` set to `demo`. There are no screens for this yet, and the sandbox has no real S3 upload target, so the **live** check below is the full one.
+
+**Part A: give access, no files needed.**
+1. Log in as `demo-admin@example.com` (code in the terminal), copy the token and click **Authorize**.
+2. **GET /api/courses** to copy a course id. **POST /api/admin/registrations/student@example.com/access** with `{"course_id": "..."}`. You should see `active: true` and `expires_at` set by the course's access length (`null` for unlimited).
+3. Try it on `pending@example.com`: **409**, "You can only give access to an approved student".
+4. **GET /api/admin/registrations/student@example.com/access** lists it. **DELETE** the same path with `/<course id>` ends it.
+
+**Part B: the student's view.** Log in as `student@example.com`, authorize with that token, and open **GET /api/my/courses**. The courses given in Part A appear, with their files. Opening a file without access gives **404**, "We couldn't find that file."
+
+**Part C: files, live on dev.** The upload goes from the browser straight to S3, so use the live API with a real file: **POST /api/admin/courses/{id}/files** with `{"filename": "notes.pdf", "size": <bytes>}` returns a signed form (`url` and `fields`). Post the file to it, then **POST .../files/{file id}/complete**. A real PDF or MP4 becomes `ready`. A renamed text file is refused ("isn't a real PDF") and removed. The screens for this come in F3.
+
 ### What you can't test yet
-Paying for a course and getting access (M5), and uploading content (M4).
+Paying for a course (M5), and any of the content and access screens (F2, F3).
 
 ## Real data to load into dev
 You asked for real data in the dev table, in place of my old test rows. These are the details you gave me.
@@ -290,7 +303,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 347 passed, 0 failed. Frontend: 156 passed, 0 failed. Total: 503.**
+**Backend, run on my machine: 389 passed, 0 failed. Frontend: 156 passed, 0 failed. Total: 545.**
 
 | Backend area | Tests |
 |---|---|
@@ -306,6 +319,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | M3 Review | 33 |
 | P1 Platform admin API (institutes: list, add, edit, replace admin, no delete, who may call it) | 59 |
 | P2 Correcting a student's details and email | 23 |
+| M4 Files, access and student links (including that a corrected email keeps access) | 42 |
 
 | Frontend area (F1) | Tests |
 |---|---|
