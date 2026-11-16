@@ -109,6 +109,10 @@ class RegistrationIn(BaseModel):
     course_id: str | None = None
 
 
+class RegistrationEditIn(RegistrationIn):
+    """The same fields as the form. Only the ones sent are changed."""
+
+
 class RegistrationReceivedOut(BaseModel):
     status: str
     message: str
@@ -132,6 +136,9 @@ class RegistrationOut(BaseModel):
     decided_by: str = ""
     decided_at: str = ""
     reason: str = ""
+    edited_by: str = ""
+    edited_at: str = ""
+    previous_email: str = ""
 
 
 class DecisionIn(BaseModel):

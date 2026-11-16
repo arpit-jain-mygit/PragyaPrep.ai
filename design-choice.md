@@ -25,6 +25,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 19. [Registration, payment review and course access (proposed)](#19-registration-payment-review-and-course-access-proposed)
 20. [Frontend (step F1)](#20-frontend-step-f1)
 21. [Platform admin page](#21-platform-admin-page)
+22. [Correcting a student's details](#22-correcting-a-students-details)
 
 ---
 
@@ -690,3 +691,30 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 - Institutes need several admins, or the platform needs several platform admins.
 - Billing or plans per institute are added.
+
+---
+
+## 22. Correcting a student's details
+
+**Status:** Built and tested (23 backend and 11 frontend tests, a real browser, and a live check on dev).
+
+**Chosen:** The institute admin can edit any detail of a registration, at any status, from the registrations page, including the email. A student's own editing comes later with their screens (F2).
+
+**Alternatives considered:** let the student re-register (loses the record and, later, payments and access), edit straight in the database (error-prone, and easy to miss the status index), and a separate "change email" action (two places to maintain the same checks).
+
+### 22.1 Decisions
+
+- **One endpoint, only changed fields.** The screen sends just what changed, and the server checks the merged record with the same rules as registration, reporting every mistake at once.
+- **The email is the key, so changing it moves the record.** The new row is written only if the email is free, then the old one is removed. A taken email is refused, and nothing changes. The old email's pending login code is removed, and its sessions stop because the person no longer exists under that email.
+- **The status is untouched.** A correction isn't a decision. Who edited and when, and the earlier email, are recorded on the record.
+- **The new address is emailed;** the old one is not, because a mistyped address may belong to a stranger.
+
+### 22.2 Trade-offs
+
+- A record has no history beyond the last edit and the earlier email. A full change log can come with payments.
+- Once payments and access exist, they must move with the email. That is why this was built before M5.
+
+### 22.3 Revisit when
+
+- M5 adds payments and M4 adds access: move those rows in the same step.
+- Students need to edit their own details after logging in.

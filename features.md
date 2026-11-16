@@ -89,6 +89,12 @@ The login page shows these messages straight away. When an email isn't registere
 - Upload and delete PDF and MP4 files in a course.
 - See and edit the tenant's own branding: display name, logo and primary colour.
 
+## Correcting a student's details
+- The tenant admin can edit any detail of a registration, at any status: name, birth date, gender, mobile, WhatsApp, address, city, PIN code, course and email.
+- Changing the email moves the student's record to the new email. The old email stops working, any session on it ends, and the new address gets an email. An email already used at the institute is refused.
+- Each edit records who made it and when. The status doesn't change.
+- Students editing their own contact details after login comes later, with their own screens.
+
 ## Platform admin
 - Created only by a script, never from the screens.
 - Has its own page at `/platform-admin`, after logging in at `/platform/login`.

@@ -163,8 +163,8 @@ class TenantRepo:
         email = member["email"].strip().lower()
         status = member.get("status", "pending")
         return {
-            **self._member_key(email),
             **member,
+            **self._member_key(email),
             "email": email,
             "GSI1PK": f"{self._prefix}MEMBERS#{status}",
             "GSI1SK": f"{member.get('created_at', '')}#{email}",
@@ -222,6 +222,12 @@ class TenantRepo:
                 return False
             raise
         return True
+
+    def move_member(self, old_email: str, member: dict) -> None:
+        """Give a person a new email. The email is part of the key, so this writes the row under the new key,
+        then removes the old one. Raises ConflictError if the new email is already in use."""
+        _put_new(self.table, self._member_item(member))
+        self.table.delete_item(Key=self._member_key(old_email))
 
     def replace_rejected_member(self, member: dict) -> bool:
         """Let someone whose registration was rejected register again. Replaces the old row only if it is still rejected."""

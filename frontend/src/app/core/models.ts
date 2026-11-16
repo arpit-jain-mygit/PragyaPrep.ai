@@ -64,7 +64,13 @@ export interface Registration {
   decided_by: string;
   decided_at: string;
   reason: string;
+  edited_by?: string;
+  edited_at?: string;
+  previous_email?: string;
 }
+
+/** Only the fields that changed are sent. */
+export type RegistrationEdit = Partial<RegistrationForm>;
 
 export type DecisionAction = 'approve' | 'reject' | 'suspend' | 'reactivate';
 

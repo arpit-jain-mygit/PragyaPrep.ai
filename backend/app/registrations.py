@@ -283,3 +283,76 @@ def decide(
     elif action == "reject":
         email_sent = send_quietly(mailer, _rejected_email(tenant, updated, reason))
     return updated, email_sent
+
+
+# ---- Corrections by the admin ----
+
+EDITABLE = ("email", "first_name", "last_name", "birth_date", "gender", "mobile", "whatsapp", "address", "city", "pin_code", "course_id")
+
+
+def _email_changed_email(tenant: dict, record: dict) -> Email:
+    name = tenant["branding"]["display_name"]
+    return Email(
+        to=record["email"],
+        from_name=name,
+        subject=f"Your email with {name} was corrected",
+        body=(
+            f"Hello {record['first_name']},\n\n"
+            f"{name} has corrected the email address on your registration. It is now this address.\n"
+            "Please use it to log in. We'll send a 6-digit code each time you log in."
+        ),
+    )
+
+
+def edit(
+    scoped: TenantRepo, tenant: dict, mailer: Mailer, email: str, changes: dict, admin_email: str
+) -> tuple[dict, bool]:
+    """Correct a student's details, including their email. Only the fields in 'changes' are touched.
+
+    Every field is checked again with the rule used at registration. Returns (the registration, whether an email went out).
+    Raises RegistrationNotFound, or FormErrors (including when the new email already belongs to someone).
+    """
+    email = normalize_email(email)
+    person = scoped.get_member(email)
+    if person is None or person.get("role") != "student":
+        raise RegistrationNotFound()
+
+    changes = {name: value for name, value in changes.items() if name in EDITABLE + ("whatsapp_same_as_mobile",) and value is not None}
+    same = changes.get(
+        "whatsapp_same_as_mobile", "whatsapp" not in changes and person.get("whatsapp") == person.get("mobile")
+    )
+    form = {**person, **changes, "whatsapp_same_as_mobile": same}
+
+    # The student's own course is always allowed, even if the institute has since hidden it.
+    courses = {course["id"]: course for course in scoped.list_courses() if course.get("active", True) or course["id"] == person.get("course_id")}
+    taken = "Someone at this institute is already registered with that email."
+    try:
+        clean = validate_form(form, courses, clock.today_india())
+    except FormErrors as error:
+        # Say so about a taken email in the same pass, so the admin can fix everything in one go.
+        wanted = (changes.get("email") or "").strip().lower()
+        if "email" not in error.errors and wanted and wanted != email and scoped.get_member(wanted) is not None:
+            error.errors["email"] = taken
+        raise
+
+    new_email = clean["email"]
+    fields = {name: clean[name] for name in EDITABLE[1:] if clean.get(name) != person.get(name)}
+    if "course_id" in fields:
+        fields["course_name"] = courses[clean["course_id"]]["name"]
+
+    if new_email == email and not fields:
+        return person, False
+
+    audit = {"edited_by": admin_email, "edited_at": now_iso()}
+    if new_email == email:
+        scoped.update_member(email, **fields, **audit)
+        return scoped.get_member(email), False
+
+    moved = {**person, **fields, **audit, "email": new_email, "previous_email": email}
+    try:
+        scoped.move_member(email, moved)
+    except ConflictError:
+        raise FormErrors({"email": taken})
+    scoped.delete_otp(email)
+    updated = scoped.get_member(new_email)
+    return updated, send_quietly(mailer, _email_changed_email(tenant, updated))

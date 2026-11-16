@@ -26,6 +26,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | M3 | **Course list, registration and admin review:** each institute's courses (fee and access length), the registration form with checks, the admin's queue to approve, reject, suspend and reactivate, and the emails | **Tested live** | 263 automated tests pass (133 of them new for M3). On the live dev API I registered a test student, approved, suspended and reactivated them, and removed them again. CLAT, IPMAT and CAT are loaded into aaptprep |
 | F1 | **Frontend slice:** each institute's branding, the registration page, the login page (emailed code and status messages), the admin's review queue, the admin's course list, and a student home page | **Tested live** | 112 automated tests pass. I drove every screen in a real browser against the sandbox, then against the live dev API (registered a test student, approved it, and removed it). The browser found three problems that I fixed |
 | P1 | **Platform admin page** (`/platform-admin`): the platform admin views, adds and edits institutes and their one admin (name, colour, active or suspended, admin name and email). No delete. The platform admin itself is still created only by script | **Tested live** | 59 backend and 25 frontend tests. Driven in a real browser against the sandbox. Deployed to dev: with a short-lived platform-admin token I created a test institute (welcome email sent), suspended it and recoloured it, saw the duplicate refused and DELETE answer 405, then removed its rows. `link-admin` run for aaptprep. No errors in the Lambda log. The page itself was not opened against dev |
+| P2 | **Correct a student's details:** the admin edits any detail of a registration at any status, including the email (the record moves to the new email, the old email stops working, the new address is emailed). Only changed fields are sent, and a taken email is refused | **Tested live** | 23 backend and 11 frontend tests. Browser check in the sandbox. On dev: registered a test student, approved, a bad edit was refused with both errors at once, the email was changed, the old email then said "not registered", and the test row was removed. No Lambda errors |
 | M4 | **Content and access (API):** PDF and MP4 upload into a course, and access for a student that ends when the course's access length runs out | Not started | |
 | M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | Not started | |
 | F2 | **Frontend: student** (course list, video and PDF viewers, payment page with screenshot upload) | Not started | |
@@ -118,7 +119,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `324 passed`.
+You should see `347 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -233,6 +234,20 @@ In the sandbox (same two terminals as above), open <http://localhost:4200/platfo
 
 Live: run `ng serve --configuration live`, open `/platform/login`, and sign in as Arpit (`sachin.arpit@gmail.com`). The older `aaptprep` record shows "No admin on record" until `link-admin --slug aaptprep --email sachin.arpit.learning@gmail.com` has been run once against dev.
 
+### P2 (correct a student's details): what to try
+In the sandbox, log in as `demo-admin@example.com` and open **Registrations**.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Click **Edit** on a student | A form filled with what they gave |
+| 2 | Change the city and click **Save** | "Saved ...", and the new city in **Show details**, with "Last edit by you" |
+| 3 | Type a bad mobile such as `555` and an email that is already used, then save | A red message under each wrong field. The form stays open |
+| 4 | Fix the mobile, type a new email | A yellow note: the old email will stop working and the new address gets an email |
+| 5 | Click **Save and change email** | "Their email is now ...". The email appears in Terminal 1. **Show details** lists the earlier email |
+| 6 | Try to log in with the old email | "isn't registered". The new one gets a code |
+
+The student's status stays as it was. A student's own **My profile** page comes with F2.
+
 ### What you can't test yet
 Paying for a course and getting access (M5), and uploading content (M4).
 
@@ -275,7 +290,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 324 passed, 0 failed. Frontend: 145 passed, 0 failed. Total: 469.**
+**Backend, run on my machine: 347 passed, 0 failed. Frontend: 156 passed, 0 failed. Total: 503.**
 
 | Backend area | Tests |
 |---|---|
@@ -290,6 +305,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | M3 Registration | 65 |
 | M3 Review | 33 |
 | P1 Platform admin API (institutes: list, add, edit, replace admin, no delete, who may call it) | 59 |
+| P2 Correcting a student's details and email | 23 |
 
 | Frontend area (F1) | Tests |
 |---|---|
@@ -300,6 +316,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Admin courses: list, add (all three access types), edit, hide, refused changes | 12 |
 | Page frame, student home, start page, not found: links by role, sign out, unknown or switched-off institute | 18 |
 | Platform admin page: list, add, edit, admin replacement warning, errors, no delete | 25 |
+| Admin registrations: editing a student (form, only changed fields, email warning, field errors) | 11 |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

@@ -16,6 +16,7 @@ import {
   InstituteUpdate,
   Member,
   Registration,
+  RegistrationEdit,
   RegistrationForm,
   Session,
   TenantInfo,
@@ -106,6 +107,10 @@ export class ApiService {
     // The email goes in the address, so characters like + must be escaped.
     const path = `/api/admin/registrations/${encodeURIComponent(email)}/${action}`;
     return this.post(path, action === 'reject' ? { reason: reason ?? '' } : {});
+  }
+
+  editRegistration(email: string, changes: RegistrationEdit): Promise<DecisionResult> {
+    return this.patch(`/api/admin/registrations/${encodeURIComponent(email)}`, changes);
   }
 
   adminCourses(): Promise<AdminCourse[]> {

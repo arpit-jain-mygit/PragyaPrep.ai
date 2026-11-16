@@ -74,7 +74,7 @@ describe('Admin registrations page', () => {
   it('offers Approve and Reject for a pending registration only', async () => {
     const { fixture } = await open();
     const labels = all(fixture, 'article button').map((b) => b.textContent?.trim());
-    expect(labels).toEqual(['Show details', 'Approve', 'Reject']);
+    expect(labels).toEqual(['Show details', 'Edit', 'Approve', 'Reject']);
   });
 
   it('approves, tells the admin an email went out, and refreshes the list', async () => {
@@ -149,12 +149,12 @@ describe('Admin registrations page', () => {
     ['suspended', 'Reactivate'],
   ] as const)('offers %s people the %s button', async (status, button) => {
     const { fixture } = await open([registration({ status })]);
-    expect(all(fixture, 'article button').map((b) => b.textContent?.trim())).toEqual(['Show details', button]);
+    expect(all(fixture, 'article button').map((b) => b.textContent?.trim())).toEqual(['Show details', 'Edit', button]);
   });
 
   it('offers Approve for a rejected registration, and shows the reason given', async () => {
     const { fixture } = await open([registration({ status: 'rejected', reason: 'Blurry details', decided_by: 'ritesh@example.com', decided_at: '2027-01-15T08:00:00+00:00' })]);
-    expect(all(fixture, 'article button').map((b) => b.textContent?.trim())).toEqual(['Show details', 'Approve']);
+    expect(all(fixture, 'article button').map((b) => b.textContent?.trim())).toEqual(['Show details', 'Edit', 'Approve']);
     clickButton(fixture, 'Show details');
     await settle(fixture);
     expect(text(fixture)).toContain('Blurry details');
@@ -200,5 +200,152 @@ describe('Admin registrations page', () => {
     );
     await settle(fixture);
     expect(text(fixture)).toContain("You don't have access to this.");
+  });
+});
+
+const COURSES = [
+  { id: 'c1', name: 'CLAT', fee: 10000, access: { type: 'unlimited' }, active: true, created_at: '' },
+  { id: 'c2', name: 'CAT', fee: 12000, access: { type: 'unlimited' }, active: true, created_at: '' },
+];
+
+/** Open the edit form on the first registration, answering the course list the form needs. */
+async function openEdit(initial: unknown[] = [registration()]) {
+  const env = await open(initial);
+  clickButton(env.fixture, 'Edit');
+  env.http.expectOne(`${API}/api/admin/courses`).flush(COURSES);
+  await settle(env.fixture);
+  return env;
+}
+
+describe('Admin registrations: editing a student', () => {
+  it('opens a form filled with what the student gave', async () => {
+    const { fixture } = await openEdit();
+    expect(el<HTMLInputElement>(fixture, '#e-email').value).toBe('meera@example.com');
+    expect(el<HTMLInputElement>(fixture, '#e-first_name').value).toBe('Meera');
+    expect(el<HTMLInputElement>(fixture, '#e-city').value).toBe('Noida');
+    expect(el<HTMLInputElement>(fixture, '#e-same').checked).toBe(true);
+    expect(all(fixture, '#e-course_id option').map((o) => o.textContent?.trim())).toEqual(['CLAT', 'CAT']);
+  });
+
+  it('fetches the course list only the first time', async () => {
+    const { fixture, http } = await openEdit();
+    clickButton(fixture, 'Cancel');
+    await settle(fixture);
+    clickButton(fixture, 'Edit');
+    await settle(fixture);
+    http.expectNone(`${API}/api/admin/courses`);
+    expect(el(fixture, '#e-email')).toBeTruthy();
+  });
+
+  it('sends only the fields that changed', async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#e-city', 'Delhi');
+    clickButton(fixture, 'Save');
+    const request = http.expectOne(`${API}/api/admin/registrations/meera%40example.com`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ city: 'Delhi' });
+    request.flush({ registration: registration({ city: 'Delhi' }), email_sent: false });
+    await settle(fixture);
+    answerReload(http, 'pending', [registration({ city: 'Delhi' })]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Saved Meera Kapoor.');
+    expect(all(fixture, '#e-city').length).toBe(0); // the form closed
+  });
+
+  it('says nothing was saved when nothing changed, without calling the API', async () => {
+    const { fixture, http } = await openEdit();
+    clickButton(fixture, 'Save');
+    await settle(fixture);
+    http.expectNone(`${API}/api/admin/registrations/meera%40example.com`);
+    expect(text(fixture)).toContain('No changes to Meera Kapoor.');
+  });
+
+  it('warns before an email change, and sends it with the new address', async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#e-email', ' new.meera@example.com ');
+    await settle(fixture);
+    expect(text(fixture)).toContain('new.meera@example.com');
+    expect(text(fixture)).toContain('meera@example.com will stop working');
+    await settle(fixture);
+    clickButton(fixture, 'Save and change email');
+    const request = http.expectOne(`${API}/api/admin/registrations/meera%40example.com`);
+    expect(request.request.body).toEqual({ email: 'new.meera@example.com' });
+    request.flush({ registration: registration({ email: 'new.meera@example.com' }), email_sent: true });
+    await settle(fixture);
+    answerReload(http, 'pending', [registration({ email: 'new.meera@example.com' })]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Their email is now new.meera@example.com, and we emailed it.');
+  });
+
+  it('warns when the email was changed but the message could not be sent', async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#e-email', 'new.meera@example.com');
+    await settle(fixture);
+    clickButton(fixture, 'Save and change email');
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).flush({
+      registration: registration({ email: 'new.meera@example.com' }), email_sent: false,
+    });
+    await settle(fixture);
+    answerReload(http, 'pending', []);
+    await settle(fixture);
+    expect(text(fixture)).toContain('could not be sent');
+    expect(el(fixture, '.alert').className).toContain('warn');
+  });
+
+  it('shows the server\'s message under each wrong field, keeps the form open, and clears one as it is fixed', async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#e-mobile', '555');
+    type(fixture, '#e-email', 'taken@example.com');
+    await settle(fixture);
+    clickButton(fixture, 'Save and change email');
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).flush(
+      { detail: 'Please correct the marked fields.', errors: { mobile: 'Enter a 10-digit Indian mobile number.', email: 'Someone at this institute is already registered with that email.' } },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    await settle(fixture);
+    expect(text(fixture)).toContain('Please correct the marked fields.');
+    expect(text(fixture)).toContain('Enter a 10-digit Indian mobile number.');
+    expect(text(fixture)).toContain('already registered with that email');
+    expect(el<HTMLInputElement>(fixture, '#e-mobile').value).toBe('555'); // nothing typed was lost
+
+    type(fixture, '#e-mobile', '9123456789');
+    await settle(fixture);
+    expect(text(fixture)).not.toContain('Enter a 10-digit Indian mobile number.');
+    expect(text(fixture)).toContain('already registered with that email');
+  });
+
+  it('can make the WhatsApp number different from the mobile', async () => {
+    const { fixture, http } = await openEdit();
+    el<HTMLInputElement>(fixture, '#e-same').click();
+    await settle(fixture);
+    type(fixture, '#e-whatsapp', '9000000001');
+    clickButton(fixture, 'Save');
+    expect(http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).request.body).toEqual({ whatsapp: '9000000001' });
+  });
+
+  it('changes the course', async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#e-course_id', 'c2');
+    clickButton(fixture, 'Save');
+    expect(http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).request.body).toEqual({ course_id: 'c2' });
+  });
+
+  it('closes the form on Cancel without saving', async () => {
+    const { fixture, http } = await openEdit();
+    type(fixture, '#e-city', 'Delhi');
+    clickButton(fixture, 'Cancel');
+    await settle(fixture);
+    http.expectNone(`${API}/api/admin/registrations/meera%40example.com`);
+    expect(all(fixture, '#e-city').length).toBe(0);
+  });
+
+  it('shows who last edited, and the earlier email, in the details', async () => {
+    const { fixture } = await open([
+      registration({ edited_by: 'ritesh@example.com', edited_at: '2027-01-16T08:00:00+00:00', previous_email: 'old@example.com' }),
+    ]);
+    clickButton(fixture, 'Show details');
+    await settle(fixture);
+    expect(text(fixture)).toContain('by ritesh@example.com');
+    expect(text(fixture)).toContain('old@example.com');
   });
 });

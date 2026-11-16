@@ -17,7 +17,7 @@ from app.deps import (
 from app.limits import TooManyRequests
 from app.mailer import Mailer
 from app.repo import Repo, TenantRepo
-from app.schemas import DecisionIn, DecisionOut, RegistrationIn, RegistrationOut, RegistrationReceivedOut
+from app.schemas import DecisionIn, DecisionOut, RegistrationEditIn, RegistrationIn, RegistrationOut, RegistrationReceivedOut
 from app.tenants import ValidationError
 
 router = APIRouter(tags=["registration"])
@@ -123,3 +123,28 @@ def reactivate(
 ):
     """Let a suspended student back in."""
     return _decision("reactivate", email, None, tenant, scoped, mailer, admin)
+
+
+@router.patch("/api/admin/registrations/{email}", response_model=DecisionOut)
+def edit_registration(
+    email: str,
+    body: RegistrationEditIn,
+    tenant: dict = Depends(get_tenant),
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    mailer: Mailer = Depends(get_mailer),
+    admin: dict = Depends(require_roles(TENANT_ADMIN)),
+):
+    """Correct a student's details, including their email, at any status. Send only what changed."""
+    try:
+        person, email_sent = registrations.edit(
+            scoped, tenant, mailer, email, body.model_dump(exclude_unset=True), admin["email"]
+        )
+    except registrations.RegistrationNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that registration.")
+    except registrations.FormErrors as error:
+        return JSONResponse(
+            status_code=422, content={"detail": "Please correct the marked fields.", "errors": error.errors}
+        )
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return DecisionOut(registration=RegistrationOut.model_validate(person), email_sent=email_sent)

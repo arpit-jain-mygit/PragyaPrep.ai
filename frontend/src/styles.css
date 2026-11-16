@@ -182,3 +182,5 @@ tr:last-child td { border-bottom: 0; }
 /* A small dot showing an institute's colour. */
 .swatch { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.2); vertical-align: -0.1rem; margin-right: 0.4rem; }
 input[type='color'] { width: 3.2rem; height: 2.3rem; padding: 0.15rem; border: 1px solid #c8ccd4; border-radius: 8px; background: #fff; cursor: pointer; }
+
+.edit { margin-top: 0.75rem; }
