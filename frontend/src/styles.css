@@ -184,3 +184,8 @@ tr:last-child td { border-bottom: 0; }
 input[type='color'] { width: 3.2rem; height: 2.3rem; padding: 0.15rem; border: 1px solid #c8ccd4; border-radius: 8px; background: #fff; cursor: pointer; }
 
 .edit { margin-top: 0.75rem; }
+.player { width: 100%; max-height: 70vh; margin-top: 0.75rem; background: #000; border-radius: 8px; }
+progress { height: 0.9rem; }
+.access { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+.access h3 { font-size: 1rem; margin: 0 0 0.5rem; }
+.access-row { padding: 0.35rem 0; }

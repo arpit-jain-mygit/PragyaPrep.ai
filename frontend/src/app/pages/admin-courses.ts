@@ -1,8 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { describeAccess, formatFee } from '../core/format';
 import { Access, AdminCourse, ApiError } from '../core/models';
+import { TenantService } from '../core/tenant.service';
 
 interface Draft {
   name: string;
@@ -36,7 +38,7 @@ function accessFrom(draft: Draft): Access {
 /** The institute's courses: what appears in the registration dropdown, with each one's fee and access length. */
 @Component({
   selector: 'app-admin-courses',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <h1>Courses</h1>
     <p class="muted">These are the courses students can choose when they register. Hidden courses don't appear in the list.</p>
@@ -104,6 +106,7 @@ function accessFrom(draft: Draft): Access {
                   <td><span class="chip" [class]="'chip ' + (course.active ? 'open' : 'hidden')">{{ course.active ? 'open' : 'hidden' }}</span></td>
                   <td>
                     <div class="row">
+                      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'admin', 'courses', course.id, 'files']">Files</a>
                       <button class="btn secondary small" type="button" (click)="startEdit(course)">Edit</button>
                       <button class="btn secondary small" type="button" [disabled]="saving()" (click)="toggleActive(course)">
                         {{ course.active ? 'Hide' : 'Show' }}
@@ -162,6 +165,7 @@ function accessFrom(draft: Draft): Access {
 })
 export class AdminCourses implements OnInit {
   private readonly api = inject(ApiService);
+  readonly tenants = inject(TenantService);
 
   readonly courses = signal<AdminCourse[]>([]);
   readonly loading = signal(false);

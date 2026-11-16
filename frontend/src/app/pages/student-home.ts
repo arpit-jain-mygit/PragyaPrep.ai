@@ -1,11 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { ApiError, Member } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 
-/** A student's home page. Courses, payment and content arrive in the next steps. */
+/** A student's home page, with a way into their courses. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
+  imports: [RouterLink],
   template: `
     <div class="card narrow" style="margin-inline: auto">
       @if (error(); as problem) {
@@ -15,9 +17,10 @@ import { TenantService } from '../core/tenant.service';
         <h1>Welcome, {{ m.first_name }}</h1>
         <p class="muted">You are signed in as {{ m.email }}.</p>
         <div class="alert ok" role="status">Your registration with {{ tenants.info()?.branding?.display_name }} is approved.</div>
-        <h2>What's next</h2>
-        <p>Soon you'll be able to pay for your course here, upload your payment screenshot, and then watch videos and read PDFs.</p>
-        <p class="muted small">These parts are being built. For now, you can see that your login works.</p>
+        <h2>Your courses</h2>
+        <p>Watch videos and read PDFs for the courses you have access to.</p>
+        <a class="btn" [routerLink]="['/', tenants.slug(), 'courses']">Go to my courses</a>
+        <p class="muted small" style="margin-top: 1rem">Paying for a course from here is coming soon. Until then, your institute gives you access.</p>
       } @else if (!error()) {
         <p class="muted">Loading…</p>
       }

@@ -27,6 +27,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 21. [Platform admin page](#21-platform-admin-page)
 22. [Correcting a student's details](#22-correcting-a-students-details)
 23. [Course content and access (step M4)](#23-course-content-and-access-step-m4)
+24. [Content screens (step F2a)](#24-content-screens-step-f2a)
 
 ---
 
@@ -753,3 +754,36 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 - M5 adds payments: a verified payment calls the same grant, with the source set to payment.
 - Videos are large or students are on weak connections: resumable uploads and adaptive streaming.
 - Content needs ordering, sections or free previews.
+
+---
+
+## 24. Content screens (step F2a)
+
+**Status:** Built and tested (34 tests, and a live check in a real browser against dev with real S3).
+
+**Chosen:** Three screens for M4: a **Files** page for each course (admin), a **Course access** section on an approved student's details (admin), and **My courses** (student). The student's page is a separate address (`/<institute>/courses`) with its own link in the top bar.
+
+**Alternatives considered:** a modal for uploads (hard to read progress and errors in, and awkward on a phone), a big separate admin area for access (access is about one student, so it belongs with their details), and a custom video player (the browser's own player already seeks, goes full screen and handles captions).
+
+### 24.1 Decisions
+
+- **The browser sends the file to S3 itself,** using the signed form from the API, with a plain `XMLHttpRequest` because it reports upload progress and `fetch` does not. Our sign-in header is never sent to S3. The screen does the three steps in order and shows the API's own message when any of them fails, such as "isn't a real PDF".
+- **The server is the judge,** as in registration: the page does not check file types itself, so the rules live in one place. The title fills itself from the file name until the admin types one.
+- **A file that failed in the middle stays visible as "not finished"** with an explanation, so the admin can delete it rather than wonder.
+- **Deleting asks first** ("Yes, delete" or "Keep") because it removes the file from storage for every student.
+- **Access is shown where the student is.** The list loads when the details are opened, and only for approved students, because only they can be given access.
+- **A PDF opens in a new tab and a video plays in the page.** The new tab is opened the instant the button is pressed, before the link is fetched, so browsers don't block it as a pop-up, and it can't reach back into our page. If a video's link runs out while it plays or while jumping around, the page fetches a new one and carries on from the same spot. It gives up after two tries, so a broken video can't loop forever.
+- **"Not found" means access ended.** The student is told plainly, and the list is refreshed.
+
+### 24.2 Trade-offs
+
+- **Uploads are one request per file.** A dropped connection means starting that file again. Resumable upload is worth adding for long lecture videos.
+- **No student-facing payment or "request access" yet.** Access is given by hand until M5.
+- **The video uses the browser's own controls.** No speed or quality choices beyond what the browser offers.
+- **A downloaded or shared PDF can still be copied** during its link's 5 minutes, as noted for M4.
+
+### 24.3 Revisit when
+
+- M5 arrives: the payment page goes on the student's side, and the payments queue on the admin's.
+- Videos are large: resumable uploads and a progress that survives a refresh.
+- Content needs order or sections: drag to reorder and group files.

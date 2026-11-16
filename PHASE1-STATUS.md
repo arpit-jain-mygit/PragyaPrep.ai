@@ -29,8 +29,9 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | P2 | **Correct a student's details:** the admin edits any detail of a registration at any status, including the email (the record moves to the new email, the old email stops working, the new address is emailed). Only changed fields are sent, and a taken email is refused | **Tested live** | 23 backend and 11 frontend tests. Browser check in the sandbox. On dev: registered a test student, approved, a bad edit was refused with both errors at once, the email was changed, the old email then said "not registered", and the test row was removed. No Lambda errors |
 | M4 | **Content and access (API):** the admin adds PDF and MP4 files to a course (straight to S3, then checked), gives an approved student access (renewable, ends by the course's access length), and takes it away. A student sees their courses and opens a file through a 5-minute link | **Tested live** | 42 new backend tests (389 in all). On dev with real S3: a real PDF and MP4 were accepted, a fake PDF was removed from S3, a student had no access before the grant and got a working link after, a byte-range download returned 206, and a revoke closed the link. Test rows and files removed. No Lambda errors. No screens yet (F2, F3) |
 | M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | Not started | |
-| F2 | **Frontend: student** (course list, video and PDF viewers, payment page with screenshot upload) | Not started | |
-| F3 | **Frontend: tenant admin** (payments queue, content upload, payment QR and settings) | Not started | |
+| F2a | **Content screens (the screens for M4):** the admin's **Files** page for each course (upload with progress, delete), **Course access** on a student's details (give, renew, remove), and the student's **My courses** page (PDFs open in a new tab, videos play on the page) | **Tested live** | 34 new frontend tests (190 in all). Driven in a real browser against dev with real S3: uploaded a real PDF and MP4 from the page, gave a test student access from the registrations screen, then as that student played the video (it played and seeking worked). Test files and student removed. No Lambda errors |
+| F2 | **Frontend: student, the rest** (the payment page with screenshot upload; the course list and viewers are done in F2a) | Not started | |
+| F3 | **Frontend: tenant admin, the rest** (payments queue and payment QR and settings; content upload and access are done in F2a) | Not started | |
 | M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | Not started | |
 | M7 | **Frontend hosting** (S3 and CloudFront) and allowed origins | Not started | |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
@@ -261,8 +262,35 @@ Use the sandbox's API page, <http://localhost:8000/docs> (or 8001), with `X-Tena
 
 **Part C: files, live on dev.** The upload goes from the browser straight to S3, so use the live API with a real file: **POST /api/admin/courses/{id}/files** with `{"filename": "notes.pdf", "size": <bytes>}` returns a signed form (`url` and `fields`). Post the file to it, then **POST .../files/{file id}/complete**. A real PDF or MP4 becomes `ready`. A renamed text file is refused ("isn't a real PDF") and removed. The screens for this come in F3.
 
+### F2a (content screens): what to try
+Use the live dev environment, because an upload goes to real S3. Start the screens against it:
+
+```bash
+cd /Users/arpit/Documents/claude/transcription-workspace/PragyaPrep.ai/frontend
+```
+
+```bash
+npx ng serve --configuration live
+```
+
+Open <http://localhost:4200/aaptprep/login> and log in as Ritesh (`sachin.arpit.learning@gmail.com`, code by email).
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | **Courses**, then **Files** on CLAT | "Files: CLAT" with an **Add a file** form |
+| 2 | Choose a PDF. The title fills itself in. Click **Upload** | A progress bar, then "Added ...", and the file listed as **ready** |
+| 3 | Rename a text file to `fake.pdf` and upload it | "That isn't a real PDF file, so it was removed." and no row |
+| 4 | Try a `.docx` | "Only PDF and MP4 files can be added." |
+| 5 | **Registrations**, **Approved** tab, **Show details** on an approved student | A **Course access** section. Choose CLAT, **Give or renew access** |
+| 6 | Sign out, and log in as that student (in a private window if you want both open) | **My courses** in the top bar |
+| 7 | Open **My courses** | CLAT with your files. **Open PDF** opens a new tab. **Play** plays the video on the page, and you can jump around in it |
+| 8 | As admin, **Remove** the student's access. As the student, reload **My courses** | The course is gone |
+| 9 | Delete the files you added, with **Delete** then **Yes, delete** | They disappear from the list and from storage |
+
+The origin `http://localhost:4200` must be in the bucket's allowed origins, which it is for dev. If you serve the screens from another address, add it to `cors_origins` in `dev.tfvars` and deploy, or uploads will fail in the browser.
+
 ### What you can't test yet
-Paying for a course (M5), and any of the content and access screens (F2, F3).
+Paying for a course (M5), and its screens (the rest of F2 and F3).
 
 ## Real data to load into dev
 You asked for real data in the dev table, in place of my old test rows. These are the details you gave me.
@@ -303,7 +331,7 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 389 passed, 0 failed. Frontend: 156 passed, 0 failed. Total: 545.**
+**Backend, run on my machine: 389 passed, 0 failed. Frontend: 190 passed, 0 failed. Total: 579.**
 
 | Backend area | Tests |
 |---|---|
@@ -331,6 +359,10 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 | Page frame, student home, start page, not found: links by role, sign out, unknown or switched-off institute | 18 |
 | Platform admin page: list, add, edit, admin replacement warning, errors, no delete | 25 |
 | Admin registrations: editing a student (form, only changed fields, email warning, field errors) | 11 |
+| F2a Admin files page (list, upload in three steps with progress, refusals, delete with a yes) | 12 |
+| F2a Course access on a student's details (show, give, remove, errors) | 7 |
+| F2a Student My courses (list, open a PDF, play a video, renew a link, give up on a broken video, access ended) | 10 |
+| F2a Upload service and size format | 5 |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

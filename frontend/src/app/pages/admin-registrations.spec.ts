@@ -349,3 +349,88 @@ describe('Admin registrations: editing a student', () => {
     expect(text(fixture)).toContain('old@example.com');
   });
 });
+
+describe('Admin registrations: course access', () => {
+  const approved = () => registration({ status: 'approved' });
+  const GIVEN = { course_id: 'c1', course_name: 'CLAT', granted_at: '2027-01-15T08:00:00+00:00', granted_by: 'ritesh@example.com', source: 'manual', expires_at: null, active: true };
+
+  async function openDetails(given: unknown[] = [GIVEN]) {
+    const env = await open([approved()]);
+    clickButton(env.fixture, 'Show details');
+    env.http.expectOne(`${API}/api/admin/courses`).flush(COURSES);
+    await settle(env.fixture);
+    env.http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush(given as object[]);
+    await settle(env.fixture);
+    return env;
+  }
+
+  it('shows an approved student what courses they have', async () => {
+    const { fixture } = await openDetails();
+    const content = text(fixture);
+    expect(content).toContain('Course access');
+    expect(content).toContain('CLAT');
+    expect(content).toContain('No end date');
+    expect(content).toContain('given by ritesh@example.com');
+    expect(all(fixture, '.access .chip.open').length).toBe(1);
+  });
+
+  it('says when they have none yet', async () => {
+    const { fixture } = await openDetails([]);
+    expect(text(fixture)).toContain('No courses yet.');
+  });
+
+  it('shows an ended course as ended', async () => {
+    const { fixture } = await openDetails([{ ...GIVEN, expires_at: '2027-02-01T23:59:59+05:30', active: false }]);
+    expect(text(fixture)).toContain('Ended 1 Feb 2027');
+    expect(all(fixture, '.access .chip.hidden').length).toBe(1);
+  });
+
+  it('has no access section for a student who is not approved', async () => {
+    const { fixture } = await open([registration()]);
+    clickButton(fixture, 'Show details');
+    await settle(fixture);
+    expect(all(fixture, '.access').length).toBe(0);
+  });
+
+  it('gives access to the chosen course and shows it', async () => {
+    const { fixture, http } = await openDetails([]);
+    expect(el<HTMLButtonElement>(fixture, '.access .btn:not(.danger)').disabled).toBe(true); // nothing chosen yet
+    type(fixture, '.access select', 'c2');
+    await settle(fixture);
+    clickButton(fixture, 'Give or renew access');
+    const request = http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ course_id: 'c2' });
+    request.flush({ ...GIVEN, course_id: 'c2', course_name: 'CAT' });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush([{ ...GIVEN, course_id: 'c2', course_name: 'CAT' }]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Gave Meera access.');
+    expect(text(fixture)).toContain('CAT');
+  });
+
+  it('removes a course', async () => {
+    const { fixture, http } = await openDetails();
+    clickButton(fixture, 'Remove');
+    const request = http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access/c1`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush([]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Removed CLAT from Meera.');
+    expect(text(fixture)).toContain('No courses yet.');
+  });
+
+  it("shows the API's reason when access can't be given", async () => {
+    const { fixture, http } = await openDetails([]);
+    type(fixture, '.access select', 'c1');
+    await settle(fixture);
+    clickButton(fixture, 'Give or renew access');
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush(
+      { detail: "This course's end date has passed. Change its access length first." }, { status: 409, statusText: 'Conflict' },
+    );
+    await settle(fixture);
+    expect(text(fixture)).toContain("end date has passed");
+  });
+});

@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { GENDER_LABELS, formatDate, formatDateTime } from '../core/format';
-import { AdminCourse, ApiError, DecisionAction, Registration, RegistrationEdit } from '../core/models';
+import { AdminCourse, ApiError, CourseAccess, DecisionAction, Registration, RegistrationEdit } from '../core/models';
 
 interface Draft {
   email: string; first_name: string; last_name: string; birth_date: string; gender: string; mobile: string;
@@ -73,6 +73,39 @@ interface Notice {
             @if (person.edited_by) { <dt>Last edit</dt><dd>by {{ person.edited_by }}, {{ when(person.edited_at ?? '') }}</dd> }
             @if (person.previous_email) { <dt>Earlier email</dt><dd>{{ person.previous_email }}</dd> }
           </dl>
+          @if (person.status === 'approved') {
+            <div class="access" [attr.data-access]="person.email">
+              <h3>Course access</h3>
+              @if (accessNotice(); as n) {
+                @if (n.email === person.email) { <div class="alert" [class]="'alert ' + n.kind" role="status">{{ n.text }}</div> }
+              }
+              @if (access()[person.email]; as given) {
+                @for (item of given; track item.course_id) {
+                  <div class="row spread access-row">
+                    <div>
+                      <strong>{{ item.course_name }}</strong>
+                      <span class="chip" [class]="'chip ' + (item.active ? 'open' : 'hidden')">{{ item.active ? 'active' : 'ended' }}</span>
+                      <div class="muted small">{{ item.expires_at ? (item.active ? 'Ends ' : 'Ended ') + date(item.expires_at) : 'No end date' }} &middot; given by {{ item.granted_by }}</div>
+                    </div>
+                    <button class="btn danger small" type="button" [disabled]="busy() === person.email" (click)="takeAway(person, item)">Remove</button>
+                  </div>
+                } @empty {
+                  <p class="muted small">No courses yet.</p>
+                }
+              } @else {
+                <p class="muted small">Loading…</p>
+              }
+              <div class="row">
+                <label class="sr-only" [attr.for]="'give-' + person.email">Course to give</label>
+                <select [id]="'give-' + person.email" name="give" [(ngModel)]="giveCourse">
+                  <option value="">Choose a course…</option>
+                  @for (course of courses(); track course.id) { <option [value]="course.id">{{ course.name }}</option> }
+                </select>
+                <button class="btn small" type="button" [disabled]="!giveCourse || busy() === person.email" (click)="give(person)">Give or renew access</button>
+              </div>
+              <p class="hint">Access lasts as long as the course says. Giving it again starts the length again.</p>
+            </div>
+          }
         }
 
         @if (editing() === person.email) {
@@ -211,6 +244,9 @@ export class AdminRegistrations implements OnInit {
   readonly editError = signal<string | null>(null);
   readonly fieldErrors = signal<Record<string, string>>({});
   readonly courses = signal<AdminCourse[]>([]);
+  readonly access = signal<Record<string, CourseAccess[]>>({});
+  readonly accessNotice = signal<{ email: string; kind: 'ok' | 'error'; text: string } | null>(null);
+  giveCourse = '';
   draft = emptyDraft();
 
   readonly date = formatDate;
@@ -247,8 +283,57 @@ export class AdminRegistrations implements OnInit {
 
   toggle(email: string): void {
     const next = new Set(this.open());
-    next.has(email) ? next.delete(email) : next.add(email);
+    if (next.has(email)) {
+      next.delete(email);
+    } else {
+      next.add(email);
+      const person = this.items().find((p) => p.email === email);
+      if (person?.status === 'approved') void this.openAccess(email);
+    }
     this.open.set(next);
+  }
+
+  /** Show what an approved student has. The course list for the "give" menu is fetched the first time. */
+  private async openAccess(email: string): Promise<void> {
+    this.giveCourse = '';
+    this.accessNotice.set(null);
+    try {
+      await this.ensureCourses();
+      const given = await this.api.studentAccess(email);
+      this.access.update((all) => ({ ...all, [email]: given }));
+    } catch (error) {
+      this.accessNotice.set({ email, kind: 'error', text: (error as ApiError).detail });
+    }
+  }
+
+  private async ensureCourses(): Promise<void> {
+    if (this.courses().length === 0) this.courses.set(await this.api.adminCourses());
+  }
+
+  async give(person: Registration): Promise<void> {
+    if (this.busy() || !this.giveCourse) return;
+    await this.changeAccess(person, `Gave ${person.first_name} access.`, () => this.api.giveAccess(person.email, this.giveCourse));
+    this.giveCourse = '';
+  }
+
+  async takeAway(person: Registration, item: CourseAccess): Promise<void> {
+    if (this.busy()) return;
+    await this.changeAccess(person, `Removed ${item.course_name} from ${person.first_name}.`, () => this.api.revokeAccess(person.email, item.course_id));
+  }
+
+  private async changeAccess(person: Registration, done: string, change: () => Promise<unknown>): Promise<void> {
+    this.busy.set(person.email);
+    this.accessNotice.set(null);
+    try {
+      await change();
+      const given = await this.api.studentAccess(person.email);
+      this.access.update((all) => ({ ...all, [person.email]: given }));
+      this.accessNotice.set({ email: person.email, kind: 'ok', text: done });
+    } catch (error) {
+      this.accessNotice.set({ email: person.email, kind: 'error', text: (error as ApiError).detail });
+    } finally {
+      this.busy.set(null);
+    }
   }
 
   startReject(email: string): void {
@@ -298,13 +383,11 @@ export class AdminRegistrations implements OnInit {
       gender: person.gender, mobile: person.mobile, same: person.whatsapp === person.mobile, whatsapp: person.whatsapp,
       address: person.address, city: person.city, pin_code: person.pin_code, course_id: person.course_id,
     };
-    if (this.courses().length === 0) {
-      try {
-        this.courses.set(await this.api.adminCourses());
-      } catch (error) {
-        this.notice.set({ kind: 'error', text: (error as ApiError).detail });
-        return;
-      }
+    try {
+      await this.ensureCourses();
+    } catch (error) {
+      this.notice.set({ kind: 'error', text: (error as ApiError).detail });
+      return;
     }
     this.editing.set(person.email);
   }

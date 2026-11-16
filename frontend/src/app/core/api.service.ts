@@ -6,15 +6,20 @@ import {
   Access,
   AdminCourse,
   ApiError,
+  CourseAccess,
+  CourseFile,
   CodeResult,
   Course,
   DecisionAction,
   DecisionResult,
+  FileLink,
+  FileStart,
   Institute,
   InstituteCreate,
   InstituteResult,
   InstituteUpdate,
   Member,
+  MyCourse,
   Registration,
   RegistrationEdit,
   RegistrationForm,
@@ -63,6 +68,10 @@ export class ApiService {
 
   private post<T>(path: string, body: unknown = {}): Promise<T> {
     return this.call(firstValueFrom(this.http.post<T>(this.base + path, body)));
+  }
+
+  private delete(path: string): Promise<void> {
+    return this.call(firstValueFrom(this.http.delete<void>(this.base + path)));
   }
 
   private patch<T>(path: string, body: unknown): Promise<T> {
@@ -126,6 +135,46 @@ export class ApiService {
     body: { name?: string; fee?: number; access?: Access; active?: boolean },
   ): Promise<AdminCourse> {
     return this.patch(`/api/admin/courses/${id}`, body);
+  }
+
+  // ---- Course files and access (admin) ----
+
+  courseFiles(courseId: string): Promise<CourseFile[]> {
+    return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/files`);
+  }
+
+  startUpload(courseId: string, body: { filename: string; size: number; title: string }): Promise<FileStart> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/files`, body);
+  }
+
+  finishUpload(courseId: string, fileId: string): Promise<CourseFile> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}/complete`);
+  }
+
+  deleteFile(courseId: string, fileId: string): Promise<void> {
+    return this.delete(`/api/admin/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}`);
+  }
+
+  studentAccess(email: string): Promise<CourseAccess[]> {
+    return this.get(`/api/admin/registrations/${encodeURIComponent(email)}/access`);
+  }
+
+  giveAccess(email: string, courseId: string): Promise<CourseAccess> {
+    return this.post(`/api/admin/registrations/${encodeURIComponent(email)}/access`, { course_id: courseId });
+  }
+
+  revokeAccess(email: string, courseId: string): Promise<void> {
+    return this.delete(`/api/admin/registrations/${encodeURIComponent(email)}/access/${encodeURIComponent(courseId)}`);
+  }
+
+  // ---- Student ----
+
+  myCourses(): Promise<MyCourse[]> {
+    return this.get('/api/my/courses');
+  }
+
+  fileLink(courseId: string, fileId: string): Promise<FileLink> {
+    return this.get(`/api/my/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}/link`);
   }
 
   // ---- Platform admin ----

@@ -2,14 +2,15 @@ import { HttpClient, HttpErrorResponse, HttpHeaders, provideHttpClient, withInte
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API, DEMO, sessionFor } from '../testing';
 import { toApiError } from './api.service';
-import { formatDate, formatFee, describeAccess } from './format';
+import { formatDate, formatFee, formatSize, describeAccess } from './format';
 import { adminGuard, platformGuard, signedInGuard } from './guards';
 import { apiInterceptor } from './interceptor';
 import { SessionService } from './session.service';
 import { TenantService, readableTextColor } from './tenant.service';
+import { UploadService } from './upload.service';
 
 describe('SessionService', () => {
   let sessions: SessionService;
@@ -260,6 +261,68 @@ describe('format helpers', () => {
     expect(formatDate('2005-03-14')).toBe('14 Mar 2005');
     expect(formatDate('')).toBe('');
     expect(formatDate('not a date')).toBe('not a date');
+  });
+});
+
+describe('formatSize', () => {
+  it('shows sizes in plain units', () => {
+    expect(formatSize(500)).toBe('500 B');
+    expect(formatSize(1536)).toBe('1.5 KB');
+    expect(formatSize(5 * 1024 * 1024)).toBe('5 MB');
+    expect(formatSize(300 * 1024 * 1024)).toBe('300 MB');
+    expect(formatSize(3 * 1024 ** 3)).toBe('3 GB');
+    expect(formatSize(null)).toBe('');
+  });
+});
+
+describe('UploadService', () => {
+  /** A stand-in for the browser's request object, so the test can decide how storage answers. */
+  class FakeRequest {
+    static last: FakeRequest;
+    upload: { onprogress?: (event: unknown) => void } = {};
+    onload?: () => void;
+    onerror?: () => void;
+    status = 204;
+    method = '';
+    url = '';
+    body?: FormData;
+    constructor() { FakeRequest.last = this; }
+    open(method: string, url: string) { this.method = method; this.url = url; }
+    send(body: FormData) { this.body = body; }
+  }
+
+  const form = { url: 'https://s3.example/upload', fields: { key: 'k', policy: 'p' } };
+
+  beforeEach(() => {
+    vi.stubGlobal('XMLHttpRequest', FakeRequest);
+    TestBed.configureTestingModule({});
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('posts the fields first and the file last, and reports progress', async () => {
+    const progress: number[] = [];
+    const sending = TestBed.inject(UploadService).send(form, new File(['x'], 'a.pdf'), (p) => progress.push(p));
+    const request = FakeRequest.last;
+    expect(request.method).toBe('POST');
+    expect(request.url).toBe(form.url);
+    expect([...request.body!.keys()]).toEqual(['key', 'policy', 'file']);
+    request.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 200 });
+    request.onload?.();
+    await sending;
+    expect(progress).toEqual([25]);
+  });
+
+  it('rejects with a plain message when storage refuses', async () => {
+    const sending = TestBed.inject(UploadService).send(form, new File(['x'], 'a.pdf'), () => undefined);
+    FakeRequest.last.status = 403;
+    FakeRequest.last.onload?.();
+    await expect(sending).rejects.toMatchObject({ status: 403, detail: 'The upload was refused. Please try again.' });
+  });
+
+  it('rejects with a plain message when the connection fails', async () => {
+    const sending = TestBed.inject(UploadService).send(form, new File(['x'], 'a.pdf'), () => undefined);
+    FakeRequest.last.onerror?.();
+    await expect(sending).rejects.toMatchObject({ status: 0 });
   });
 });
 

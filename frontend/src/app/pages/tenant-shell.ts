@@ -41,6 +41,7 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active">Courses</a>
               } @else {
                 <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active">Home</a>
+                <a [routerLink]="['/', info.slug, 'courses']" routerLinkActive="active">My courses</a>
               }
               <span class="who">{{ member()!.first_name }}</span>
               <button class="linklike" type="button" (click)="signOut()">Sign out</button>

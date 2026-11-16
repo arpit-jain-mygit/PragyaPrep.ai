@@ -35,7 +35,7 @@ export function registration(overrides: Partial<Registration> = {}): Registratio
 }
 
 /** Set up the test module the way the real app is wired, without the interceptor so the tests stay simple. */
-export function setupTestBed(options: { queryParams?: Record<string, string>; tenant?: boolean } = {}) {
+export function setupTestBed(options: { queryParams?: Record<string, string>; params?: Record<string, string>; tenant?: boolean } = {}) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -43,7 +43,12 @@ export function setupTestBed(options: { queryParams?: Record<string, string>; te
       provideHttpClientTesting(),
       {
         provide: ActivatedRoute,
-        useValue: { snapshot: { queryParamMap: convertToParamMap(options.queryParams ?? {}) } },
+        useValue: {
+          snapshot: {
+            queryParamMap: convertToParamMap(options.queryParams ?? {}),
+            paramMap: convertToParamMap(options.params ?? {}),
+          },
+        },
       },
     ],
   });

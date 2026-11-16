@@ -153,3 +153,52 @@ export interface InstituteUpdate {
   admin_email?: string;
 }
 
+
+// ---- Course files and access ----
+
+export interface CourseFile {
+  id: string;
+  course_id: string;
+  title: string;
+  kind: 'pdf' | 'mp4';
+  content_type: string;
+  size: number | null;
+  status: 'uploading' | 'ready';
+  created_at: string;
+}
+
+/** A signed form from the API: the file is posted to S3 with these fields, the file itself last. */
+export interface UploadForm {
+  url: string;
+  fields: Record<string, string>;
+}
+
+export interface FileStart {
+  file: CourseFile;
+  upload: UploadForm;
+}
+
+export interface CourseAccess {
+  course_id: string;
+  course_name: string;
+  granted_at: string;
+  granted_by: string;
+  source: string;
+  /** null means the access never ends. */
+  expires_at: string | null;
+  active: boolean;
+}
+
+export interface MyCourse {
+  id: string;
+  name: string;
+  expires_at: string | null;
+  files: CourseFile[];
+}
+
+export interface FileLink {
+  url: string;
+  expires_in: number;
+  content_type: string;
+  title: string;
+}
