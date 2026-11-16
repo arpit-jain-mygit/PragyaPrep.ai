@@ -20,7 +20,7 @@ def make_s3(settings: Settings):
 
 
 # Secret settings and the SSM parameter name that holds each one under the prefix.
-SECRET_SETTINGS = ("secret_key", "admin_password", "google_client_secret")
+SECRET_SETTINGS = ("secret_key",)
 
 
 def load_secrets(settings: Settings) -> Settings:

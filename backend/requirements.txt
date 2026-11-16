@@ -3,9 +3,7 @@ mangum
 boto3
 pydantic-settings
 pyjwt
-bcrypt
 httpx
-google-auth
 uvicorn[standard]
 pytest
 moto[dynamodb,s3]

@@ -18,9 +18,10 @@ class Settings(BaseSettings):
     dynamodb_endpoint: str | None = None
     s3_endpoint: str | None = None
 
-    # Signs login tokens. Must be overridden in production.
+    # Signs session tokens. Must be overridden in production.
     secret_key: str = "dev-only-change-me"
-    access_token_minutes: int = 60 * 12
+    # How long a signed-in session lasts before a new emailed code is needed (7 days).
+    session_minutes: int = 60 * 24 * 7
 
     # How long a download link and an upload form stay valid.
     file_url_seconds: int = 300
@@ -28,11 +29,18 @@ class Settings(BaseSettings):
     # S3 accepts a single presigned POST of up to 5 GB.
     max_upload_mb: int = 5120
 
-    admin_login_id: str = "admin"
-    admin_password: str = "change-me-now"
+    # Email. 'console' prints in the terminal, 'memory' keeps a list (tests), 'ses' sends with Amazon SES.
+    email_backend: str = "console"
+    email_sender: str = ""
 
-    google_client_id: str = ""
-    google_client_secret: str = ""
-    google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
+    # Login codes and their limits.
+    otp_ttl_seconds: int = 600  # a code works for 10 minutes
+    otp_max_attempts: int = 5  # wrong tries allowed per code
+    otp_resend_seconds: int = 30  # wait before asking for another code
+    otp_requests_per_hour: int = 5  # codes per email, per institute, per hour
+    ip_requests_per_hour: int = 20  # code requests from one connection per hour
+    ip_verifies_per_hour: int = 60  # code tries from one connection per hour
+    registrations_per_hour_per_ip: int = 10  # registration forms from one connection per hour
+
     frontend_url: str = "http://localhost:4200"
     cors_origins: list[str] = ["http://localhost:4200"]

@@ -2,7 +2,3 @@ fastapi
 mangum
 pydantic-settings
 pyjwt
-bcrypt
-httpx
-google-auth
-requests

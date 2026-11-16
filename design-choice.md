@@ -426,7 +426,7 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 ## 18. Registration approval and email OTP login (proposed)
 
-**Status:** Proposed, awaiting review. The code has not been changed yet. This replaces the ID + password and Google sign-in decisions in section 3.
+**Status:** The login itself is **built and deployed to dev (step M2)**; registration and approval (section 19) are not built yet. This replaces the ID + password and Google sign-in decisions in section 3.
 
 ### 18.1 The flow
 
@@ -469,7 +469,7 @@ For the best experience, the messages are shown straight away. A not-registered 
 
 - **Email delivery is now the login system.** If a code lands in spam or bounces, the student is locked out. This is the biggest operational risk. Sending from a verified domain fixes most of it, so a domain should come soon.
 - **Until a domain exists,** emails can only be sent from a single verified address (for example a Gmail address). That works for dev but has poor delivery and may land in spam.
-- **Amazon SES starts in "sandbox" mode,** where it only sends to verified addresses. Production access has to be requested from AWS and takes about a day.
+- **Amazon SES starts in "sandbox" mode** in a new account, where it only sends to verified addresses, and production access has to be requested (about a day). **This account already has production access** (enabled for another project), so mail can go to any address and only the sender needs verifying. A new account for prod would start in sandbox.
 - **The status messages reveal registration.** Anyone who types an email learns whether it is registered, pending, rejected or approved at that tenant. Rate limiting reduces bulk checking. Showing status only after the person proves they own the email would avoid this, but would mean sending codes to unapproved emails. Decided: show clear status messages straight away, for the best experience, with limits on how often an email can be tried. Revisit if probing becomes a problem.
 - **No password fallback.** A student who loses their mailbox can't log in until an admin changes the registered email, which needs an admin tool.
 - **A person with a shared or compromised mailbox** is exposed, because the email is the only proof of identity.
@@ -500,11 +500,24 @@ Amazon SES costs about $0.10 per 1,000 emails, so login codes and approval email
 - Students share mailboxes, or the institute wants stronger security: add a password or second factor.
 - A student loses their mailbox often: add an admin tool to change the registered email.
 
+### 18.9 As built (step M2)
+
+- **Endpoints:** `POST /api/auth/request-code`, `POST /api/auth/verify-code`, `GET /api/auth/me`. The institute comes from the `X-Tenant` header.
+- **Codes:** 6 digits, valid 10 minutes, one use. They are stored as a keyed hash (HMAC) tied to the institute and email, with a DynamoDB expiry so rows clear themselves.
+- **Limits, as built:** 30 seconds between codes for one email; 5 codes an hour per email per institute; 5 wrong tries per code; 20 code requests and 60 code tries per hour per connection. The connection is the address the platform reports, never a header such as `X-Forwarded-For`, which anyone can fake.
+- **Counters:** fixed hourly windows, counted in one step inside DynamoDB so two simultaneous requests can't both slip under a limit. Counter rows hold only a short fingerprint of an email or address, never the readable value, and they expire by themselves.
+- **Messages:** every status answers straight away with its own message, as decided. A refusal for too many requests says how long to wait.
+- **Sessions:** a signed token that carries the institute and role, lasting 7 days. It is rejected at any other institute, and as soon as the person is no longer approved, the institute is suspended, or the person is removed.
+- **Roles:** student, tenant admin and platform admin, with a reusable check that lets only the right role through.
+- **Email failures:** if the email can't be sent, the person gets a clear "try again" message, the unused code is removed, and no wait period is left behind. The cause is written to the log.
+- **Removed from AWS:** the old admin password and Google secret.
+- **Open item:** the sender is a Gmail address, so the first emails may land in Spam until a domain is verified.
+
 ---
 
 ## 19. Registration, payment review and course access (proposed)
 
-**Status:** Proposed, awaiting review. The code has not been changed yet. It extends section 18 and brings the manual payment flow, deferred earlier, into Phase 1.
+**Status:** Registration and the admin's review are **built and deployed to dev (step M3)**. Payments and access (19.4 and 19.10) are not built yet. It extends section 18 and brings the manual payment flow, deferred earlier, into Phase 1.
 
 **Confirmed by the owner:** each tenant manages its own course list; students under 18 can register; access length is configurable; a screenshot is enough as payment proof; and the login page shows clear status messages straight away.
 
@@ -594,3 +607,19 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 - Expiry is checked when something is opened, not by a background job, so nothing runs overnight. An expired student simply stops seeing the course. Signed file links already issued still work until they expire in 5 minutes.
 - A student whose access ends can pay again to renew. A reminder email before expiry is useful, but is not part of Phase 1.
 - Dates and times use one clock (UTC), so a "fixed date" means the end of that day in a set time zone. The tenant's time zone needs to be chosen (proposed: India Standard Time).
+
+### 19.11 As built (step M3): courses, registration and review
+
+- **Endpoints:**
+  - Public: `GET /api/courses` (the dropdown) and `POST /api/register`.
+  - Admin only: `GET`, `POST` and `PATCH /api/admin/courses`, `GET /api/admin/registrations`, and `POST /api/admin/registrations/{email}/approve | reject | suspend | reactivate`.
+- **Courses live with each institute.** A course has a name (unique ignoring capitals and extra spaces), a fee in whole rupees, an access length (unlimited, a number of days, or until a date) and an open or hidden flag. The dropdown shows open courses only, with just the id, name and fee. aaptprep starts with CLAT, IPMAT and CAT at 10000, unlimited.
+- **The form** checks every field and reports **all** mistakes together, field by field, so the page can mark them in one go. Mobile numbers accept `+91`, `91`, a leading `0`, spaces and dashes, and are saved as 10 digits. Birth dates must make the person 10 to 80 years old by the Indian calendar. The course must be an open course of that institute.
+- **A registration is a person row** (the same row that later becomes the student), with status `pending`, the form's details, and the course's name saved at that moment so a later rename doesn't change the record.
+- **Duplicates:** a pending, approved or suspended email, or the institute admin's, is refused with a message that says what to do next. A **rejected** student can register again, and the new form replaces the old one. Mistakes in the form are reported **before** anything about whether an email is known, so a bad form can't be used to check who is registered.
+- **Limits:** 10 registration forms an hour per connection.
+- **Decisions** move a registration between statuses in one safe step. Approve works from pending or rejected, reject from pending, suspend from approved, reactivate from suspended. Anything else is refused with a clear message, and two admins pressing a button at once can't both win. Each decision records who made it and when, and a rejection can carry a reason of up to 300 characters.
+- **Emails:** a receipt on registering, and an email on approval or rejection (with the reason). Suspending and reactivating send nothing. If an email can't be sent, the registration or decision still stands, and the admin's screen is told `email_sent: false`.
+- **The queue** lists students by status, newest first, using an index that follows each person's status. It returns up to 200 per status for now, which is plenty for one institute, and paging can come later.
+- **A suspended student's session ends at once,** because every request checks that the person is still approved.
+

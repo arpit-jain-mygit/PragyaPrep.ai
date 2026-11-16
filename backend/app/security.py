@@ -1,17 +1,7 @@
-"""Password hashing and signed tokens (JWT)."""
+"""Signed tokens (JWT). Used for sessions, and later for other short-lived signed values."""
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 import jwt
-
-
-def hash_password(password: str) -> str:
-    # bcrypt stores a salt inside the hash, so two equal passwords get different hashes.
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-
-def verify_password(password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
 def create_token(secret: str, subject: str, purpose: str, ttl_seconds: int, **claims) -> str:

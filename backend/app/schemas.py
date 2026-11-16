@@ -1,97 +1,143 @@
 """Request and response shapes. FastAPI uses these to validate input and hide internal fields."""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-# ---- Auth ----
-
-class LoginIn(BaseModel):
-    login_id: str = Field(min_length=1, max_length=64)
-    password: str = Field(min_length=1, max_length=72)
-
-
-class RegisterIn(BaseModel):
-    """Student self sign-up. The student picks their own ID and gives an email."""
-
-    login_id: str = Field(min_length=3, max_length=64)
-    full_name: str = Field(min_length=1, max_length=120)
-    email: str = Field(min_length=3, max_length=255)
-    password: str = Field(min_length=8, max_length=72)
+class BrandingOut(BaseModel):
+    display_name: str
+    primary_color: str
+    logo_url: str | None = None
 
 
-class GoogleCompleteIn(BaseModel):
-    """Finishes a first-time Google sign-in by choosing an ID."""
+class TenantPublicOut(BaseModel):
+    """What the login and registration pages need to look like the institute. Nothing private."""
 
-    signup_token: str
-    login_id: str = Field(min_length=3, max_length=64)
-    full_name: str = Field(min_length=1, max_length=120)
-
-
-class PasswordChangeIn(BaseModel):
-    current_password: str = Field(min_length=1, max_length=72)
-    new_password: str = Field(min_length=8, max_length=72)
+    slug: str
+    name: str
+    branding: BrandingOut
 
 
-class UserOut(BaseModel):
-    id: str
-    login_id: str
-    email: str | None = None
-    full_name: str
+# ---- Login by emailed code ----
+
+class RequestCodeIn(BaseModel):
+    email: str
+
+
+class RequestCodeOut(BaseModel):
+    """'status' is one of: code_sent, not_registered, pending, rejected, suspended. 'message' is ready to show."""
+
+    status: str
+    message: str
+
+
+class VerifyCodeIn(BaseModel):
+    email: str
+    code: str
+
+
+class MemberOut(BaseModel):
+    email: str
+    first_name: str
+    last_name: str = ""
     role: str
+    status: str
 
 
-class TokenOut(BaseModel):
+class SessionOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user: UserOut
+    expires_in: int
+    tenant: str
+    member: MemberOut
 
 
-# ---- Admin: users and grants ----
+# ---- Courses ----
 
-class PasswordResetIn(BaseModel):
-    password: str = Field(min_length=8, max_length=72)
+class AccessIn(BaseModel):
+    """How long a student keeps access after payment: type is 'unlimited', 'days' (with days) or 'until_date' (with until)."""
 
+    type: str = "unlimited"
+    days: int | None = None
+    until: str | None = None
 
-class GrantIn(BaseModel):
-    login_id: str = Field(min_length=1, max_length=64)
-
-
-# ---- Courses and content ----
 
 class CourseIn(BaseModel):
-    title: str = Field(min_length=1, max_length=160)
-    description: str = Field(default="", max_length=2000)
+    name: str
+    fee: int
+    access: AccessIn = AccessIn()
 
 
-class CourseOut(BaseModel):
+class CourseUpdateIn(BaseModel):
+    name: str | None = None
+    fee: int | None = None
+    access: AccessIn | None = None
+    active: bool | None = None
+
+
+class CoursePublicOut(BaseModel):
+    """What the registration dropdown needs."""
+
     id: str
-    title: str
-    description: str
+    name: str
+    fee: int
 
 
-class ContentUploadIn(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    filename: str = Field(min_length=1, max_length=255)
-    size_bytes: int = Field(gt=0)
-
-
-class UploadTicketOut(BaseModel):
-    content_id: str
-    upload: dict
-
-
-class ContentOut(BaseModel):
+class CourseAdminOut(BaseModel):
     id: str
-    course_id: str
-    title: str
-    kind: str
+    name: str
+    fee: int
+    access: dict
+    active: bool
+    created_at: str = ""
+
+
+# ---- Registration ----
+
+class RegistrationIn(BaseModel):
+    """The registration form. Every field is checked by hand, so all mistakes come back together, field by field."""
+
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    birth_date: str | None = None
+    gender: str | None = None
+    mobile: str | None = None
+    whatsapp_same_as_mobile: bool = False
+    whatsapp: str | None = None
+    address: str | None = None
+    city: str | None = None
+    pin_code: str | None = None
+    course_id: str | None = None
+
+
+class RegistrationReceivedOut(BaseModel):
     status: str
-    size_bytes: int
+    message: str
 
 
-class CourseDetailOut(CourseOut):
-    content_items: list[ContentOut]
+class RegistrationOut(BaseModel):
+    email: str
+    first_name: str = ""
+    last_name: str = ""
+    birth_date: str = ""
+    gender: str = ""
+    mobile: str = ""
+    whatsapp: str = ""
+    address: str = ""
+    city: str = ""
+    pin_code: str = ""
+    course_id: str = ""
+    course_name: str = ""
+    status: str
+    created_at: str = ""
+    decided_by: str = ""
+    decided_at: str = ""
+    reason: str = ""
 
 
-class FileUrlOut(BaseModel):
-    url: str
-    expires_in: int
+class DecisionIn(BaseModel):
+    reason: str | None = None
+
+
+class DecisionOut(BaseModel):
+    registration: RegistrationOut
+    email_sent: bool

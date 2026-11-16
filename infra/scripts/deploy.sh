@@ -49,10 +49,9 @@ if [ ! -f "$SECRETS_FILE" ]; then
     umask 077
     {
       echo "export TF_VAR_secret_key=$(openssl rand -hex 32)"
-      echo "export TF_VAR_admin_password=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-20)"
     } > "$SECRETS_FILE"
   )
-  echo "Created $SECRETS_FILE (holds the admin password). To keep existing logins valid, copy the old file here instead."
+  echo "Created $SECRETS_FILE (holds the session signing key). To keep existing sessions valid, copy the old file here instead."
 fi
 source "$SECRETS_FILE"
 

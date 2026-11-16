@@ -58,6 +58,12 @@ resource "aws_dynamodb_table" "main" {
   point_in_time_recovery {
     enabled = true
   }
+
+  # DynamoDB removes a row by itself once its 'ttl' time has passed. Login codes and rate counters use this.
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
 }
 
 # ---- Files: videos and PDFs ----
@@ -121,17 +127,17 @@ resource "aws_ssm_parameter" "secret_key" {
   value = var.secret_key
 }
 
-resource "aws_ssm_parameter" "admin_password" {
-  name  = "${local.ssm_prefix}/admin_password"
-  type  = "SecureString"
-  value = var.admin_password
+# ---- Email: Amazon SES sends the login codes ----
+
+# Every address here gets a verification email from AWS, and its owner must click the link once.
+# While the account is in the SES "sandbox", mail can only go to verified addresses.
+locals {
+  ses_addresses = toset(compact(concat([var.email_sender], var.ses_verified_emails)))
 }
 
-resource "aws_ssm_parameter" "google_client_secret" {
-  name = "${local.ssm_prefix}/google_client_secret"
-  type = "SecureString"
-  # SSM can't store an empty value. Google sign-in stays off while the client ID is empty.
-  value = var.google_client_secret == "" ? "not-set" : var.google_client_secret
+resource "aws_sesv2_email_identity" "address" {
+  for_each       = local.ses_addresses
+  email_identity = each.value
 }
 
 # ---- Lambda: the API ----
@@ -187,6 +193,12 @@ data "aws_iam_policy_document" "api" {
   }
 
   statement {
+    sid       = "SendEmail"
+    actions   = ["ses:SendEmail"]
+    resources = ["arn:aws:ses:${var.region}:${local.account_id}:identity/*"]
+  }
+
+  statement {
     sid       = "Secrets"
     actions   = ["ssm:GetParameter"]
     resources = ["arn:aws:ssm:${var.region}:${local.account_id}:parameter${local.ssm_prefix}/*"]
@@ -218,14 +230,14 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      PRAGYA_TABLE_NAME       = aws_dynamodb_table.main.name
-      PRAGYA_BUCKET_NAME      = aws_s3_bucket.content.bucket
-      PRAGYA_AWS_REGION       = var.region
-      PRAGYA_SSM_PREFIX       = local.ssm_prefix
-      PRAGYA_ADMIN_LOGIN_ID   = var.admin_login_id
-      PRAGYA_FRONTEND_URL     = var.frontend_url
-      PRAGYA_CORS_ORIGINS     = jsonencode(var.cors_origins)
-      PRAGYA_GOOGLE_CLIENT_ID = var.google_client_id
+      PRAGYA_TABLE_NAME    = aws_dynamodb_table.main.name
+      PRAGYA_BUCKET_NAME   = aws_s3_bucket.content.bucket
+      PRAGYA_AWS_REGION    = var.region
+      PRAGYA_SSM_PREFIX    = local.ssm_prefix
+      PRAGYA_FRONTEND_URL  = var.frontend_url
+      PRAGYA_CORS_ORIGINS  = jsonencode(var.cors_origins)
+      PRAGYA_EMAIL_BACKEND = "ses"
+      PRAGYA_EMAIL_SENDER  = var.email_sender
     }
   }
 

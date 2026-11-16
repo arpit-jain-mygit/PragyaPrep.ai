@@ -12,33 +12,19 @@ variable "secret_key" {
   sensitive   = true
 }
 
-variable "admin_password" {
-  description = "Password for the first admin account."
+variable "email_sender" {
+  description = "The address login codes are sent from. It must be verified in Amazon SES."
   type        = string
-  sensitive   = true
 }
 
-variable "admin_login_id" {
-  description = "Login ID of the first admin account."
-  type        = string
-  default     = "admin"
-}
-
-variable "google_client_id" {
-  description = "Google OAuth client ID. Leave empty to keep Google sign-in off."
-  type        = string
-  default     = ""
-}
-
-variable "google_client_secret" {
-  description = "Google OAuth client secret."
-  type        = string
-  sensitive   = true
-  default     = ""
+variable "ses_verified_emails" {
+  description = "Other addresses to verify in SES. While SES is in sandbox mode, mail can only go to verified addresses."
+  type        = list(string)
+  default     = []
 }
 
 variable "frontend_url" {
-  description = "Where the browser goes after Google sign-in."
+  description = "Where the website lives."
   type        = string
   default     = "http://localhost:4200"
 }
