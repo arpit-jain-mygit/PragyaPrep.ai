@@ -1,6 +1,6 @@
 # PragyaPrep: Design Choices
 
-Each entry records what we chose, what we turned down, and what it costs us. Parts marked **Proposed** come from the multi-tenancy, email login and registration changes (sections 17 to 19) and are awaiting review. No code has been changed for them yet. Where the owner has confirmed a decision, it says so. Dates are when the decision was made. Cost figures are approximate list prices for `ap-south-1` and should be rechecked in the AWS Pricing Calculator.
+Each entry records what we chose, what we turned down, and what it costs us. Sections 17 to 19 began as proposals and are now built (each has a status line saying which step built it). Payments and their review moved to Phase 2 on 17 Nov 2026. A few older sections still show a **Proposed** label on text that was written before the build, and the notes under them say what was done. Where the owner has confirmed a decision, it says so. Dates are when the decision was made. Cost figures are approximate list prices for `ap-south-1` and should be rechecked in the AWS Pricing Calculator.
 
 ## Contents
 
@@ -20,9 +20,9 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 14. [Cost summary](#14-cost-summary)
 15. [Known limits and when to revisit](#15-known-limits-and-when-to-revisit)
 16. [Account portability](#16-account-portability)
-17. [Multi-tenancy (proposed)](#17-multi-tenancy-proposed)
-18. [Registration approval and email OTP login (proposed)](#18-registration-approval-and-email-otp-login-proposed)
-19. [Registration, payment review and course access (proposed)](#19-registration-payment-review-and-course-access-proposed)
+17. [Multi-tenancy](#17-multi-tenancy)
+18. [Registration approval and email OTP login](#18-registration-approval-and-email-otp-login)
+19. [Registration, payment review and course access (payment review is Phase 2)](#19-registration-payment-review-and-course-access)
 20. [Frontend (step F1)](#20-frontend-step-f1)
 21. [Platform admin page](#21-platform-admin-page)
 22. [Correcting a student's details](#22-correcting-a-students-details)
@@ -81,7 +81,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 
 **Why:** ID + password keeps existing students onboardable later by their old IDs. Google gives a no-password option.
 
-**Proposed change:** login ID, email and Google account are unique within a tenant, not globally. A person at two tenants has two accounts, and a sign-in always happens for one tenant (section 17).
+**Change made (step M1):** login ID, email and Google account are unique within a tenant, not globally. A person at two tenants has two accounts, and a sign-in always happens for one tenant (section 17).
 
 **Trade-offs:**
 - The email on a password sign-up is **not verified**. Anyone can register with someone else's email. Add email verification (OTP) before relying on email for recovery.
@@ -186,7 +186,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 
 **Trade-offs:**
 - No joins or ad hoc queries. Every new feature needs its access patterns designed first.
-- Uniqueness (today: login ID, email, Google account and course title; under the proposed design: email and course title within a tenant) is enforced with separate lookup items, claimed one at a time with conditional writes, with undo if one clashes. DynamoDB transactions would be atomic, but the moto test library mishandled them, so they were not used. A crash between steps could leave a stray lookup item.
+- Uniqueness (email and course title within a tenant, since the multi-tenant change) is enforced with separate lookup items, claimed one at a time with conditional writes, with undo if one clashes. DynamoDB transactions would be atomic, but the moto test library mishandled them, so they were not used. A crash between steps could leave a stray lookup item.
 - Course lists are not paginated yet. Fine for a small catalogue.
 - Reporting or analytics will need exports or a second store.
 
@@ -199,7 +199,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 - **Download:** students receive a signed S3 link that works for 5 minutes for one file. S3 serves byte ranges, so video seeking works.
 - Pending uploads are hidden from students.
 - The S3 client uses the regional endpoint, so signed links point at the right host.
-- **Proposed:** file keys move under `tenants/<tenant>/content/...`, and payment screenshots under `tenants/<tenant>/payments/...`, so each tenant's files are separate.
+- **Built:** every file lives under its institute's own folder. Course files are `<institute>/courses/<course>/<file>` (section 23), logos are `<institute>/branding/<file>` (section 25), and payment screenshots will be `<institute>/payments/...` in Phase 2. The keys differ slightly from the first proposal (`tenants/<tenant>/content/...`) but keep the same rule: one folder per institute.
 
 **Alternatives considered:**
 - Upload through the API (blocked by Lambda size limits).
@@ -224,7 +224,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 
 **Why:** Standard SSM parameters are free, and secrets stay out of the Lambda configuration.
 
-**Proposed change:** the email OTP login (section 18) removes the Google client secret and the admin password. What remains is the session signing key. Amazon SES needs no stored secret, because the Lambda's IAM role sends the email.
+**Done:** the email OTP login (section 18) removed the Google client secret and the admin password. What remains is the session signing key. Amazon SES needs no stored secret, because the Lambda's IAM role sends the email.
 
 **Trade-offs:**
 - Secrets still end up in Terraform state, which is encrypted but sensitive.
@@ -247,7 +247,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 
 ## 13. Testing approach
 
-**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. 24 tests cover sign-up, login, password change, admin rules, grants, uploads and file checks. A live smoke test against dev covered the real S3 behaviour. **Proposed:** most of these tests will be rewritten for tenant isolation, emailed codes, registration and payment review.
+**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 419 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 200 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
 
 **Alternatives considered:** DynamoDB Local in Docker, or testing only against real AWS.
 
@@ -264,7 +264,8 @@ Each entry records what we chose, what we turned down, and what it costs us. Par
 | Dev, idle or light use | under $1 |
 | Video storage | $0.025 per GB |
 | Video downloads from S3 | about $0.11 per GB |
-| Email (proposed, Amazon SES) | about $0.10 per 1,000 emails |
+| Email (Amazon SES) | about $0.10 per 1,000 emails |
+| Website (S3 and CloudFront, step M7) | the app is a few hundred KB, so at this size it should sit inside CloudFront's free monthly allowance (recheck in the Pricing Calculator). Not measured yet |
 | Domain (when bought) | $10 to $60 per year, plus about $0.50 a month for DNS |
 
 Video downloads are the main driver. For example, 500 GB of downloads a month is roughly $40 to $45 without CloudFront.
@@ -275,8 +276,6 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 | Limit | Revisit when |
 |---|---|
-| Email on sign-up is unverified (current build; the proposed email OTP login in section 18 verifies it) | Before building the new login, or before relying on email for recovery |
-| No login rate limiting (current build; the proposed login design includes limits) | Before public launch |
 | 1 to 2 s cold start | Students complain, or traffic is steady (use provisioned concurrency or always-on compute) |
 | Files can be shared for 5 minutes | Piracy becomes a concern (CloudFront signed cookies, watermarking, DRM) |
 | S3 direct delivery cost | Monthly downloads pass about 100 GB (add CloudFront) |
@@ -285,16 +284,16 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 | `AdministratorAccess` for the CLI user | Setup settles (narrow the permissions) |
 | Backend and infra have no CI | Before a second contributor joins |
 | Prod environment does not exist yet | After the frontend is built |
-| **Proposed:** tenant isolation relies on our code, not on separate databases | Always: keep the isolation tests, and revisit if a tenant needs a contractual guarantee |
-| **Proposed:** one busy tenant can use capacity others need | A tenant's traffic or storage is large enough to notice, so move it to its own stack |
-| **Proposed:** tenants are created by a script, with no self-service | More than a handful of tenants |
-| **Proposed:** tenants are found by a slug in the frontend config | A domain exists: add subdomains, a wildcard certificate and custom domains |
-| **Proposed:** login depends on email delivery. A bounced or spam-filtered code locks a student out | Before launch: move email sending to a verified domain and watch bounce rates |
-| **Proposed:** the login page reveals whether an email is registered (kept on purpose for a better experience) | Probing or complaints appear: show status only after the email is proven |
-| **Proposed:** no password fallback if a student loses access to their mailbox | An admin changes the registered email, which needs an admin tool |
-| **Proposed:** payments are checked by eye from screenshots, so fake or edited screenshots can pass | Admins start missing fakes, or volume grows: add duplicate-reference checks, bank-statement matching, or an online payment gateway |
-| **Proposed:** the registration form stores personal data, including students under 18 | Before launch: confirm consent, retention and deletion rules with a legal check |
-| **Proposed:** one admin per tenant, so a lost mailbox blocks admin work | A tenant asks for more staff: add more admins and an admin tool to change an email |
+| Tenant isolation relies on our code, not on separate databases | Always: keep the isolation tests, and revisit if a tenant needs a contractual guarantee |
+| One busy tenant can use capacity others need | A tenant's traffic or storage is large enough to notice, so move it to its own stack |
+| Tenants are created by the platform admin (from their page or by a script), with no self-service sign-up | More than a handful of tenants |
+| Tenants are found by a slug in the web address path | A domain exists: add subdomains, a wildcard certificate and custom domains |
+| Login depends on email delivery. A bounced or spam-filtered code locks a student out | Before launch: move email sending to a verified domain and watch bounce rates |
+| The login page reveals whether an email is registered (kept on purpose for a better experience) | Probing or complaints appear: show status only after the email is proven |
+| No password fallback if a student loses access to their mailbox | The admin can correct a student's email (built, section 22), so the remaining risk is a slow reply from the admin |
+| (Phase 2) Payments will be checked by eye from screenshots, so fake or edited screenshots can pass | Admins start missing fakes, or volume grows: add duplicate-reference checks, bank-statement matching, or an online payment gateway |
+| The registration form stores personal data, including students under 18 | Before launch: confirm consent, retention and deletion rules with a legal check |
+| One admin per tenant, so a lost mailbox blocks admin work | A tenant asks for more staff: add more admins. The platform admin can already replace an institute's admin (section 21) |
 
 ---
 
@@ -325,9 +324,9 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 ---
 
-## 17. Multi-tenancy (proposed)
+## 17. Multi-tenancy
 
-**Status:** Proposed, awaiting review. The code has not been changed yet. The first tenant is `aaptprep`.
+**Status:** Built (step M1) and tested live on dev. The first tenant is `aaptprep`.
 
 **Confirmed by the owner:** shared tables with tenant-prefixed keys (17.1), and one admin per tenant for now (17.5).
 
@@ -352,7 +351,7 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 ### 17.2 How the tenant is identified
 
-**Chosen (proposed):** A tenant slug sent by the frontend with every request (a header), taken from the frontend's configuration. Once a domain exists, tenants are found from the hostname instead (`aaptprep.pragyaprep.ai`, and later `aaptprep.com`).
+**Chosen:** A tenant slug sent by the frontend with every request (a header), taken from the frontend's configuration. Once a domain exists, tenants are found from the hostname instead (`aaptprep.pragyaprep.ai`, and later `aaptprep.com`).
 
 **Alternatives considered:** a path prefix (`/t/aaptprep/...`), a query parameter, or subdomains only.
 
@@ -367,7 +366,7 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 > **Updated by section 18:** a person's identity is their registered email, unique within a tenant. There are no login IDs.
 
-**Chosen (proposed):** Separate accounts per tenant. The email is unique within a tenant. The same person at two tenants has two accounts.
+**Chosen:** Separate accounts per tenant. The email is unique within a tenant. The same person at two tenants has two accounts.
 
 **Alternatives considered:** One global identity per person with a membership in each tenant.
 
@@ -389,7 +388,7 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 ### 17.5 Roles and tenant management
 
-**Chosen (proposed):**
+**Chosen:**
 - **Platform admin:** the PragyaPrep owner, with access to all tenants but only to manage tenants (create, suspend, change a tenant admin's email). Not tenant content.
 - **Tenant admin:** one per tenant for now (decided). Manages that tenant's course list, registrations, payments and files. More admins can come later.
 - **Student:** one tenant only.
@@ -405,7 +404,7 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 ### 17.6 Login tokens
 
-**Chosen (proposed):** A login token carries the tenant. A request is refused when the token's tenant doesn't match the tenant of the request.
+**Chosen:** A login token carries the tenant. A request is refused when the token's tenant doesn't match the tenant of the request.
 
 **Why:** A token stolen or reused from one tenant can't be used against another.
 
@@ -433,9 +432,9 @@ Video downloads are the main driver. For example, 500 GB of downloads a month is
 
 ---
 
-## 18. Registration approval and email OTP login (proposed)
+## 18. Registration approval and email OTP login
 
-**Status:** The login itself is **built and deployed to dev (step M2)**; registration and approval (section 19) are not built yet. This replaces the ID + password and Google sign-in decisions in section 3.
+**Status:** Built (step M2) and tested live on dev, with registration and approval (section 19, step M3). This replaces the ID + password and Google sign-in decisions in section 3.
 
 ### 18.1 The flow
 
@@ -483,7 +482,7 @@ For the best experience, the messages are shown straight away. A not-registered 
 - **No password fallback.** A student who loses their mailbox can't log in until an admin changes the registered email, which needs an admin tool.
 - **A person with a shared or compromised mailbox** is exposed, because the email is the only proof of identity.
 - **Plus-addresses and dots** (for example `name+a@gmail.com` and `name@gmail.com`) count as different emails. We treat emails as case-insensitive only, and don't merge them.
-- **Sessions:** with no passwords, a long session (proposed: 7 days) saves students from asking for codes all the time, but a stolen session lasts as long.
+- **Sessions:** with no passwords, a long session (7 days) saves students from asking for codes all the time, but a stolen session lasts as long.
 
 ### 18.6 Effect on the design
 
@@ -524,9 +523,9 @@ Amazon SES costs about $0.10 per 1,000 emails, so login codes and approval email
 
 ---
 
-## 19. Registration, payment review and course access (proposed)
+## 19. Registration, payment review and course access
 
-**Status:** Registration and the admin's review are **built and deployed to dev (step M3)**. Payments and access (19.4 and 19.10) are not built yet. It extends section 18 and brings the manual payment flow, deferred earlier, into Phase 1.
+**Status:** Registration and the admin's review are **built (step M3)**, and access is given by the admin by hand (step M4, section 23). **Payments and their review moved to Phase 2 on 17 Nov 2026**, so 19.4 and 19.10 are the design for that phase and are not built. It extends section 18.
 
 **Confirmed by the owner:** each tenant manages its own course list; students under 18 can register; access length is configurable; a screenshot is enough as payment proof; and the login page shows clear status messages straight away.
 
@@ -544,7 +543,7 @@ All fields are required: email, first name, last name, birth date, gender, mobil
 
 - The course dropdown is a list the tenant admin manages (decided). The first tenant starts with IPMAT, CAT and CLAT.
 - Checks: email format, 10-digit Indian mobile numbers, 6-digit PIN code, a reasonable birth date, and a gender from a fixed list.
-- A registration asks for one course. Another course later is a new request with its own payment (proposed).
+- A registration asks for one course. Another course later is a new request with its own payment (Phase 2).
 
 ### 19.3 States
 
@@ -602,7 +601,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 ### 19.10 Access length (decided: configurable)
 
-**Chosen (proposed design):** Each course carries an access setting that the tenant admin controls: no expiry, a number of days counted from the day the payment is verified, or until a fixed date. When a payment is verified, the grant records its own end date, and that date is checked every time a course or file is opened.
+**Chosen:** Each course carries an access setting that the tenant admin controls: no expiry, a number of days counted from the day the payment is verified, or until a fixed date. When a payment is verified, the grant records its own end date, and that date is checked every time a course or file is opened.
 
 **Alternatives considered:**
 - One fixed length for the whole tenant (simple, but a one-month crash course and a one-year course can't differ).
@@ -615,7 +614,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 - Changing a course's setting later does **not** change access already granted, because each grant keeps its own end date. An admin can still extend or end a single student's access by hand.
 - Expiry is checked when something is opened, not by a background job, so nothing runs overnight. An expired student simply stops seeing the course. Signed file links already issued still work until they expire in 5 minutes.
 - A student whose access ends can pay again to renew. A reminder email before expiry is useful, but is not part of Phase 1.
-- Dates and times use one clock (UTC), so a "fixed date" means the end of that day in a set time zone. The tenant's time zone needs to be chosen (proposed: India Standard Time).
+- Dates and times use one clock (UTC), so a "fixed date" means the end of that day in a set time zone. The time zone is India Standard Time, and the code uses it for birth dates and course end dates.
 
 ### 19.11 As built (step M3): courses, registration and review
 
@@ -636,7 +635,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 ## 20. Frontend (step F1)
 
-**Status:** Built and tested (112 tests, a real browser against the sandbox, and a live check against the dev API). It runs on your computer only. Hosting is a later step.
+**Status:** Built (step F1) and tested (112 tests at the time, a real browser against the sandbox, and a live check against the dev API). Later steps added screens (sections 21, 24 and 25) and hosting (section 26).
 
 **Chosen:** An Angular app (version 22) in `frontend/`, using standalone components and signals, with no UI library and plain CSS. It has these screens: the start page, the institute frame, registration, login, a student home, the admin's registrations queue, and the admin's courses.
 
@@ -660,7 +659,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 - **Sessions in local storage can be read by a script that runs on the page** (cross-site scripting). Cookies that scripts can't read are safer against that, but need the API and the screens on one site and protection against forged requests. This is worth revisiting when hosting is set up.
 - **One build for all institutes means the logo and colours load after the page**, so there is a brief default look. A hostname-based setup later can fix this.
-- **Only the screens needed so far exist.** There is no platform admin screen, no logo upload, no payment or course screens for students, and no content upload. Those come with later steps.
+- **Only the screens needed at the time existed.** The platform admin page, logo upload, course files, course access and the student's courses came in later steps (sections 21, 24 and 25). Payment screens are Phase 2.
 - **The browser found three bugs the tests missed** (layout margin, an escaped slash in a link, and stale error messages). Tests check behaviour, so a real look at the page is still needed for each new screen.
 
 ### 20.3 Revisit when
@@ -673,7 +672,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 ## 21. Platform admin page
 
-**Status:** Built and tested (59 backend and 25 frontend tests, and a real browser against the sandbox). Not yet deployed to dev.
+**Status:** Built and tested (59 backend and 25 frontend tests, and a real browser against the sandbox), deployed to dev and tested live.
 
 **Chosen:** The platform admin gets a page at `/platform-admin` to view, add and edit institutes and their one admin. The platform admin itself is still created only by the `manage_tenants.py platform-admin` script. Nothing can be deleted from the screens or the API.
 
@@ -702,7 +701,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 ## 22. Correcting a student's details
 
-**Status:** Built and tested (23 backend and 11 frontend tests, a real browser, and a live check on dev).
+**Status:** Built and tested (22 backend and 11 frontend tests, a real browser, and a live check on dev).
 
 **Chosen:** The institute admin can edit any detail of a registration, at any status, from the registrations page, including the email. A student's own editing comes later with their screens (F2).
 
@@ -729,7 +728,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 ## 23. Course content and access (step M4)
 
-**Status:** Built and tested (42 tests, and a live check on dev with real S3). No screens yet.
+**Status:** Built and tested (42 tests, and a live check on dev with real S3). Its screens are in section 24.
 
 **Chosen:** The admin adds PDF and MP4 files to a course. The browser sends the file straight to S3 using a signed form, then tells the API it is done, and the API checks it. The admin gives an approved student access to a course by hand (a verified payment will do the same in M5). A student opens a file through a link that works for 5 minutes.
 

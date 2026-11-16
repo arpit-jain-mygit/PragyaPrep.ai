@@ -48,12 +48,12 @@ npx ng test --watch=false
 npx ng build
 ```
 
-The output is in `dist/frontend`. Hosting (S3 and CloudFront) is a later step.
+The output is in `dist/frontend/browser`. To put it on the dev website (S3 and CloudFront), run `infra/scripts/deploy-web.sh main dev` from the repo root. It builds, copies and clears the cache. The website is at https://d1szng4oy9m4an.cloudfront.net.
 
 ## How it is organised
 
 | Folder | What is in it |
 |---|---|
 | `src/app/core` | Talking to the API, who is signed in, the institute's look, the guards that protect pages |
-| `src/app/pages` | One file per screen: register, login, student home, admin registrations, admin courses |
+| `src/app/pages` | One file per screen: start page, register, login, student home and My courses, admin registrations, courses and course files, the platform admin's institutes page, and the page frame |
 | `src/environments` | Which API to use: the local test version, or the live one |

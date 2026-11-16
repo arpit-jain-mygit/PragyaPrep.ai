@@ -26,7 +26,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | M3 | **Course list, registration and admin review:** each institute's courses (fee and access length), the registration form with checks, the admin's queue to approve, reject, suspend and reactivate, and the emails | **Tested live** | 263 automated tests pass (133 of them new for M3). On the live dev API I registered a test student, approved, suspended and reactivated them, and removed them again. CLAT, IPMAT and CAT are loaded into aaptprep |
 | F1 | **Frontend slice:** each institute's branding, the registration page, the login page (emailed code and status messages), the admin's review queue, the admin's course list, and a student home page | **Tested live** | 112 automated tests pass. I drove every screen in a real browser against the sandbox, then against the live dev API (registered a test student, approved it, and removed it). The browser found three problems that I fixed |
 | P1 | **Platform admin page** (`/platform-admin`): the platform admin views, adds and edits institutes and their one admin (name, colour, active or suspended, admin name and email). No delete. The platform admin itself is still created only by script | **Tested live** | 59 backend and 25 frontend tests. Driven in a real browser against the sandbox. Deployed to dev: with a short-lived platform-admin token I created a test institute (welcome email sent), suspended it and recoloured it, saw the duplicate refused and DELETE answer 405, then removed its rows. `link-admin` run for aaptprep. No errors in the Lambda log. The page itself was not opened against dev |
-| P2 | **Correct a student's details:** the admin edits any detail of a registration at any status, including the email (the record moves to the new email, the old email stops working, the new address is emailed). Only changed fields are sent, and a taken email is refused | **Tested live** | 23 backend and 11 frontend tests. Browser check in the sandbox. On dev: registered a test student, approved, a bad edit was refused with both errors at once, the email was changed, the old email then said "not registered", and the test row was removed. No Lambda errors |
+| P2 | **Correct a student's details:** the admin edits any detail of a registration at any status, including the email (the record moves to the new email, the old email stops working, the new address is emailed). Only changed fields are sent, and a taken email is refused | **Tested live** | 22 backend and 11 frontend tests. Browser check in the sandbox. On dev: registered a test student, approved, a bad edit was refused with both errors at once, the email was changed, the old email then said "not registered", and the test row was removed. No Lambda errors |
 | P3 | **Institute logos:** the platform admin adds, replaces and removes an institute's logo (PNG or JPG, up to 1 MB) on the Edit form. It shows next to the name at the top of every page, including login | **Tested live** | 30 backend and 10 frontend tests (419 and 200 in all). On dev with real S3: uploaded a real PNG from the platform page, saw it in the preview and in AaptPrep's top bar, then removed it. Back to no logo, no stray files, no Lambda errors |
 | M4 | **Content and access (API):** the admin adds PDF and MP4 files to a course (straight to S3, then checked), gives an approved student access (renewable, ends by the course's access length), and takes it away. A student sees their courses and opens a file through a 5-minute link | **Tested live** | 42 new backend tests (389 in all). On dev with real S3: a real PDF and MP4 were accepted, a fake PDF was removed from S3, a student had no access before the grant and got a working link after, a byte-range download returned 206, and a revoke closed the link. Test rows and files removed. No Lambda errors. No screens yet (F2, F3) |
 | M5 | **Payments (API):** QR code, screenshot upload, admin verify or reject, access granted on verify | **Moved to Phase 2** | Decided on 17 Nov 2026. Until then the admin gives access by hand (built in M4) |
@@ -40,7 +40,10 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 ## How you can test each step
 After I finish a step, I'll tell you how to test it, and I keep the instructions here.
 
-### Easiest: use the screens (F1)
+### Fastest: the hosted website
+The dev website is at **https://d1szng4oy9m4an.cloudfront.net** (see M7 below). Open `/aaptprep/login` there. For the sandbox or your own computer, use the steps that follow.
+
+### Easiest on your own computer: use the screens (F1)
 From F1 on, you can test in a browser, like a real user. You need two terminal windows.
 
 **Terminal 1: the API (a local test version, with a fake AWS and no real email)**
@@ -327,8 +330,8 @@ If the Lambda or the allowed origins change, run `infra/scripts/deploy.sh main d
 ### What you can't test yet
 Paying for a course (M5), and its screens (the rest of F2 and F3).
 
-## Real data to load into dev
-You asked for real data in the dev table, in place of my old test rows. These are the details you gave me.
+## Real data in dev
+You asked for real data in the dev table, in place of my old test rows. These are the details you gave me, and what the table holds now.
 
 | Item | Value |
 |---|---|
@@ -348,16 +351,17 @@ You asked for real data in the dev table, in place of my old test rows. These ar
 | Add CLAT, IPMAT and CAT with fee 10000 and unlimited access | **Done in M3.** All three are in `aaptprep`, and the admin can change the fee and access length |
 | Verify the email sender in Amazon SES | **Done.** `sachin.arpit@gmail.com` is verified. Recipients need no verification, because this AWS account already has SES production access |
 
-**What is in `pragyaprep-dev` right now** (read back from AWS):
+**What is in `pragyaprep-dev`** (read back from AWS on 17 Nov 2026):
 
-| Key | What it is |
+| What | Detail |
 |---|---|
-| `TENANT#platform` | The platform's own institute, active |
-| `T#platform#MEMBER#sachin.arpit@gmail.com` | Arpit Jain, **platform admin**, approved |
-| `TENANT#aaptprep` | The **AaptPrep** institute, active |
-| `T#aaptprep#MEMBER#sachin.arpit.learning@gmail.com` | Ritesh, **tenant admin** of aaptprep, approved |
+| Platform | The `platform` institute, and Arpit Jain (`sachin.arpit@gmail.com`) as platform admin |
+| Institute | **AaptPrep** (`aaptprep`), active, with a logo, and Ritesh (`sachin.arpit.learning@gmail.com`) as its admin |
+| Courses | CLAT, IPMAT and CAT, each with a name lookup row |
+| Students | Two registered while you were testing: `arpit.jain.itian@gmail.com` (approved, with access to IPMAT) and `arpit.jain.itain@gmail.com` (suspended) |
+| Files | Two IPMAT files you uploaded (a PDF and an MP4), both ready |
 
-Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a name lookup row. Ten real rows in total, as of the end of M3. Students, payments and access will appear in later steps.
+My own test rows and files are always removed after each live test. Login codes and rate counters also appear in the table for a while and delete themselves.
 
 ## Things I'll need from you along the way
 | When | What |
@@ -368,38 +372,36 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 ## Latest test results
 **Backend, run on my machine: 419 passed, 0 failed. Frontend: 200 passed, 0 failed. Total: 619.**
 
-| Backend area | Tests |
-|---|---|
-| Tenants: creating, validating, finding, suspending, platform admin, the script (including the course commands) | 44 |
-| Isolation between institutes | 20 |
-| Old-data cleanup script | 4 |
-| M2 Login codes | 31 |
-| M2 Sessions and roles | 15 |
-| M2 Rate limits | 11 |
-| M2 Email sender | 7 |
-| M3 Courses | 33 |
-| M3 Registration | 65 |
-| M3 Review | 33 |
-| P1 Platform admin API (institutes: list, add, edit, replace admin, no delete, who may call it) | 59 |
-| P2 Correcting a student's details and email | 23 |
-| M4 Files, access and student links (including that a corrected email keeps access) | 42 |
-| P3 Logos (who may, types and size, checking contents, replace, remove, the public address) | 30 |
+| Backend test file | What it covers | Tests |
+|---|---|---|
+| `test_tenants` | Creating, validating, finding and suspending institutes, the platform admin, the scripts (including the course commands and `link-admin`) | 47 |
+| `test_isolation` | One institute can't see or use another's data | 20 |
+| `test_wipe_legacy` | The old-data cleanup script | 4 |
+| `test_otp_login` | M2 login codes | 31 |
+| `test_sessions` | M2 sessions and roles | 15 |
+| `test_rate_limits` | M2 rate limits | 11 |
+| `test_mailer` | M2 email sender | 7 |
+| `test_courses` | M3 courses | 33 |
+| `test_registration` | M3 registration | 65 |
+| `test_review` | M3 admin review | 33 |
+| `test_platform` | P1 platform admin API (list, add, edit, replace admin, no delete, who may call it) | 59 |
+| `test_edit_registration` | P2 correcting a student's details and email | 22 |
+| `test_content` | M4 files, access, student links, and that a corrected email keeps access | 42 |
+| `test_logo` | P3 logos (who may, types and size, checking contents, replace, remove, the public address) | 30 |
+| | **Total** | **419** |
 
-| Frontend area (F1) | Tests |
-|---|---|
-| Services, guards and helpers: who is signed in per institute, the interceptor (institute and sign-in headers, ending a refused session), the institute's colour and readable text colour, error tidying, fees and dates | 30 |
-| Registration page: fields, courses with fees, WhatsApp toggle, sending, every kind of error, messages clearing as you fix them, limits | 16 |
-| Login page: each status message, the Register buttons, code step, wrong code, countdown, redirects by role | 21 |
-| Admin registrations: tabs, details, approve, reject with a reason, suspend, reactivate, refused moves, email warnings | 17 |
-| Admin courses: list, add (all three access types), edit, hide, refused changes | 12 |
-| Page frame, student home, start page, not found: links by role, sign out, unknown or switched-off institute | 18 |
-| Platform admin page: list, add, edit, admin replacement warning, errors, no delete | 25 |
-| Admin registrations: editing a student (form, only changed fields, email warning, field errors) | 11 |
-| F2a Admin files page (list, upload in three steps with progress, refusals, delete with a yes) | 12 |
-| F2a Course access on a student's details (show, give, remove, errors) | 7 |
-| F2a Student My courses (list, open a PDF, play a video, renew a link, give up on a broken video, access ended) | 10 |
-| F2a Upload service and size format | 5 |
-| P3 Logo on the platform edit form and in the top bar | 10 |
+| Frontend test file | What it covers | Tests |
+|---|---|---|
+| `core.spec` | Who is signed in per institute, the interceptor, colours, errors, guards, fees, dates, sizes, the upload service | 38 |
+| `register.spec` | Registration page | 16 |
+| `login.spec` | Login page: status messages, Register buttons, code step, countdown, redirects by role | 23 |
+| `admin-registrations.spec` | Queue, details, decisions, editing a student, course access | 35 |
+| `admin-courses.spec` | Courses list, add, edit, hide | 12 |
+| `admin-course-files.spec` | Files page: list, upload with progress, refusals, delete | 13 |
+| `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
+| `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
+| `shell.spec` | Page frame, logo in the top bar, student home, start page, not found | 20 |
+| | **Total** | **200** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 
@@ -410,4 +412,3 @@ Plus, since M3: the three courses of `aaptprep` (CLAT, IPMAT, CAT), each with a 
 2. The institute's name in the top bar linked to `/demo/admin%2Fregistrations` (a slash escaped), because I gave the address as one piece. Now each part is separate, and a test checks the address.
 3. After a failed submit, the red message under a field stayed even after fixing it. Now it clears when you edit that field, and the summary goes when none are left.
 
-**Not committed yet.**
