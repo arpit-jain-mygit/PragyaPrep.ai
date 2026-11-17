@@ -237,7 +237,7 @@ function draftFrom(question: Question): Draft {
     </div>
 
     @if (tab() === 'upload') {
-      <app-question-upload (imported)="uploaded($event)" />
+      <app-question-upload (imported)="uploaded($event)" (failed)="uploadFailed($event)" />
     }
 
     @if (tab() === 'questions') {
@@ -592,6 +592,11 @@ export class AdminQuestions implements OnInit {
     this.notice.set(`Imported ${count} ${count === 1 ? 'question' : 'questions'}.`);
     this.filter = { paper: '', topic: '', status: '', pictures: '', kind: '', passage: '' };
     await this.load();
+  }
+
+  /** Some files of an upload couldn't be imported: say so on the page, since the upload tab has closed. */
+  uploadFailed(message: string): void {
+    this.error.set({ status: 0, detail: message });
   }
 
   paperChanged(): void {

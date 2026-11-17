@@ -1,31 +1,98 @@
 import { TestBed } from '@angular/core/testing';
+import JSZip from 'jszip';
 import { describe, expect, it, vi } from 'vitest';
 import { UploadService } from '../core/upload.service';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { QuestionUpload } from './question-upload';
 
 const READY = [
-  { row: 2, paper: 'physics', topic: 'Optics', text: 'Q one' },
-  { row: 3, paper: 'physics', topic: 'Optics', text: 'Q two' },
+  { row: 2, paper: 'physics', topic: 'Optics', text: 'Q one', pictures: 0 },
+  { row: 3, paper: 'physics', topic: 'Optics', text: 'Q two', pictures: 0 },
 ];
+const OK = { confirmed: false, ready: READY, problems: [], duplicates: [], imported: 0 };
+
+type Env = ReturnType<typeof open>;
 
 function open() {
   const env = setupTestBed();
   env.sessions.save(sessionFor('tenant_admin'));
   const fixture = TestBed.createComponent(QuestionUpload);
   const imported: number[] = [];
+  const failed: string[] = [];
   fixture.componentInstance.imported.subscribe((n) => imported.push(n));
+  fixture.componentInstance.failed.subscribe((m) => failed.push(m));
+  const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
   fixture.detectChanges();
-  return { ...env, fixture, imported };
+  return { ...env, fixture, imported, failed, send };
 }
 
-async function choose(fixture: ReturnType<typeof open>['fixture'], name = 'questions.xlsx') {
-  const file = new File(['x'], name);
-  const input = el<HTMLInputElement>(fixture, '#upload-file');
-  Object.defineProperty(input, 'files', { value: [file], configurable: true });
+const xlsx = (name: string) => new File(['x'], name);
+const png = (name: string, size = 10) => new File([new Uint8Array(size)], name, { type: 'image/png' });
+
+async function choose(env: Env, files: File[]) {
+  const input = el<HTMLInputElement>(env.fixture, '#upload-files');
+  Object.defineProperty(input, 'files', { value: files, configurable: true });
   input.dispatchEvent(new Event('change'));
+  await settle(env.fixture);
+}
+
+async function zipOf(entries: Record<string, string | Uint8Array>, name = 'all.zip') {
+  const zip = new JSZip();
+  for (const [path, content] of Object.entries(entries)) zip.file(path, content);
+  return new File([await zip.generateAsync({ type: 'blob' })], name);
+}
+
+/** Answer whatever the component has asked for so far: picture steps and Excel checks, until it goes quiet. */
+async function pump(env: Env, options: { sheets?: Record<string, object>; failPictures?: string[]; badSheets?: Record<string, { detail: string }> } = {}) {
+  const { http, fixture } = env;
+  let n = 0;
+  const seen: string[] = [];
+  let quiet = 0;
+  for (let i = 0; i < 400 && quiet < 25; i++) {
+    await settle(fixture);
+    await new Promise((resolve) => setTimeout(resolve, 8)); // unzipping and reading files take a few real moments
+    let did = false;
+    for (const r of http.match((q) => q.method === 'POST' && q.url === `${API}/api/admin/question-images`)) {
+      const name = (r.request.body as { filename: string }).filename;
+      seen.push(name);
+      if (options.failPictures?.includes(name)) r.flush({ detail: 'Nope.' }, { status: 422, statusText: 'x' });
+      else r.flush({ id: `p${++n}`, upload: { url: 'u', fields: {} } });
+      did = true;
+    }
+    for (const r of http.match((q) => /question-images\/p\d+\/complete$/.test(q.url))) {
+      r.flush({ id: r.request.url.split('/').slice(-2)[0], url: 'x' });
+      did = true;
+    }
+    for (const r of http.match((q) => q.url.endsWith('import?confirm=false'))) {
+      const name = (r.request.body as File).name;
+      const bad = options.badSheets?.[name];
+      if (bad) r.flush(bad, { status: 422, statusText: 'x' });
+      else r.flush(options.sheets?.[name] ?? OK);
+      did = true;
+    }
+    quiet = did ? 0 : quiet + 1;
+  }
   await settle(fixture);
-  return file;
+  return seen;
+}
+
+/** Answer the confirm calls, in the order they come, saying how many each file imported. */
+async function pumpConfirm(env: Env, counts: Record<string, number | { detail: string }>) {
+  const order: string[] = [];
+  for (let i = 0; i < 100; i++) {
+    await settle(env.fixture);
+    const pending = env.http.match((q) => q.url.endsWith('import?confirm=true'));
+    if (!pending.length) break;
+    expect(pending.length).toBe(1); // one file at a time, in order
+    const r = pending[0];
+    const name = (r.request.body as File).name;
+    order.push(name);
+    const value = counts[name];
+    if (typeof value === 'object') r.flush(value, { status: 500, statusText: 'x' });
+    else r.flush({ confirmed: true, ready: [], problems: [], duplicates: [], imported: value });
+  }
+  await settle(env.fixture);
+  return order;
 }
 
 describe('Question upload', () => {
@@ -46,241 +113,202 @@ describe('Question upload', () => {
     click.mockRestore();
   });
 
-  it('checks a chosen file straight away and shows a preview without saving', async () => {
-    const { fixture, http } = open();
-    const file = await choose(fixture);
-    const request = http.expectOne(`${API}/api/admin/questions/import?confirm=false`);
-    expect(request.request.method).toBe('POST');
+  it('takes one Excel file: checks it straight away and shows a preview without saving', async () => {
+    const env = open();
+    const file = xlsx('questions.xlsx');
+    await choose(env, [file]);
+    const request = env.http.expectOne(`${API}/api/admin/questions/import?confirm=false`);
     expect(request.request.body).toBe(file);
-    request.flush({ confirmed: false, ready: READY, problems: [], duplicates: [], imported: 0 });
-    await settle(fixture);
-    expect(text(fixture)).toContain('2 ready');
-    expect(text(fixture)).toContain('Import 2 questions');
-    http.expectNone(`${API}/api/admin/questions/import?confirm=true`);
+    request.flush(OK);
+    await settle(env.fixture);
+    expect(text(env.fixture)).toContain('2 ready');
+    expect(text(env.fixture)).toContain('Import 2 questions');
+    env.http.expectNone(`${API}/api/admin/questions/import?confirm=true`);
   });
 
-  it('says how many new passages the file brings, and a passage problem shows on its column', async () => {
-    const { fixture, http } = open();
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({
-      confirmed: false,
-      ready: [{ ...READY[0], passage: 'Monsoon' }],
-      problems: [{ row: 4, errors: { Passage: "'Nowhere' isn't on the Passages sheet or in your bank." } }],
-      duplicates: [],
-      new_passages: 1,
-      imported: 0,
+  it('takes several Excel files at once and shows one combined preview', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx'), xlsx('b.xlsx'), xlsx('c.xlsx')]);
+    await pump(env, {
+      sheets: {
+        'a.xlsx': OK,
+        'b.xlsx': { ...OK, ready: [READY[0]], duplicates: [{ row: 3, text: 'dup' }] },
+        'c.xlsx': { ...OK, ready: [], problems: [{ row: 5, errors: { Topic: 'Not a topic of Physics.' } }] },
+      },
     });
-    await settle(fixture);
-    expect(text(fixture)).toContain('1 new passage');
-    expect(text(fixture)).toContain("Passage: 'Nowhere' isn't on the Passages sheet");
-  });
-
-  it('lists each problem with its row and column, and the duplicates', async () => {
-    const { fixture, http } = open();
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({
-      confirmed: false,
-      ready: [READY[0]],
-      problems: [{ row: 5, errors: { Topic: 'Not a topic of Physics.', 'Why C': 'The reason for option 3 is required.' } }],
-      duplicates: [{ row: 7, text: 'Q' }, { row: 9, text: 'Q2' }],
-      imported: 0,
-    });
-    await settle(fixture);
-    const page = text(fixture);
-    expect(page).toContain('1 ready');
+    const page = text(env.fixture);
+    expect(page).toContain('3 ready');
     expect(page).toContain('1 with problems');
-    expect(page).toContain('2 already in the bank (skipped)');
-    expect(all(fixture, 'tbody tr').length).toBe(1);
-    expect(page).toContain('Topic: Not a topic of Physics.');
-    expect(page).toContain('Why C: The reason for option 3 is required.');
-    expect(page).toContain('rows 7, 9');
-    expect(page).toContain('Import 1 question');
-    expect(page).not.toContain('Import 1 questions');
+    expect(page).toContain('1 already in the bank (skipped)');
+    expect(page).toContain('Import 3 questions');
+    expect(all(env.fixture, '#sheet-table [data-sheet]').map((r) => r.getAttribute('data-sheet'))).toEqual(['a.xlsx', 'b.xlsx', 'c.xlsx']);
+    expect(el(env.fixture, '[data-sheet="b.xlsx"]').textContent).toContain('1');
   });
 
-  it('imports on confirm, sends the same file, and reports how many', async () => {
-    const { fixture, http, imported } = open();
-    const file = await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({ confirmed: false, ready: READY, problems: [], duplicates: [], imported: 0 });
-    await settle(fixture);
-    clickButton(fixture, 'Import 2 questions');
-    const request = http.expectOne(`${API}/api/admin/questions/import?confirm=true`);
-    expect(request.request.body).toBe(file);
-    request.flush({ confirmed: true, ready: READY, problems: [], duplicates: [], imported: 2 });
-    await settle(fixture);
-    expect(imported).toEqual([2]);
-    expect(all(fixture, '#upload-preview').length).toBe(0);
-    expect(all(fixture, '#upload-file').length).toBe(1);
+  it('lists each file\'s problems with their row and column', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx')]);
+    await pump(env, { sheets: { 'a.xlsx': { ...OK, ready: [READY[0]], problems: [{ row: 5, errors: { Topic: 'Not a topic of Physics.', 'Why C': 'The reason for option 3 is required.' } }] } } });
+    const details = el(env.fixture, '[data-problems="a.xlsx"]').textContent!;
+    expect(details).toContain('What to fix in a.xlsx');
+    expect(details).toContain('Topic: Not a topic of Physics.');
+    expect(details).toContain('Why C: The reason for option 3 is required.');
   });
 
-  it('cannot import when nothing is ready', async () => {
-    const { fixture, http } = open();
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({
-      confirmed: false, ready: [], problems: [{ row: 2, errors: { Paper: 'Paper is required.' } }], duplicates: [], imported: 0,
+  it('imports every file in order and reports the total', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx'), xlsx('b.xlsx')]);
+    await pump(env);
+    clickButton(env.fixture, 'Import 4 questions');
+    const order = await pumpConfirm(env, { 'a.xlsx': 2, 'b.xlsx': 1 });
+    expect(order).toEqual(['a.xlsx', 'b.xlsx']);
+    expect(env.imported).toEqual([3]); // b.xlsx skipped one as a duplicate of a.xlsx
+    expect(all(env.fixture, '#upload-preview').length).toBe(0);
+    expect(all(env.fixture, '#upload-files').length).toBe(1);
+  });
+
+  it('skips a file that could not be checked, shows why, and still imports the others', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx'), xlsx('broken.xlsx')]);
+    await pump(env, { badSheets: { 'broken.xlsx': { detail: "That isn't a readable Excel (.xlsx) file." } } });
+    expect(el(env.fixture, '[data-sheet="broken.xlsx"]').textContent).toContain("That isn't a readable Excel");
+    expect(text(env.fixture)).toContain('Import 2 questions');
+    clickButton(env.fixture, 'Import 2 questions');
+    expect(await pumpConfirm(env, { 'a.xlsx': 2 })).toEqual(['a.xlsx']);
+    expect(env.imported).toEqual([2]);
+  });
+
+  it('tells the page which files failed to import, and still reports what was saved', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx'), xlsx('b.xlsx')]);
+    await pump(env);
+    clickButton(env.fixture, 'Import 4 questions');
+    await pumpConfirm(env, { 'a.xlsx': 2, 'b.xlsx': { detail: 'Server trouble.' } });
+    expect(env.imported).toEqual([2]);
+    expect(env.failed[0]).toContain("Some files couldn't be imported.");
+    expect(env.failed[0]).toContain('b.xlsx: Server trouble.');
+  });
+
+  it('opens a zip, sends its pictures to storage and checks its Excel files, ignoring folders and computer clutter', async () => {
+    const env = open();
+    const zip = await zipOf({
+      'batch/one.xlsx': 'x',
+      'batch/two.xlsx': 'x',
+      'batch/pictures/DI-S001-Q1.png': 'png1',
+      'batch/pictures/DI-S001-Q2.PNG': 'png2',
+      'photo.jpg': 'jpg',
+      '__MACOSX/batch/._one.xlsx': 'junk',
+      'batch/.DS_Store': 'junk',
+      'batch/~$one.xlsx': 'lock',
+      'batch/readme.txt': 'hi',
     });
-    await settle(fixture);
-    expect(el<HTMLButtonElement>(fixture, '.actions .btn').disabled).toBe(true);
+    await choose(env, [zip]);
+    const sent = await pump(env);
+    expect(sent.sort()).toEqual(['DI-S001-Q1.png', 'DI-S001-Q2.PNG', 'photo.jpg']);
+    expect(env.send).toHaveBeenCalledTimes(3);
+    expect(all(env.fixture, '#sheet-table [data-sheet]').map((r) => r.getAttribute('data-sheet')).sort()).toEqual(['one.xlsx', 'two.xlsx']);
+    expect(text(env.fixture)).toContain('4 ready');
   });
 
-  it('lets the admin choose another file', async () => {
-    const { fixture, http } = open();
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({ confirmed: false, ready: READY, problems: [], duplicates: [], imported: 0 });
-    await settle(fixture);
-    clickButton(fixture, 'Choose another file');
-    await settle(fixture);
-    expect(all(fixture, '#upload-file').length).toBe(1);
-    http.verify();
+  it('shows picture progress and counts the pictures ready', async () => {
+    const env = open();
+    await choose(env, [png('a.png'), png('b.png'), png('c.png')]);
+    await pump(env);
+    expect(text(env.fixture)).toContain('3 pictures ready');
+    expect(all(env.fixture, '#upload-files').length).toBe(1); // no Excel yet: the box stays so the Excel files can be added next
+    await choose(env, [xlsx('q.xlsx')]);
+    await pump(env);
+    expect(text(env.fixture)).toContain('2 ready');
   });
 
-  it('shows the server\'s message when the file cannot be read', async () => {
-    const { fixture, http } = open();
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush(
-      { detail: 'The column headings have changed. Download a fresh template and copy your questions into it.' },
-      { status: 422, statusText: 'Unprocessable' },
-    );
-    await settle(fixture);
-    expect(text(fixture)).toContain('The column headings have changed.');
-    expect(all(fixture, '#upload-preview').length).toBe(0);
+  it('lists pictures that are too big or could not be sent, and carries on with the rest', async () => {
+    const env = open();
+    await choose(env, [png('big.png', 1024 * 1024 + 1), png('bad.png'), png('good.png')]);
+    await pump(env, { failPictures: ['bad.png'] });
+    const page = text(env.fixture);
+    expect(page).toContain('1 picture ready');
+    expect(page).toContain('2 not uploaded');
+    expect(el(env.fixture, '[data-staged="big.png"]').textContent).toContain('up to 1 MB');
+    expect(el(env.fixture, '[data-staged="bad.png"]').textContent).toContain('Nope.');
   });
 
-  it('refuses a file that is not .xlsx without asking the server', async () => {
-    const { fixture, http } = open();
-    await choose(fixture, 'questions.csv');
-    expect(text(fixture)).toContain('Choose an Excel file that ends in .xlsx');
-    http.verify();
-  });
-});
-
-describe('Question upload: pictures', () => {
-  async function stageFiles(fixture: ReturnType<typeof open>['fixture'], names: string[], sizes: number[] = []) {
-    const files = names.map((n, i) => new File([new Uint8Array(sizes[i] ?? 10)], n));
-    const input = el<HTMLInputElement>(fixture, '#upload-pictures');
-    Object.defineProperty(input, 'files', { value: files, configurable: true });
-    input.dispatchEvent(new Event('change'));
-    await settle(fixture);
-  }
-
-  function answerPicture(http: ReturnType<typeof open>['http'], id: string) {
-    http.expectOne(`${API}/api/admin/question-images`).flush({ id, upload: { url: 'u', fields: {} } }, { status: 201, statusText: 'Created' });
-    return id;
-  }
-
-  it('uploads each chosen picture in three steps, one after another, and lists them as ready', async () => {
-    const { fixture, http } = open();
-    const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
-    await stageFiles(fixture, ['a.png', 'b.jpg']);
-    expect(text(fixture)).toContain('a.png uploading…');
-    expect(all(fixture, '[data-staged]').length).toBe(1); // one at a time: b.jpg joins the list when a.png is done
-
-    answerPicture(http, 'p1');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p1/complete`).flush({ id: 'p1', url: 'x' });
-    await settle(fixture);
-    answerPicture(http, 'p2');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p2/complete`).flush({ id: 'p2', url: 'y' });
-    await settle(fixture);
-
-    expect(send).toHaveBeenCalledTimes(2);
-    expect(all(fixture, '[data-staged] .status').map((c) => c.textContent?.trim())).toEqual(['ready', 'ready']);
+  it('uses a picture name only once and says so', async () => {
+    const env = open();
+    const zip = await zipOf({ 'a/x.png': '1', 'b/X.png': '2' });
+    await choose(env, [zip, png('y.png')]);
+    const sent = await pump(env);
+    expect(sent.sort()).toEqual(['x.png', 'y.png']);
+    expect(text(env.fixture)).toContain('name used twice');
   });
 
-  it('refuses a wrong type or an oversized picture without asking the server, and still does the others', async () => {
-    const { fixture, http } = open();
-    vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
-    await stageFiles(fixture, ['a.gif', 'big.png', 'ok.png'], [10, 1024 * 1024 + 1, 10]);
-    expect(text(fixture)).toContain('A picture must be a PNG or JPG.');
-    expect(text(fixture)).toContain('A picture can be up to 1 MB.');
-    answerPicture(http, 'p3');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p3/complete`).flush({ id: 'p3', url: 'z' });
-    await settle(fixture);
-    http.verify();
+  it('ignores files that are neither Excel nor pictures and says how many', async () => {
+    const env = open();
+    await choose(env, [xlsx('q.xlsx'), new File(['x'], 'notes.txt'), new File(['x'], 'doc.pdf')]);
+    await pump(env);
+    // The Excel file moved the page to the preview; the note is shown when no preview is open.
+    clickButton(env.fixture, 'Choose other files');
+    await settle(env.fixture);
+    expect(text(env.fixture)).toContain('Ignored 2 files');
   });
 
-  it('shows the server\'s refusal next to the picture', async () => {
-    const { fixture, http } = open();
-    vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
-    await stageFiles(fixture, ['fake.png']);
-    answerPicture(http, 'p4');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p4/complete`).flush(
-      { detail: "That isn't a real PNG or JPG picture, so it was removed." },
-      { status: 422, statusText: 'Unprocessable' },
-    );
-    await settle(fixture);
-    expect(text(fixture)).toContain("That isn't a real PNG or JPG picture, so it was removed.");
+  it('refuses a choice with nothing usable', async () => {
+    const env = open();
+    await choose(env, [new File(['x'], 'notes.txt')]);
+    expect(text(env.fixture)).toContain('Nothing to upload');
   });
 
-  it('removing a staged picture throws it away', async () => {
-    const { fixture, http } = open();
-    vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
-    await stageFiles(fixture, ['a.png']);
-    answerPicture(http, 'p5');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p5/complete`).flush({ id: 'p5', url: 'x' });
-    await settle(fixture);
-    clickButton(fixture, 'Remove');
-    const request = http.expectOne(`${API}/api/admin/question-images/p5`);
-    expect(request.request.method).toBe('DELETE');
-    request.flush(null);
-    await settle(fixture);
-    expect(all(fixture, '[data-staged]').length).toBe(0);
+  it('refuses a zip that cannot be opened', async () => {
+    const env = open();
+    await choose(env, [new File(['this is not a zip'], 'broken.zip')]);
+    for (let i = 0; i < 50 && !text(env.fixture).includes('broken.zip'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      await settle(env.fixture);
+    }
+    expect(text(env.fixture)).toContain("broken.zip couldn't be opened as a zip.");
   });
 
-  it('shows how many pictures the preview will attach', async () => {
-    const { fixture, http } = open();
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({
-      confirmed: false,
-      ready: [{ ...READY[0], pictures: 2 }, { ...READY[1], pictures: 1 }],
-      problems: [{ row: 4, errors: { 'Image A': "The picture 'x.png' hasn't been uploaded." } }],
-      duplicates: [], imported: 0,
+  it('limits one run to 30 Excel files', async () => {
+    const env = open();
+    await choose(env, Array.from({ length: 31 }, (_, i) => xlsx(`f${i}.xlsx`)));
+    expect(text(env.fixture)).toContain('31 Excel files');
+    env.http.expectNone((r) => r.url.includes('import'));
+  });
+
+  it('Choose other files goes back to the picker', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx')]);
+    await pump(env);
+    clickButton(env.fixture, 'Choose other files');
+    await settle(env.fixture);
+    expect(all(env.fixture, '#upload-preview').length).toBe(0);
+    expect(all(env.fixture, '#upload-files').length).toBe(1);
+  });
+
+  it('throws away uploaded pictures that no question used, after the import', async () => {
+    const env = open();
+    await choose(env, [png('a.png'), xlsx('q.xlsx')]);
+    await pump(env);
+    clickButton(env.fixture, 'Import 2 questions');
+    await pumpConfirm(env, { 'q.xlsx': 2 });
+    const discard = env.http.expectOne(`${API}/api/admin/question-images/p1`);
+    expect(discard.request.method).toBe('DELETE');
+    discard.flush(null);
+  });
+
+  it('says how many new passages the files bring, and a passage problem shows on its column', async () => {
+    const env = open();
+    await choose(env, [xlsx('a.xlsx')]);
+    await pump(env, {
+      sheets: {
+        'a.xlsx': {
+          ...OK,
+          ready: [{ ...READY[0], passage: 'Monsoon' }],
+          problems: [{ row: 4, errors: { Passage: 'The passage can be at most 5000 characters.' } }],
+          new_passages: 1,
+        },
+      },
     });
-    await settle(fixture);
-    expect(text(fixture)).toContain('2 ready (3 pictures)');
-    expect(text(fixture)).toContain("Image A: The picture 'x.png' hasn't been uploaded.");
-  });
-
-  it('after a confirmed import, throws away the staged pictures that are left over', async () => {
-    const { fixture, http } = open();
-    vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
-    await stageFiles(fixture, ['a.png']);
-    answerPicture(http, 'p6');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p6/complete`).flush({ id: 'p6', url: 'x' });
-    await settle(fixture);
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({ confirmed: false, ready: [{ ...READY[0], pictures: 1 }], problems: [], duplicates: [], imported: 0 });
-    await settle(fixture);
-    clickButton(fixture, 'Import 1 question');
-    http.expectOne(`${API}/api/admin/questions/import?confirm=true`).flush({ confirmed: true, ready: [], problems: [], duplicates: [], imported: 1 });
-    await settle(fixture);
-    // the picture is on its question now, so the server answers 409 and nothing is lost
-    const cleanup = http.expectOne(`${API}/api/admin/question-images/p6`);
-    expect(cleanup.request.method).toBe('DELETE');
-    cleanup.flush({ detail: 'on a question' }, { status: 409, statusText: 'Conflict' });
-    await settle(fixture);
-    expect(all(fixture, '[data-staged]').length).toBe(0);
-  });
-
-  it('keeps the staged pictures when the admin chooses another Excel file', async () => {
-    const { fixture, http } = open();
-    vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue();
-    await stageFiles(fixture, ['a.png']);
-    answerPicture(http, 'p7');
-    await settle(fixture);
-    http.expectOne(`${API}/api/admin/question-images/p7/complete`).flush({ id: 'p7', url: 'x' });
-    await settle(fixture);
-    await choose(fixture);
-    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({ confirmed: false, ready: READY, problems: [], duplicates: [], imported: 0 });
-    await settle(fixture);
-    clickButton(fixture, 'Choose another file');
-    await settle(fixture);
-    expect(all(fixture, '[data-staged]').length).toBe(1);
-    http.verify();
+    expect(text(env.fixture)).toContain('1 new passage');
+    expect(text(env.fixture)).toContain('Passage: The passage can be at most 5000 characters.');
   });
 });
