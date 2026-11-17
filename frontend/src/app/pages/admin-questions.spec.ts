@@ -709,4 +709,91 @@ describe('Admin question bank: fill-in questions', () => {
       expect(text(fixture)).toContain('Nope.');
     });
   });
+
+  describe('deleting many at once', () => {
+    const Q2 = { ...Q1, id: 'q2', text: 'Second question', status: 'draft' };
+    const Q3 = { ...Q1, id: 'q3', text: 'Third question', status: 'draft' };
+
+    async function tick(fixture: Parameters<typeof type>[0], ...ids: string[]) {
+      for (const id of ids) el<HTMLInputElement>(fixture, `[data-question="${id}"] .pick`).click();
+      await settle(fixture);
+    }
+
+    it('asks for the word DELETE and keeps the button off until it is typed exactly', async () => {
+      const { fixture, http } = await open([Q1, Q2, Q3]);
+      await tick(fixture, 'q2', 'q3');
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      expect(text(fixture)).toContain('Delete 2 questions for good?');
+      const go = () => el<HTMLButtonElement>(fixture, '#bulk-delete-go');
+      expect(go().disabled).toBe(true);
+      for (const wrong of ['delete', 'DELET', 'DELETE ']) {
+        type(fixture, '#bulk-confirm', wrong);
+        await settle(fixture);
+        expect(go().disabled).toBe(true);
+      }
+      go().click();
+      http.expectNone(`${API}/api/admin/questions/delete`);
+    });
+
+    it('deletes the ticked questions once DELETE is typed and shows the fresh list', async () => {
+      const { fixture, http } = await open([Q1, Q2, Q3]);
+      await tick(fixture, 'q2', 'q3');
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      type(fixture, '#bulk-confirm', 'DELETE');
+      await settle(fixture);
+      el<HTMLButtonElement>(fixture, '#bulk-delete-go').click();
+      const request = http.expectOne(`${API}/api/admin/questions/delete`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ ids: ['q2', 'q3'], confirm: 'DELETE' });
+      request.flush({ deleted: 2, missing: 0 });
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+      await settle(fixture);
+      expect(text(fixture)).toContain('Deleted 2 questions.');
+      expect(text(fixture)).not.toContain('Second question');
+      expect(all(fixture, '#bulk-delete-box').length).toBe(0);
+    });
+
+    it('Keep them closes the box and deletes nothing', async () => {
+      const { fixture, http } = await open([Q1]);
+      await tick(fixture, 'q1');
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      clickButton(fixture, 'Keep them');
+      await settle(fixture);
+      expect(all(fixture, '#bulk-delete-box').length).toBe(0);
+      http.expectNone(`${API}/api/admin/questions/delete`);
+    });
+
+    it('starts with an empty box each time it is opened', async () => {
+      const { fixture } = await open([Q1]);
+      await tick(fixture, 'q1');
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      type(fixture, '#bulk-confirm', 'DELETE');
+      await settle(fixture);
+      clickButton(fixture, 'Keep them');
+      await settle(fixture);
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      expect(el<HTMLInputElement>(fixture, '#bulk-confirm').value).toBe('');
+      expect(el<HTMLButtonElement>(fixture, '#bulk-delete-go').disabled).toBe(true);
+    });
+
+    it('shows the problem and keeps the questions when the delete fails', async () => {
+      const { fixture, http } = await open([Q2]);
+      await tick(fixture, 'q2');
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      type(fixture, '#bulk-confirm', 'DELETE');
+      await settle(fixture);
+      el<HTMLButtonElement>(fixture, '#bulk-delete-go').click();
+      http.expectOne(`${API}/api/admin/questions/delete`).flush({ detail: 'Nope.' }, { status: 422, statusText: 'x' });
+      await settle(fixture);
+      expect(text(fixture)).toContain('Second question');
+      expect(text(fixture)).toContain('Nope.');
+    });
+  });
 });

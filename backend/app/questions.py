@@ -230,6 +230,25 @@ def set_status(scoped: TenantRepo, ids: list, status: str, admin_email: str) -> 
     return {"changed": changed, "unchanged": unchanged, "missing": missing}
 
 
+def delete_many(scoped: TenantRepo, storage: ContentStorage, ids: list, confirm: str) -> dict:
+    """Delete many questions (and their pictures). The caller must send the word DELETE, as a guard against a slip."""
+    if confirm != "DELETE":
+        raise ValidationError("Type DELETE to confirm.")
+    if not isinstance(ids, list) or not ids or not all(isinstance(item, str) for item in ids):
+        raise ValidationError("Choose at least one question.")
+    ids = list(dict.fromkeys(ids))
+    if len(ids) > MAX_BULK:
+        raise ValidationError(f"Choose up to {MAX_BULK} questions at a time.")
+    deleted = missing = 0
+    for question_id in ids:
+        try:
+            delete_question(scoped, storage, question_id)
+            deleted += 1
+        except QuestionNotFound:
+            missing += 1
+    return {"deleted": deleted, "missing": missing}
+
+
 def _drop(scoped: TenantRepo, storage: ContentStorage, pictures: list[dict]) -> None:
     for picture in pictures:
         storage.delete(picture["key"])

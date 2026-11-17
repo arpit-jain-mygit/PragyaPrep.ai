@@ -291,6 +291,11 @@ class QuestionStatusIn(BaseModel):
     status: Any = None
 
 
+class QuestionDeleteIn(BaseModel):
+    ids: Any = None
+    confirm: Any = None
+
+
 class QuestionPictureOut(BaseModel):
     id: str
     url: str

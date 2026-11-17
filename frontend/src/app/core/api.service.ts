@@ -209,6 +209,11 @@ export class ApiService {
     return this.post('/api/admin/questions/status', { ids, status });
   }
 
+  /** Delete many questions for good. The server insists on the word DELETE. */
+  deleteQuestions(ids: string[]): Promise<{ deleted: number; missing: number }> {
+    return this.post('/api/admin/questions/delete', { ids, confirm: 'DELETE' });
+  }
+
   deleteQuestion(id: string): Promise<void> {
     return this.delete(`/api/admin/questions/${encodeURIComponent(id)}`);
   }

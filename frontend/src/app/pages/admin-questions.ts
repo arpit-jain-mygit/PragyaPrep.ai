@@ -282,9 +282,26 @@ function draftFrom(question: Question): Draft {
               <span class="muted" id="selected-count">{{ selectedCount() }} selected</span>
               <button class="btn small" type="button" [disabled]="saving()" (click)="setStatus('published')">Publish selected</button>
               <button class="btn secondary small" type="button" [disabled]="saving()" (click)="setStatus('draft')">Move to draft</button>
-              <button class="btn secondary small" type="button" (click)="selected.set([])">Clear</button>
+              <button class="btn secondary small" type="button" [disabled]="saving()" (click)="askDeleteMany()">Delete selected</button>
+              <button class="btn secondary small" type="button" (click)="selected.set([]); deleteAsk.set(false)">Clear</button>
             }
           </div>
+          @if (deleteAsk() && selectedCount()) {
+            <div class="danger-box" id="bulk-delete-box">
+              <p>
+                <strong>Delete {{ selectedCount() }} {{ selectedCount() === 1 ? 'question' : 'questions' }} for good?</strong>
+                Their pictures are deleted too. This can't be undone.
+              </p>
+              <div class="field">
+                <label for="bulk-confirm">Type DELETE to confirm</label>
+                <input id="bulk-confirm" name="bulkconfirm" autocomplete="off" [ngModel]="deleteWord()" (ngModelChange)="deleteWord.set($event)" />
+              </div>
+              <div class="row">
+                <button class="btn danger small" id="bulk-delete-go" type="button" [disabled]="saving() || deleteWord() !== 'DELETE'" (click)="deleteMany()">Delete {{ selectedCount() }}</button>
+                <button class="btn secondary small" type="button" (click)="deleteAsk.set(false)">Keep them</button>
+              </div>
+            </div>
+          }
         }
         @for (question of questions(); track question.id) {
           <div class="question" [attr.data-question]="question.id">
@@ -353,6 +370,9 @@ export class AdminQuestions implements OnInit {
   readonly confirming = signal<string | null>(null);
   /** The ids ticked for a bulk change. */
   readonly selected = signal<string[]>([]);
+  /** The typed-confirmation box for deleting the ticked questions. */
+  readonly deleteAsk = signal(false);
+  readonly deleteWord = signal('');
   readonly selectedCount = computed(() => this.selected().length);
   readonly allSelected = computed(() => this.questions().length > 0 && this.selected().length === this.questions().length);
   /** How many questions were added in a row, without closing the form. */
@@ -427,6 +447,29 @@ export class AdminQuestions implements OnInit {
     this.selected.set(on ? this.questions().map((question) => question.id) : []);
   }
 
+  askDeleteMany(): void {
+    this.deleteWord.set('');
+    this.deleteAsk.set(true);
+  }
+
+  /** Delete every ticked question. The button only works once DELETE has been typed. */
+  async deleteMany(): Promise<void> {
+    const ids = this.selected();
+    if (!ids.length || this.deleteWord() !== 'DELETE') return;
+    this.saving.set(true);
+    this.reset();
+    try {
+      const result = await this.api.deleteQuestions(ids);
+      this.notice.set(`Deleted ${result.deleted} ${result.deleted === 1 ? 'question' : 'questions'}.`);
+      this.deleteAsk.set(false);
+      await this.load();
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   /** Publish or un-publish every ticked question, then show the fresh list. */
   async setStatus(status: 'draft' | 'published'): Promise<void> {
     const ids = this.selected();
@@ -449,6 +492,7 @@ export class AdminQuestions implements OnInit {
   async load(): Promise<void> {
     try {
       this.selected.set([]);
+      this.deleteAsk.set(false);
       this.questions.set(await this.api.questions(this.filter));
     } catch (error) {
       this.error.set(error as ApiError);
