@@ -20,6 +20,9 @@ import {
   InstituteUpdate,
   Member,
   MyCourse,
+  Paper,
+  Question,
+  QuestionInput,
   Registration,
   RegistrationEdit,
   RegistrationForm,
@@ -166,6 +169,29 @@ export class ApiService {
 
   revokeAccess(email: string, courseId: string): Promise<void> {
     return this.delete(`/api/admin/registrations/${encodeURIComponent(email)}/access/${encodeURIComponent(courseId)}`);
+  }
+
+  // ---- Question bank (admin) ----
+
+  papers(): Promise<Paper[]> {
+    return this.get('/api/admin/papers');
+  }
+
+  questions(filter: { paper?: string; topic?: string; status?: string } = {}): Promise<Question[]> {
+    const query = new URLSearchParams(Object.entries(filter).filter(([, value]) => !!value) as [string, string][]);
+    return this.get(`/api/admin/questions${query.size ? '?' + query : ''}`);
+  }
+
+  addQuestion(body: QuestionInput): Promise<Question> {
+    return this.post('/api/admin/questions', body);
+  }
+
+  updateQuestion(id: string, body: QuestionInput): Promise<Question> {
+    return this.patch(`/api/admin/questions/${encodeURIComponent(id)}`, body);
+  }
+
+  deleteQuestion(id: string): Promise<void> {
+    return this.delete(`/api/admin/questions/${encodeURIComponent(id)}`);
   }
 
   // ---- Student ----

@@ -35,6 +35,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | F3 | **Frontend: tenant admin payments** (payments queue, QR code and settings) | **Moved to Phase 2** | Goes with M5. Content upload and access are done in F2a |
 | M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | **Tested live** | Run on 17 Nov 2026 at https://d1szng4oy9m4an.cloudfront.net with a throwaway institute `zz-e2e`, in a real browser. Platform admin added the institute (welcome email sent). Its admin added a course. A student registered through the form and was told "waiting for approval" at login. The admin approved (email sent), uploaded a real PDF and MP4, and gave the student the course. The student saw the course, played the video from S3 and opened the PDF link. Suspending the student cut them off at once, and suspending the institute locked out everyone. No problems found, no Lambda errors, and the institute's rows and files were removed afterwards. Not covered: typing a real emailed login code (done in M2) and a phone-sized screen |
 | M7 | **Frontend hosting:** the Angular app on S3 behind CloudFront (HTTPS, deep links work on refresh, the bucket is private), a one-command `deploy-web.sh`, and the site's address added to the allowed origins for the API and S3 uploads | **Tested live** | Address: https://d1szng4oy9m4an.cloudfront.net. Checked with curl (deep links, security headers, a year's caching for hashed files and none for `index.html`, the bucket refuses direct reads, CORS from the site) and in a real browser (login page with the institute's colour and logo, admin screens, a real PDF upload and delete from that address). No Lambda errors |
+| Q1 | **Question bank (admin side):** the admin picks a paper and topic from the fixed list of 37 CUET-style papers, writes a multiple-choice question with four options, marks the correct one, and explains why each option is right or wrong. Difficulty and draft/published. List with filters, edit, delete. Private to each institute. Students don't see questions yet | **Tested live** | 32 backend and 14 frontend tests (451 and 214 in all). Added later: **Save and add another** keeps the paper, topic, difficulty and status, so the admin can enter many questions for one combination. Real browser on the sandbox: both mistakes (a repeated option, no correct answer) were shown at once, then the question saved and listed with the correct option marked. On dev (backend and website deployed): the paper list came back, a `ZZ TEST` question was added, a bad topic was refused with every error, the question was filtered, published and deleted, a call with no login got 401, and AaptPrep's bank is empty again. No Lambda errors. The page itself was not opened against dev |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -124,7 +125,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `419 passed`.
+You should see `451 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -308,6 +309,21 @@ As platform admin, on dev: `npx ng serve --configuration live` (from `frontend`)
 
 Remember to remove any test logo from a real institute afterwards.
 
+### Q1 (question bank): what to try
+Log in as an institute admin and open **Question bank** in the top bar (`/<institute>/admin/questions`).
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Click **Add a question** | A form. **Topic** is switched off until a paper is chosen |
+| 2 | Choose **Physics**, then a topic | Papers are grouped as Language, Domain and General. Topics are only those of the chosen paper |
+| 3 | Type a question, four options and a reason for each, but repeat one option and mark no correct answer | Both mistakes are shown next to the form, and what you typed stays |
+| 4 | Fix them, mark the correct option, set **Published**, click **Save and add another** | "Added question 1 in Physics · Optics." The list below switches to that paper and topic and shows the question with the correct option marked and each reason. The form stays open with the paper, topic, difficulty and status kept, and the rest cleared, ready for the next question |
+| 4b | Add a few more the same way, then click **Done** (or use **Save and close** on the last one) | A counter shows how many you added. The form closes |
+| 5 | Use the Paper, Topic and Status filters | Only matching questions |
+| 6 | **Edit**, change the wording, save. Then **Delete** and confirm | The change shows. The question is gone |
+
+Delete your test questions afterwards. Students can't see this page or these questions.
+
 ### M7 (hosting): what to try
 The dev website is at **https://d1szng4oy9m4an.cloudfront.net**. Open it on any device. There is no start page content yet, so use an institute's address:
 
@@ -370,7 +386,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 419 passed, 0 failed. Frontend: 200 passed, 0 failed. Total: 619.**
+**Backend, run on my machine: 451 passed, 0 failed. Frontend: 214 passed, 0 failed. Total: 665.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -388,7 +404,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_edit_registration` | P2 correcting a student's details and email | 22 |
 | `test_content` | M4 files, access, student links, and that a corrected email keeps access | 42 |
 | `test_logo` | P3 logos (who may, types and size, checking contents, replace, remove, the public address) | 30 |
-| | **Total** | **419** |
+| `test_questions` | Q1 question bank (the 37 papers, checks with all mistakes at once, filters, edit, delete, who may, privacy between institutes) | 32 |
+| | **Total** | **451** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -401,7 +418,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
 | `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
 | `shell.spec` | Page frame, logo in the top bar, student home, start page, not found | 20 |
-| | **Total** | **200** |
+| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row | 14 |
+| | **Total** | **214** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

@@ -191,3 +191,12 @@ progress { height: 0.9rem; }
 .access-row { padding: 0.35rem 0; }
 .logo { height: 2rem; width: auto; max-width: 9rem; object-fit: contain; vertical-align: middle; margin-right: 0.5rem; background: #fff; border-radius: 4px; padding: 2px; }
 .logo-preview { height: 3rem; width: auto; max-width: 12rem; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; padding: 3px; background: #fff; }
+
+/* Question bank */
+.option { border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
+.option legend { font-weight: 700; padding: 0 0.3rem; }
+label.inline { display: flex; gap: 0.5rem; align-items: center; font-weight: 600; }
+.question { border-top: 1px solid var(--line); padding: 0.75rem 0; }
+.options { margin: 0.25rem 0 0.75rem; padding-left: 1.5rem; }
+.options li.correct { font-weight: 600; }
+.options li .hint { font-weight: 400; }

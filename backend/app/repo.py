@@ -8,6 +8,7 @@ Tenant data. Every key starts with T#<slug>#, so one tenant can never touch anot
   T#<slug>#OTP#<email>       CODE       a login code waiting to be used (hashed, expires)
   T#<slug>#COURSE#<id>       META       a course: name, fee, access length   GSI1: T#<slug>#COURSES / name
   T#<slug>#COURSENAME#<name> LOOKUP     keeps course names unique within the institute
+  T#<slug>#QUESTION#<id>     META       a question bank question          GSI1: T#<slug>#QUESTIONS / created
 
 Counters for rate limits are platform data too, and expire on their own:
   RATE#<name>#<window>       COUNT      how many times something happened in one time window
@@ -391,3 +392,45 @@ class TenantRepo:
         _update(self.table, self._course_key(course_id), {"name": new_name, "GSI1SK": new_name.strip().lower()})
         self.table.delete_item(Key=self._course_name_key(old_name))
 
+
+    # ---- Question bank ----
+
+    def _question_key(self, question_id: str) -> dict:
+        return {"PK": f"{self._prefix}QUESTION#{question_id}", "SK": "META"}
+
+    def create_question(self, question: dict) -> None:
+        _put_new(
+            self.table,
+            {
+                **self._question_key(question["id"]),
+                **question,
+                "GSI1PK": f"{self._prefix}QUESTIONS",
+                "GSI1SK": f"{question['created_at']}#{question['id']}",
+            },
+        )
+
+    def get_question(self, question_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._question_key(question_id)).get("Item"))
+
+    def list_questions(self) -> list[dict]:
+        """All of this institute's questions, newest first."""
+        items, start = [], None
+        while True:
+            args = {
+                "IndexName": "GSI1",
+                "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}QUESTIONS"),
+                "ScanIndexForward": False,
+            }
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_question(self, question_id: str, fields: dict) -> None:
+        _update(self.table, self._question_key(question_id), fields)
+
+    def delete_question(self, question_id: str) -> None:
+        self.table.delete_item(Key=self._question_key(question_id))

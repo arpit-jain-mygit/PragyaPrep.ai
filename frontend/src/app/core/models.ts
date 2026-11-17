@@ -204,3 +204,35 @@ export interface FileLink {
   content_type: string;
   title: string;
 }
+
+// ---- Question bank ----
+
+export interface Paper {
+  id: string;
+  name: string;
+  section: string;
+  stream: string;
+  topics: string[];
+}
+
+export interface QuestionOption {
+  text: string;
+  why: string;
+}
+
+export interface Question {
+  id: string;
+  paper: string;
+  topic: string;
+  text: string;
+  options: QuestionOption[];
+  correct: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  status: 'draft' | 'published';
+  created_at: string;
+  edited_by?: string | null;
+  edited_at?: string | null;
+}
+
+/** What the admin sends. For an edit, only what changed. */
+export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at'>>;

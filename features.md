@@ -84,6 +84,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Manage the course list (it fills the registration dropdown): add, rename, change the fee and access length, hide or show.
 - Give a student a course, renew it, or take it away, from the student's details.
 - Add and delete PDF and MP4 files in a course, from the course's **Files** page.
+- Keep a **question bank** (see below).
 - *(Phase 2)* Review payments: verify or reject a screenshot, with a reason, and upload the payment QR code.
 - *(Phase 2)* Edit the institute's own branding. Today only the platform admin changes the name, colour and logo.
 
@@ -92,6 +93,14 @@ The login page shows these messages straight away. When an email isn't registere
 - Changing the email moves the student's record to the new email. The old email stops working, any session on it ends, and the new address gets an email. An email already used at the institute is refused.
 - Each edit records who made it and when. The status doesn't change.
 - Students editing their own contact details after login comes later, with their own screens.
+
+## Question bank
+- Each institute has its own private bank of multiple-choice questions. Only its admin sees it. Students can't see questions yet, and mock tests that use them come later.
+- The admin chooses a **paper** and a **topic** from a fixed list shared by all institutes: 37 CUET-style papers (13 languages, 23 domain papers such as Physics or Accountancy, and General Aptitude), each with its own topics.
+- A question has the question text, **four options**, the **correct option**, and a **reason for every option** saying why it is right or wrong. It also has a difficulty (easy, medium, hard) and a status (draft or published).
+- The admin chooses a paper and topic once and keeps adding questions for that combination: **Save and add another** keeps the paper, topic, difficulty and status, clears the rest and counts the questions added. **Save and close** ends the run.
+- The admin can list questions, filter by paper, topic and status, edit and delete them.
+- Not yet: importing questions from a file, images or formulas, several correct answers, per-institute papers or topics.
 
 ## Platform admin
 - Created only by a script, never from the screens.
@@ -135,7 +144,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Payments: QR code, screenshot upload, admin verification and rejection, and the emails and screens that go with them.
 - Students editing their own details, and institute admins editing their own branding.
 - Other video formats (M4V, MOV, WEBM).
-- Mock tests and exams.
+- Mock tests and exams (the question bank is the base for them).
 - Automatic online payments (for example a UPI gateway).
 - AI features (doubt solver, test analysis).
 - Parent and Mentor roles.

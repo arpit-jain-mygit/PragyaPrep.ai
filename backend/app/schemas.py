@@ -1,4 +1,6 @@
 """Request and response shapes. FastAPI uses these to validate input and hide internal fields."""
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -257,3 +259,44 @@ class LogoStartIn(BaseModel):
 
 class LogoUploadOut(BaseModel):
     upload: UploadFormOut
+
+
+# ---- Question bank ----
+
+class QuestionOptionIO(BaseModel):
+    text: str | None = None
+    why: str | None = None
+
+
+class QuestionIn(BaseModel):
+    """A question. Every field is checked by hand so all mistakes come back together."""
+
+    paper: str | None = None
+    topic: str | None = None
+    text: str | None = None
+    options: list[QuestionOptionIO] | None = None
+    correct: Any = None
+    difficulty: str | None = None
+    status: str | None = None
+
+
+class QuestionOut(BaseModel):
+    id: str
+    paper: str
+    topic: str
+    text: str
+    options: list[QuestionOptionIO]
+    correct: int
+    difficulty: str
+    status: str
+    created_at: str = ""
+    edited_by: str | None = None
+    edited_at: str | None = None
+
+
+class PaperOut(BaseModel):
+    id: str
+    name: str
+    section: str
+    stream: str
+    topics: list[str]

@@ -41,6 +41,7 @@ import { TenantService } from '../core/tenant.service';
               } @else if (isAdmin()) {
                 <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active">Registrations</a>
                 <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active">Courses</a>
+                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active">Question bank</a>
               } @else {
                 <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active">Home</a>
                 <a [routerLink]="['/', info.slug, 'courses']" routerLinkActive="active">My courses</a>

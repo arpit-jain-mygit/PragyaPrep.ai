@@ -30,6 +30,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Sec
 24. [Content screens (step F2a)](#24-content-screens-step-f2a)
 25. [Institute logos](#25-institute-logos)
 26. [Hosting the website (step M7)](#26-hosting-the-website-step-m7)
+27. [Question bank (step Q1)](#27-question-bank-step-q1)
 
 ---
 
@@ -247,7 +248,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Sec
 
 ## 13. Testing approach
 
-**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 419 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 200 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
+**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 451 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 214 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
 
 **Alternatives considered:** DynamoDB Local in Docker, or testing only against real AWS.
 
@@ -854,3 +855,36 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 - A domain is chosen: add a certificate and the domain to CloudFront, read the institute from the hostname, and add the domain to the allowed origins.
 - M8 creates a prod environment: a second bucket and distribution, and its own API address in the build.
+
+---
+
+## 27. Question bank (step Q1)
+
+**Status:** Built and tested live on dev. Added on 17 Nov 2026 as new scope, ahead of M8. It is the base for mock tests, which stay deferred.
+
+**Chosen:** Each institute has its own private bank of multiple-choice questions. An admin picks a **paper** and a **topic**, writes the question and exactly four options, marks the one correct option, and writes a **reason for every option** (why it is right or why it is wrong). Each question also has a difficulty (easy, medium, hard) and a status (draft or published). Only published questions will be used by tests later. Students can't see any of it yet.
+
+**Alternatives considered:** a free-text subject and topic (typos split one topic into many, and filters stop working), a shared bank across institutes (breaks tenant isolation), editable topic lists per institute (more screens, not needed yet), and importing questions from a file (later, once the shape of a question is settled).
+
+### 27.1 Decisions
+
+- **The paper list is fixed and shared.** It has 37 papers in three sections (13 languages, 23 domain papers, General Aptitude), taken from the CUET-style list. It lives in the code (`app/papers.py`) and is the same for every institute. It is not editable in Phase 1.
+- **Topics are split from the "main topics" text.** Each paper has its own list. The 13 language papers share one: Reading comprehension, Vocabulary, Grammar, Verbal ability. A question's topic must belong to its paper.
+- **One format:** plain text, four options, one correct. Hindi and the other language papers work because the text is Unicode. Several correct answers, numerical answers, images and formulas can come later.
+- **Every option needs a reason.** This is the point of the bank: students will later learn from why each wrong option is wrong.
+- **Adding in a row (added the same day):** after **Save and add another** the form stays open with the paper, topic, difficulty and status kept and the question and options cleared, the list below filters to that paper and topic, and a counter shows how many were added. This is front-end only. The API is unchanged and the paper and topic are still sent with every question, so each question stays checked on its own.
+- **Rules:** question up to 2,000 characters, option up to 500, reason up to 1,000. The four options must differ. All mistakes are returned together, field by field, like the registration form.
+- **Storage:** one row per question under the institute's own key prefix (`T#<institute>#QUESTION#<id>`), listed newest first through the existing index. The admin's list is filtered in the code, which is fine for thousands of questions.
+- **Who:** institute admins only. A student, or another institute's admin, gets 403 or "not found".
+- **Delete is real** for questions (they hold no one's personal data). Each edit records who and when.
+
+### 27.2 Trade-offs
+
+- **The topic split is mine,** not the board's syllabus. A topic can be renamed later, but questions keep the old name, so a rename would need a small script.
+- **Filtering happens in memory.** Fine for now. A bank with tens of thousands of questions would need an index per paper.
+- **No bulk import, images or AI help yet.**
+
+### 27.3 Revisit when
+
+- Mock tests are built (they will read published questions, and may need an index by paper and topic).
+- An institute asks for its own papers or topics, or for images and formulas in questions.
