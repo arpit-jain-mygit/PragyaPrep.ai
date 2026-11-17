@@ -49,7 +49,7 @@ no hard (or no easy) questions, use what exists and put the levels in the title,
 - Never add a draft question. Never add the same question twice to one test.
 
 ## 5. Settings for every test
-- Start: the next day at 00:00, End: four months later at 23:59 (India time).
+- Start: today at 00:00 (so the test is open as soon as it is published), End: four months later at 23:59 (India time).
 - Maximum attempts: 3. Pass percentage: 40. Show correct answers after submitting: yes. Status: published, unless I ask for drafts.
 - Marking by course: CAT +3 correct and -1 wrong. IPMAT +4 and -1. CLAT +1 and -0.25. CUET +5 and -1. A test for several courses
   uses the marking of its first course.
