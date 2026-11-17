@@ -41,7 +41,7 @@ All fields are required. The birth date must give an age from 10 to 80.
 | Complete address | |
 | City | |
 | PIN code | 6 digits |
-| Course | A dropdown filled from the tenant's own course list. aaptprep starts with IPMAT, CAT and CLAT |
+| Course | A dropdown filled from the tenant's own course list (names only, no price). aaptprep starts with IPMAT, CAT and CLAT |
 
 The submit button is **Register**.
 
@@ -81,7 +81,7 @@ The login page shows these messages straight away. When an email isn't registere
 
 ## Tenant admin
 - Review registrations: approve, reject, suspend or reactivate, and correct a student's details (see below).
-- Manage the course list (it fills the registration dropdown): add, rename, change the fee and access length, hide or show.
+- Manage the course list (it fills the registration dropdown): add, rename, change the access length and the papers, hide or show. (The Courses page no longer shows or sets a fee; fees come back with payments in Phase 2.)
 - Give a student a course, renew it, or take it away, from the student's details.
 - Add and delete PDF and MP4 files in a course, from the course's **Files** page.
 - Keep a **question bank** (see below).

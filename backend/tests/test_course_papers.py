@@ -117,3 +117,21 @@ def test_another_institute_cannot_change_our_papers(client, admin, make_tenant, 
     other = sign_in("other-school", "boss@example.com")
     assert client.patch(f"{COURSES}/{made['id']}", json={"papers": []}, headers=other).status_code == 404
     assert client.get(COURSES, headers=admin).json()[0]["papers"] == paper_list.suggested_for("CAT")
+
+
+# ---- The fee is no longer set from the Courses page ----
+
+def test_a_course_can_be_added_without_a_fee_and_keeps_zero(client, admin):
+    made = add_no_fee(client, admin, "Foundation")
+    assert made["fee"] == 0
+
+
+def test_a_course_with_an_old_fee_keeps_it_when_other_things_change(client, admin):
+    made = add(client, admin, "Old", fee=5000)
+    assert client.patch(f"{COURSES}/{made['id']}", json={"name": "Older"}, headers=admin).json()["fee"] == 5000
+
+
+def add_no_fee(client, admin, name):
+    response = client.post(COURSES, json={"name": name}, headers=admin)
+    assert response.status_code == 201, response.text
+    return response.json()

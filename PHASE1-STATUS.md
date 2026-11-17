@@ -45,6 +45,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q8 | **Bulk delete:** with questions ticked, **Delete selected** opens a box that says how many will be deleted for good (pictures too) and asks the admin to type `DELETE`. The Delete button stays off until the word is typed exactly. The server refuses the call unless it also carries `confirm: "DELETE"`. Up to 500 at a time | **Tested live** | 19 backend and 5 frontend tests (635 and 275 in all). On dev, through the real API: 3 `ZZ` questions were made, a call with the word `delete` was refused and nothing was removed, then 2 plus one unknown id deleted (2 deleted, 1 missing), then the last one; no `ZZ` questions were left, and the real questions were not touched. The deleting of pictures is proved by the backend tests (fake storage). The buttons weren't clicked in a browser |
 | Q9 | **Reading passages:** a passage (title and text, up to 5,000 characters) is saved once per institute, and any number of questions can point to it. A **Reading passages** card on the Question bank page adds, edits and deletes passages (a passage that questions use can't be deleted). The question form has a Passage dropdown; the list keeps a passage's questions together with the passage shown once above them, and has a Passage filter. The Excel template has a **Passages** sheet (Title, Text) and an optional **Passage** column on Questions that names a passage by its title; a title already in the bank is reused, and a title with different text is refused so nothing is overwritten | **Tested live** | 41 backend and 11 frontend tests (659 and 286 in all). On dev, with the real template downloaded from the site: a file with a passage and three questions was previewed (2 ready, 1 new passage, the row naming a missing passage flagged on its Passage column, nothing saved), imported (one passage shared by 2 questions, paragraph break kept), deleting the passage while in use was refused (409), and after deleting the questions it could be deleted. Only `ZZ` records were used and all were removed. The new screens weren't clicked in a browser |
 | Q10 | **Papers on a course:** each course now lists the papers (subjects) it covers. Six new papers for management and law entrance exams join the shared list (Quantitative Ability, Verbal Ability and Reading Comprehension, Data Interpretation, Logical Reasoning, Legal Reasoning, Current Affairs and General Knowledge), making 43. The course form has a tick list grouped by section with Select all and Clear; typing a known course name (CUET, IPMAT, CAT, CLAT) ticks its usual papers, and the admin can change them. The course list shows each course's papers (names, or a count when more than four). The question bank is unchanged; students see nothing yet | **Tested live** | 30 backend and 7 frontend tests (689 and 293 in all). On dev: the paper list has 43; a `ZZ` course named like CLAT got its 5 papers, a bad paper id was refused, the list was changed by hand, and the public course list still shows only id, name and fee. There is no way to delete a course in the app, so I removed my `ZZ` course straight from the table. I then filled AaptPrep's real **CAT (4), CLAT (5) and IPMAT (3)** with the suggested papers; nothing else changed. The new screens weren't clicked in a browser |
+| Q11 | **Fee removed from the Courses page:** the Fee column and the Fee boxes (when adding and editing a course) are gone, and a course can be added with just a name. The registration dropdown now shows course names only, without the price. Fees return with payments in Phase 2. Existing courses keep the fee they already had in the database; new ones get 0 | **Tested live** | 2 new backend tests (691 in all); frontend tests updated (293). On dev: a `ZZ` course was added with just a name (fee 0), the list showed it, and I removed it from the table. The page itself wasn't clicked in a browser |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -134,7 +135,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `689 passed`.
+You should see `691 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -502,7 +503,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 689 passed, 0 failed. Frontend: 293 passed, 0 failed. Total: 982.**
+**Backend, run on my machine: 691 passed, 0 failed. Frontend: 293 passed, 0 failed. Total: 984.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -527,8 +528,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_question_status` | Q7 bulk publish (publish, back to draft, counts, bad requests, who may, privacy between institutes) | 15 |
 | `test_question_bulk_delete` | Q8 bulk delete (the word DELETE, counts, pictures removed, who may, privacy between institutes) | 19 |
 | `test_passages` | Q9 reading passages (the API, limits and unique titles, link from a question, delete rules, privacy, the Excel Passages sheet and column) | 24 |
-| `test_course_papers` | Q10 papers on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) | 30 |
-| | **Total** | **689** |
+| `test_course_papers` | Q10 papers on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) and Q11 courses without a fee | 32 |
+| | **Total** | **691** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|

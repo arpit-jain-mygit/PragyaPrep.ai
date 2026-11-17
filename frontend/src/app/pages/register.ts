@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
-import { formatFee, todayIso } from '../core/format';
+import { todayIso } from '../core/format';
 import { ApiError, Course, RegistrationForm } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 
@@ -139,7 +139,7 @@ import { TenantService } from '../core/tenant.service';
                       [attr.aria-invalid]="errors()['course_id'] ? 'true' : null">
                 <option value="">Choose a course…</option>
                 @for (course of courses(); track course.id) {
-                  <option [value]="course.id">{{ course.name }} ({{ fee(course.fee) }})</option>
+                  <option [value]="course.id">{{ course.name }}</option>
                 }
               </select>
               @if (errors()['course_id']) { <div class="error-text">{{ errors()['course_id'] }}</div> }
@@ -158,7 +158,6 @@ export class Register implements OnInit {
   readonly tenants = inject(TenantService);
 
   readonly today = todayIso();
-  readonly fee = formatFee;
 
   form: RegistrationForm = {
     email: '', first_name: '', last_name: '', birth_date: '', gender: '', mobile: '',

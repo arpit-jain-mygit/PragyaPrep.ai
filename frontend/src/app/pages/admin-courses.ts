@@ -2,14 +2,13 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
-import { describeAccess, formatFee } from '../core/format';
+import { describeAccess } from '../core/format';
 import { Access, AdminCourse, ApiError, Paper } from '../core/models';
 import { PaperChecklist } from './paper-checklist';
 import { TenantService } from '../core/tenant.service';
 
 interface Draft {
   name: string;
-  fee: number | null;
   accessType: 'unlimited' | 'days' | 'until_date';
   days: number | null;
   until: string;
@@ -17,14 +16,13 @@ interface Draft {
 }
 
 function emptyDraft(): Draft {
-  return { name: '', fee: null, accessType: 'unlimited', days: null, until: '', papers: [] };
+  return { name: '', accessType: 'unlimited', days: null, until: '', papers: [] };
 }
 
 function draftFrom(course: AdminCourse): Draft {
   const access = course.access;
   return {
     name: course.name,
-    fee: course.fee,
     accessType: access.type,
     days: access.type === 'days' ? access.days : null,
     until: access.type === 'until_date' ? access.until : '',
@@ -38,7 +36,7 @@ function accessFrom(draft: Draft): Access {
   return { type: 'unlimited' };
 }
 
-/** The institute's courses: what appears in the registration dropdown, with each one's fee and access length. */
+/** The institute's courses: what appears in the registration dropdown, with each one's access length and papers. */
 @Component({
   selector: 'app-admin-courses',
   imports: [FormsModule, RouterLink, PaperChecklist],
@@ -55,22 +53,16 @@ function accessFrom(draft: Draft): Access {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Course</th><th>Fee</th><th>Access</th><th>Papers</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
+            <tr><th>Course</th><th>Access</th><th>Papers</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             @for (course of courses(); track course.id) {
               @if (editing() === course.id) {
                 <tr>
-                  <td colspan="6">
-                    <div class="grid-2">
-                      <div class="field">
-                        <label [attr.for]="'name-' + course.id">Name</label>
-                        <input [id]="'name-' + course.id" name="name" type="text" [(ngModel)]="draft.name" />
-                      </div>
-                      <div class="field">
-                        <label [attr.for]="'fee-' + course.id">Fee (₹)</label>
-                        <input [id]="'fee-' + course.id" name="fee" type="number" min="0" [(ngModel)]="draft.fee" />
-                      </div>
+                  <td colspan="5">
+                    <div class="field">
+                      <label [attr.for]="'name-' + course.id">Name</label>
+                      <input [id]="'name-' + course.id" name="name" type="text" [(ngModel)]="draft.name" />
                     </div>
                     <div class="grid-2">
                       <div class="field">
@@ -105,7 +97,6 @@ function accessFrom(draft: Draft): Access {
               } @else {
                 <tr [attr.data-course]="course.name">
                   <td><strong>{{ course.name }}</strong></td>
-                  <td>{{ fee(course.fee) }}</td>
                   <td>{{ access(course.access) }}</td>
                   <td class="papers-cell">{{ papersShown(course) }}</td>
                   <td><span class="chip" [class]="'chip ' + (course.active ? 'open' : 'hidden')">{{ course.active ? 'open' : 'hidden' }}</span></td>
@@ -121,7 +112,7 @@ function accessFrom(draft: Draft): Access {
                 </tr>
               }
             } @empty {
-              <tr><td colspan="6" class="empty">No courses yet. Add the first one below.</td></tr>
+              <tr><td colspan="5" class="empty">No courses yet. Add the first one below.</td></tr>
             }
           </tbody>
         </table>
@@ -130,15 +121,9 @@ function accessFrom(draft: Draft): Access {
       <div class="card" style="margin-top: 1.25rem">
         <h2>Add a course</h2>
         <form (ngSubmit)="add()" novalidate>
-          <div class="grid-2">
-            <div class="field">
-              <label for="new-name">Name</label>
-              <input id="new-name" name="newName" type="text" [(ngModel)]="newCourse.name" (change)="suggest()" />
-            </div>
-            <div class="field">
-              <label for="new-fee">Fee (₹)</label>
-              <input id="new-fee" name="newFee" type="number" min="0" [(ngModel)]="newCourse.fee" />
-            </div>
+          <div class="field">
+            <label for="new-name">Name</label>
+            <input id="new-name" name="newName" type="text" [(ngModel)]="newCourse.name" (change)="suggest()" />
           </div>
           <div class="grid-2">
             <div class="field">
@@ -164,7 +149,7 @@ function accessFrom(draft: Draft): Access {
           </div>
           <app-paper-checklist [papers]="papers()" idPrefix="new-papers" [(selected)]="newCourse.papers" />
           <p class="hint">Typing a known course name (CUET, IPMAT, CAT or CLAT) ticks its usual papers. Change them as you like.</p>
-          <button class="btn" type="submit" [disabled]="saving() || !newCourse.name.trim() || newCourse.fee === null">Add course</button>
+          <button class="btn" type="submit" [disabled]="saving() || !newCourse.name.trim()">Add course</button>
         </form>
       </div>
     }
@@ -185,7 +170,6 @@ export class AdminCourses implements OnInit {
   newCourse: Draft = emptyDraft();
   draft: Draft = emptyDraft();
 
-  readonly fee = formatFee;
   readonly access = describeAccess;
 
   ngOnInit(): void {
@@ -234,7 +218,6 @@ export class AdminCourses implements OnInit {
     await this.run(async () => {
       await this.api.updateCourse(course.id, {
         name: this.draft.name,
-        fee: Number(this.draft.fee),
         access: accessFrom(this.draft),
         papers: this.draft.papers,
       });
@@ -254,7 +237,6 @@ export class AdminCourses implements OnInit {
     await this.run(async () => {
       const created = await this.api.addCourse({
         name: this.newCourse.name,
-        fee: Number(this.newCourse.fee),
         access: accessFrom(this.newCourse),
         papers: this.newCourse.papers,
       });

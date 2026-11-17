@@ -133,7 +133,7 @@ export class ApiService {
     return this.get('/api/admin/courses');
   }
 
-  addCourse(body: { name: string; fee: number; access: Access; papers?: string[] }): Promise<AdminCourse> {
+  addCourse(body: { name: string; fee?: number; access: Access; papers?: string[] }): Promise<AdminCourse> {
     return this.post('/api/admin/courses', body);
   }
 

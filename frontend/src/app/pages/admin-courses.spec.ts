@@ -29,15 +29,14 @@ function answerReload(http: ReturnType<typeof setupTestBed>['http'], courses: ob
 }
 
 describe('Admin courses page', () => {
-  it('lists every course with its fee, access length and whether it is open', async () => {
+  it('lists every course with its access length and whether it is open, and no fee', async () => {
     const { fixture } = await open();
     const rows = all(fixture, 'tbody tr').map((r) => r.textContent?.replace(/\s+/g, ' ').trim());
     expect(rows[0]).toContain('CAT');
-    expect(rows[0]).toContain('₹10,000');
+    expect(rows[0]).not.toContain('₹');
     expect(rows[0]).toContain('Unlimited');
     expect(rows[0]).toContain('open');
     expect(rows[1]).toContain('CLAT');
-    expect(rows[1]).toContain('₹12,500');
     expect(rows[1]).toContain('365 days after payment');
     expect(rows[1]).toContain('hidden');
   });
@@ -50,12 +49,11 @@ describe('Admin courses page', () => {
   it('adds a course with unlimited access', async () => {
     const { fixture, http } = await open([CAT]);
     type(fixture, '#new-name', 'IPMAT');
-    type(fixture, '#new-fee', '9000');
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     const request = http.expectOne(`${API}/api/admin/courses`);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ name: 'IPMAT', fee: 9000, access: { type: 'unlimited' }, papers: [] });
+    expect(request.request.body).toEqual({ name: 'IPMAT', access: { type: 'unlimited' }, papers: [] });
     request.flush({ ...CAT, id: 'c3', name: 'IPMAT', fee: 9000 });
     await settle(fixture);
     answerReload(http, [CAT, { ...CAT, id: 'c3', name: 'IPMAT', fee: 9000 }]);
@@ -69,47 +67,42 @@ describe('Admin courses page', () => {
   it('adds a course whose access lasts a number of days', async () => {
     const { fixture, http } = await open([]);
     type(fixture, '#new-name', 'CUET');
-    type(fixture, '#new-fee', '5000');
     type(fixture, '#new-type', 'days');
     await settle(fixture);
     type(fixture, '#new-days', '180');
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     expect(http.expectOne(`${API}/api/admin/courses`).request.body).toEqual({
-      name: 'CUET', fee: 5000, access: { type: 'days', days: 180 }, papers: [],
+      name: 'CUET', access: { type: 'days', days: 180 }, papers: [],
     });
   });
 
   it('adds a course whose access ends on a date', async () => {
     const { fixture, http } = await open([]);
     type(fixture, '#new-name', 'CUET');
-    type(fixture, '#new-fee', '5000');
     type(fixture, '#new-type', 'until_date');
     await settle(fixture);
     type(fixture, '#new-until', '2027-06-30');
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     expect(http.expectOne(`${API}/api/admin/courses`).request.body).toEqual({
-      name: 'CUET', fee: 5000, access: { type: 'until_date', until: '2027-06-30' }, papers: [],
+      name: 'CUET', access: { type: 'until_date', until: '2027-06-30' }, papers: [],
     });
   });
 
-  it('keeps the Add button off until there is a name and a fee', async () => {
+  it('keeps the Add button off until there is a name, and has no fee box', async () => {
     const { fixture } = await open([]);
     const add = () => all<HTMLButtonElement>(fixture, 'button[type=submit]')[0];
     expect(add().disabled).toBe(true);
     type(fixture, '#new-name', 'CAT');
     await settle(fixture);
-    expect(add().disabled).toBe(true);
-    type(fixture, '#new-fee', '100');
-    await settle(fixture);
     expect(add().disabled).toBe(false);
+    expect(all(fixture, '#new-fee').length).toBe(0);
   });
 
   it('shows the API\'s message when a course cannot be added', async () => {
     const { fixture, http } = await open([CAT]);
     type(fixture, '#new-name', 'cat');
-    type(fixture, '#new-fee', '1');
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     http.expectOne(`${API}/api/admin/courses`).flush(
@@ -121,16 +114,15 @@ describe('Admin courses page', () => {
     expect(all(fixture, 'tbody tr').length).toBe(1);
   });
 
-  it('edits a course\'s name, fee and access length', async () => {
+  it('edits a course\'s name and access length', async () => {
     const { fixture, http } = await open();
     clickButton(fixture, 'Edit');
     await settle(fixture);
     expect(el<HTMLInputElement>(fixture, '#name-c1').value).toBe('CAT');
-    expect(el<HTMLInputElement>(fixture, '#fee-c1').value).toBe('10000');
+    expect(all(fixture, '#fee-c1').length).toBe(0);
     expect(text(fixture)).toContain('Students who already have access keep what they have.');
 
     type(fixture, '#name-c1', 'CAT 2027');
-    type(fixture, '#fee-c1', '11000');
     type(fixture, '#type-c1', 'days');
     await settle(fixture);
     type(fixture, '#days-c1', '90');
@@ -138,10 +130,10 @@ describe('Admin courses page', () => {
     clickButton(fixture, 'Save');
     const request = http.expectOne(`${API}/api/admin/courses/c1`);
     expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ name: 'CAT 2027', fee: 11000, access: { type: 'days', days: 90 }, papers: ['quantitative-ability', 'logical-reasoning'] });
-    request.flush({ ...CAT, name: 'CAT 2027', fee: 11000 });
+    expect(request.request.body).toEqual({ name: 'CAT 2027', access: { type: 'days', days: 90 }, papers: ['quantitative-ability', 'logical-reasoning'] });
+    request.flush({ ...CAT, name: 'CAT 2027' });
     await settle(fixture);
-    answerReload(http, [{ ...CAT, name: 'CAT 2027', fee: 11000, access: { type: 'days', days: 90 } }, CLAT]);
+    answerReload(http, [{ ...CAT, name: 'CAT 2027', access: { type: 'days', days: 90 } }, CLAT]);
     await settle(fixture);
 
     expect(text(fixture)).toContain('Saved CAT 2027.');
@@ -180,15 +172,15 @@ describe('Admin courses page', () => {
     const { fixture, http } = await open();
     clickButton(fixture, 'Edit');
     await settle(fixture);
-    type(fixture, '#fee-c1', '-5');
+    type(fixture, '#name-c1', 'CLAT');
     clickButton(fixture, 'Save');
     http.expectOne(`${API}/api/admin/courses/c1`).flush(
-      { detail: 'The fee must be a whole number of rupees, from 0 to 10,000,000.' },
+      { detail: "A course called 'CLAT' already exists." },
       { status: 422, statusText: 'Unprocessable Entity' },
     );
     await settle(fixture);
-    expect(text(fixture)).toContain('The fee must be a whole number of rupees');
-    expect(all(fixture, '#fee-c1').length).toBe(1); // still editing, so nothing is lost
+    expect(text(fixture)).toContain("A course called 'CLAT' already exists.");
+    expect(all(fixture, '#name-c1').length).toBe(1); // still editing, so nothing is lost
   });
 
   it('explains it when the courses cannot be loaded', async () => {
@@ -256,8 +248,7 @@ describe('Admin courses page', () => {
     it('ticks the usual papers when a known course name is typed, and sends them', async () => {
       const { fixture, http } = await open([]);
       type(fixture, '#new-name', 'CAT 2027');
-      type(fixture, '#new-fee', '9000');
-      el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
+        el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
       const ask = http.expectOne(`${API}/api/admin/course-papers/suggested?name=CAT%202027`);
       expect(ask.request.method).toBe('GET');
       ask.flush({ papers: ['quantitative-ability', 'logical-reasoning'] });

@@ -31,10 +31,10 @@ function fillValidForm(fixture: ReturnType<typeof TestBed.createComponent<Regist
 }
 
 describe('Register page', () => {
-  it('lists the institute\'s courses with their fees', async () => {
+  it('lists the institute\'s courses by name, without fees', async () => {
     const { fixture } = await open();
     const options = all<HTMLOptionElement>(fixture, '#course_id option').map((o) => o.textContent?.trim());
-    expect(options).toEqual(['Choose a course…', 'CLAT (₹10,000)', 'IPMAT (₹12,500)']);
+    expect(options).toEqual(['Choose a course…', 'CLAT', 'IPMAT']);
   });
 
   it('asks for every field the institute needs', async () => {

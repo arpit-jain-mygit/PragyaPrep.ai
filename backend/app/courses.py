@@ -65,7 +65,7 @@ def clean_papers(raw) -> list[str]:
     return [paper["id"] for paper in paper_list.PAPERS if paper["id"] in chosen]
 
 
-def create_course(scoped: TenantRepo, name: str, fee: int, access: dict | None = None, papers=None) -> dict:
+def create_course(scoped: TenantRepo, name: str, fee: int = 0, access: dict | None = None, papers=None) -> dict:
     """papers: the ids the admin chose. Left out (None), the usual papers for the course name are used, if we know it."""
     course = {
         "id": uuid4().hex,
