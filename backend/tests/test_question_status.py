@@ -53,7 +53,6 @@ def test_questions_already_in_that_status_and_unknown_ids_are_counted(client, ad
         {"ids": ["x"], "status": "live"},
         {"ids": ["x"], "status": True},
         {"ids": ["x"]},
-        {"ids": [f"q{i}" for i in range(501)], "status": "published"},
     ],
 )
 def test_bad_requests_are_refused(client, admin, body):
@@ -83,3 +82,18 @@ def test_another_institute_cannot_change_our_questions(client, admin, make_tenan
     other = sign_in("other-school", "boss@example.com")
     assert client.post(BULK, json={"ids": [a], "status": "published"}, headers=other).json()["missing"] == 1
     assert statuses(client, admin) == {a: "draft"}
+
+
+def test_there_is_no_limit_on_how_many_can_be_changed_at_once(client, admin, repo):
+    scoped = repo.scoped("aaptprep")
+    ids = []
+    for i in range(1200):
+        item = {"id": f"bulk{i:05d}", "paper": "physics", "topic": "Optics", "text": f"Bulk {i}", "kind": "mcq", "options": [], "correct": 0,
+                "difficulty": "easy", "status": "draft", "images": {}, "created_at": f"2027-01-01T00:{i // 60:02d}:{i % 60:02d}+00:00"}
+        scoped.create_question(item)
+        ids.append(item["id"])
+    response = client.post(BULK, json={"ids": ids + ["nope"], "status": "published"}, headers=admin)
+    assert response.status_code == 200 and response.json() == {"changed": 1200, "unchanged": 0, "missing": 1}
+    assert all(q["status"] == "published" and q["edited_by"] == "ritesh@example.com" for q in client.get(URL, headers=admin).json())
+    again = client.post(BULK, json={"ids": ids, "status": "published"}, headers=admin).json()
+    assert again == {"changed": 0, "unchanged": 1200, "missing": 0}

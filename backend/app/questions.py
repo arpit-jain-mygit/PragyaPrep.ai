@@ -259,19 +259,13 @@ def set_status(scoped: TenantRepo, ids: list, status: str, admin_email: str) -> 
     if not isinstance(ids, list) or not ids or not all(isinstance(item, str) for item in ids):
         raise ValidationError("Choose at least one question.")
     ids = list(dict.fromkeys(ids))
-    if len(ids) > MAX_BULK:
-        raise ValidationError(f"Choose up to {MAX_BULK} questions at a time.")
-    changed = unchanged = missing = 0
-    for question_id in ids:
-        current = scoped.get_question(question_id)
-        if current is None:
-            missing += 1
-        elif current.get("status") == status:
-            unchanged += 1
-        else:
-            scoped.update_question(question_id, {"status": status, "edited_by": admin_email, "edited_at": now_iso()})
-            changed += 1
-    return {"changed": changed, "unchanged": unchanged, "missing": missing}
+    # No limit on how many: the whole bank can be published at once. The bank is read once and the changes are made
+    # several at a time, so a few thousand questions still finish well inside a request.
+    bank = {item["id"]: item for item in scoped.list_questions()}
+    todo = [question_id for question_id in ids if question_id in bank and bank[question_id].get("status") != status]
+    missing = sum(1 for question_id in ids if question_id not in bank)
+    scoped.set_questions_fields(todo, {"status": status, "edited_by": admin_email, "edited_at": now_iso()})
+    return {"changed": len(todo), "unchanged": len(ids) - len(todo) - missing, "missing": missing}
 
 
 def delete_many(scoped: TenantRepo, storage: ContentStorage, ids: list, confirm: str) -> dict:

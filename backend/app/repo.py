@@ -432,6 +432,36 @@ class TenantRepo:
     def update_question(self, question_id: str, fields: dict) -> None:
         _update(self.table, self._question_key(question_id), fields)
 
+    def set_questions_fields(self, question_ids: list[str], fields: dict) -> None:
+        """Set the same text fields on many questions at once, several at a time, so thousands finish within a request.
+
+        Uses the table's client (safe to share between threads) rather than the table object."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        client = self.table.meta.client
+        name = self.table.name
+        names = {f"#{key}": key for key in fields}
+        values = {f":{key}": str(value) for key, value in fields.items()}
+        expression = "SET " + ", ".join(f"#{key} = :{key}" for key in fields)
+
+        def one(question_id: str) -> None:
+            key = self._question_key(question_id)
+            try:
+                client.update_item(
+                    TableName=name,
+                    Key=key,
+                    UpdateExpression=expression,
+                    ConditionExpression="attribute_exists(PK)",
+                    ExpressionAttributeNames=names,
+                    ExpressionAttributeValues=values,
+                )
+            except ClientError as error:
+                if error.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                    raise
+
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            list(pool.map(one, question_ids))
+
     def delete_question(self, question_id: str) -> None:
         self.table.delete_item(Key=self._question_key(question_id))
 

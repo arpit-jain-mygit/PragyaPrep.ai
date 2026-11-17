@@ -29,6 +29,15 @@ interface Draft {
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'];
+/** Bulk changes go to the server in groups of this size, so any number of questions works. */
+const STATUS_CHUNK = 200;
+const DELETE_CHUNK = 100;
+
+function chunks<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
 
 function emptyDraft(): Draft {
   return {
@@ -544,32 +553,56 @@ export class AdminQuestions implements OnInit {
     if (!ids.length || this.deleteWord() !== 'DELETE') return;
     this.saving.set(true);
     this.reset();
+    let deleted = 0;
+    let blocked = 0;
     try {
-      const result = await this.api.deleteQuestions(ids);
-      this.notice.set(`Deleted ${result.deleted} ${result.deleted === 1 ? 'question' : 'questions'}.${result.blocked ? ` ${result.blocked} stayed because a published test uses ${result.blocked === 1 ? 'it' : 'them'}.` : ''}`);
+      // In small groups, so a big selection never makes one request too long.
+      for (const group of chunks(ids, DELETE_CHUNK)) {
+        const result = await this.api.deleteQuestions(group);
+        deleted += result.deleted;
+        blocked += result.blocked;
+        if (ids.length > DELETE_CHUNK) this.notice.set(`Deleting… ${deleted + blocked} of ${ids.length}`);
+      }
+      this.notice.set(`Deleted ${deleted} ${deleted === 1 ? 'question' : 'questions'}.${blocked ? ` ${blocked} stayed because a published test uses ${blocked === 1 ? 'it' : 'them'}.` : ''}`);
       this.deleteAsk.set(false);
       await this.load();
     } catch (error) {
       this.error.set(error as ApiError);
+      if (deleted) {
+        this.notice.set(`Deleted ${deleted} before the problem.`);
+        await this.load();
+      }
     } finally {
       this.saving.set(false);
     }
   }
 
-  /** Publish or un-publish every ticked question, then show the fresh list. */
+  /** Publish or un-publish every ticked question, then show the fresh list. Any number can be ticked. */
   async setStatus(status: 'draft' | 'published'): Promise<void> {
     const ids = this.selected();
     if (!ids.length) return;
     this.saving.set(true);
     this.reset();
+    let changed = 0;
+    let unchanged = 0;
     try {
-      const result = await this.api.setQuestionStatus(ids, status);
+      // In groups, so thousands of questions never make one request too long.
+      for (const group of chunks(ids, STATUS_CHUNK)) {
+        const result = await this.api.setQuestionStatus(group, status);
+        changed += result.changed;
+        unchanged += result.unchanged;
+        if (ids.length > STATUS_CHUNK) this.notice.set(`${status === 'published' ? 'Publishing' : 'Moving to draft'}… ${changed + unchanged} of ${ids.length}`);
+      }
       const word = status === 'published' ? 'Published' : 'Moved to draft:';
-      const skipped = result.unchanged ? ` ${result.unchanged} already ${status === 'published' ? 'published' : 'drafts'}.` : '';
-      this.notice.set(`${word} ${result.changed} ${result.changed === 1 ? 'question' : 'questions'}.${skipped}`);
+      const skipped = unchanged ? ` ${unchanged} already ${status === 'published' ? 'published' : 'drafts'}.` : '';
+      this.notice.set(`${word} ${changed} ${changed === 1 ? 'question' : 'questions'}.${skipped}`);
       await this.load();
     } catch (error) {
       this.error.set(error as ApiError);
+      if (changed) {
+        this.notice.set(`${status === 'published' ? 'Published' : 'Moved to draft:'} ${changed} before the problem. Run it again to finish.`);
+        await this.load();
+      }
     } finally {
       this.saving.set(false);
     }

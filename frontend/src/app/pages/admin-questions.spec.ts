@@ -965,4 +965,63 @@ describe('Admin question bank: fill-in questions', () => {
       expect(all(fixture, '[data-question]').length).toBe(1);
     });
   });
+
+  describe('very large selections', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ...Q1, id: `m${i}`, text: `Many ${i}`, status: 'draft' }));
+
+    it('publishes any number in groups of 200 and adds the results up', async () => {
+      const { fixture, http } = await open(many(450));
+      el<HTMLInputElement>(fixture, '#select-all').click();
+      await settle(fixture);
+      expect(text(fixture)).toContain('450 selected');
+      clickButton(fixture, 'Publish selected');
+      for (const size of [200, 200, 50]) {
+        const request = http.expectOne(`${API}/api/admin/questions/status`);
+        expect(request.request.body.ids.length).toBe(size);
+        expect(request.request.body.status).toBe('published');
+        request.flush({ changed: size - (size === 50 ? 5 : 0), unchanged: size === 50 ? 5 : 0, missing: 0 });
+        await settle(fixture);
+      }
+      http.expectOne(`${API}/api/admin/questions`).flush(many(450));
+      await settle(fixture);
+      expect(text(fixture)).toContain('Published 445 questions. 5 already published.');
+    });
+
+    it('shows how far it got, and says what was done if a group fails', async () => {
+      const { fixture, http } = await open(many(450));
+      el<HTMLInputElement>(fixture, '#select-all').click();
+      await settle(fixture);
+      clickButton(fixture, 'Publish selected');
+      http.expectOne(`${API}/api/admin/questions/status`).flush({ changed: 200, unchanged: 0, missing: 0 });
+      await settle(fixture);
+      expect(text(fixture)).toContain('Publishing… 200 of 450');
+      http.expectOne(`${API}/api/admin/questions/status`).flush({ detail: 'Server trouble.' }, { status: 500, statusText: 'x' });
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions`).flush(many(450));
+      await settle(fixture);
+      expect(text(fixture)).toContain('Server trouble.');
+      expect(text(fixture)).toContain('Published 200 before the problem. Run it again to finish.');
+    });
+
+    it('deletes a big selection in groups of 100, after DELETE is typed', async () => {
+      const { fixture, http } = await open(many(250));
+      el<HTMLInputElement>(fixture, '#select-all').click();
+      await settle(fixture);
+      clickButton(fixture, 'Delete selected');
+      await settle(fixture);
+      type(fixture, '#bulk-confirm', 'DELETE');
+      await settle(fixture);
+      el<HTMLButtonElement>(fixture, '#bulk-delete-go').click();
+      for (const size of [100, 100, 50]) {
+        const request = http.expectOne(`${API}/api/admin/questions/delete`);
+        expect(request.request.body.ids.length).toBe(size);
+        expect(request.request.body.confirm).toBe('DELETE');
+        request.flush({ deleted: size - (size === 50 ? 2 : 0), missing: 0, blocked: size === 50 ? 2 : 0 });
+        await settle(fixture);
+      }
+      http.expectOne(`${API}/api/admin/questions`).flush([]);
+      await settle(fixture);
+      expect(text(fixture)).toContain('Deleted 248 questions. 2 stayed because a published test uses them.');
+    });
+  });
 });
