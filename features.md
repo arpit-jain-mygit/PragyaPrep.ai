@@ -120,6 +120,7 @@ The login page shows these messages straight away. When an email isn't registere
 - **Adding questions:** *Manually* (choose from the published questions, with search, subject, topic and level filters) or *Automatically* (rules of subject, optional topic, optional level and how many; the system picks random published questions, and can pick again). The test keeps a fixed list, so every student gets the same questions.
 - Only published questions can be added. A question on a passage always comes with the rest of its passage, so the picked total can be a little more than asked. The page shows the count, the total marks and the count per subject.
 - A test needs at least one question and one course to be published. A question in a published test can't be deleted; deleting a question takes it out of draft tests.
+- The list has a **search** by name, a **course** filter and a **status** filter, with a count and a clear button.
 - Students taking tests (timing, answers, results, reasons afterwards) is the next step and isn't built yet.
 
 ## Platform admin

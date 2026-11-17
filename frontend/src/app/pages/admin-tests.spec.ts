@@ -352,4 +352,76 @@ describe('Admin tests page', () => {
     await settle(fixture);
     expect(text(fixture)).toContain("You don't have access to this.");
   });
+
+  describe('search and filters', () => {
+    const MANY = [
+      { ...T1, id: 'a', title: 'CAT Full Mock Test 1', courses: ['c1'], status: 'published' },
+      { ...T1, id: 'b', title: 'CAT Verbal Ability Sectional Test 1', courses: ['c1'], status: 'draft' },
+      { ...T1, id: 'c', title: 'CLAT English Mock 1', courses: ['c2'], status: 'published' },
+      { ...T1, id: 'd', title: 'Verbal Ability Topic Test: Vocabulary', courses: ['c1', 'c2'], status: 'published' },
+    ];
+    const titles = (fixture: Awaited<ReturnType<typeof open>>['fixture']) => all(fixture, '[data-test]').map((r) => r.getAttribute('data-test'));
+
+    it('shows every test and how many there are when nothing is filtered', async () => {
+      const { fixture } = await open(MANY);
+      expect(titles(fixture).length).toBe(4);
+      expect(el(fixture, '#test-count').textContent).toContain('4 tests');
+      expect(all(fixture, '#tf-clear').length).toBe(0);
+    });
+
+    it('searches the title by words, in any order and ignoring capitals', async () => {
+      const { fixture } = await open(MANY);
+      type(fixture, '#tf-search', 'verbal cat');
+      await settle(fixture);
+      expect(titles(fixture)).toEqual(['CAT Verbal Ability Sectional Test 1']);
+      expect(el(fixture, '#test-count').textContent).toContain('1 of 4 tests');
+      type(fixture, '#tf-search', 'MOCK');
+      await settle(fixture);
+      expect(titles(fixture)).toEqual(['CAT Full Mock Test 1', 'CLAT English Mock 1']);
+    });
+
+    it('filters by course, including tests shared by several courses', async () => {
+      const { fixture } = await open(MANY);
+      type(fixture, '#tf-course', 'c2');
+      await settle(fixture);
+      expect(titles(fixture)).toEqual(['CLAT English Mock 1', 'Verbal Ability Topic Test: Vocabulary']);
+    });
+
+    it('filters by status and combines all three filters', async () => {
+      const { fixture } = await open(MANY);
+      type(fixture, '#tf-status', 'draft');
+      await settle(fixture);
+      expect(titles(fixture)).toEqual(['CAT Verbal Ability Sectional Test 1']);
+      type(fixture, '#tf-status', 'published');
+      type(fixture, '#tf-course', 'c1');
+      type(fixture, '#tf-search', 'vocabulary');
+      await settle(fixture);
+      expect(titles(fixture)).toEqual(['Verbal Ability Topic Test: Vocabulary']);
+    });
+
+    it('says when nothing matches and clears the filters with one click', async () => {
+      const { fixture } = await open(MANY);
+      type(fixture, '#tf-search', 'zzz');
+      await settle(fixture);
+      expect(text(fixture)).toContain('No tests match');
+      expect(titles(fixture).length).toBe(0);
+      el<HTMLButtonElement>(fixture, '#tf-clear').click();
+      await settle(fixture);
+      expect(titles(fixture).length).toBe(4);
+      expect(el<HTMLInputElement>(fixture, '#tf-search').value).toBe('');
+      expect(el<HTMLSelectElement>(fixture, '#tf-course').value).toBe('');
+    });
+
+    it('keeps the filters when a test is published or deleted', async () => {
+      const { fixture, http } = await open(MANY);
+      type(fixture, '#tf-search', 'clat');
+      await settle(fixture);
+      Array.from(el(fixture, '[data-test="CLAT English Mock 1"]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Move to draft')!.click();
+      http.expectOne(`${API}/api/admin/tests/c`).flush({ ...MANY[2], status: 'draft', questions: [] });
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/tests`).flush([MANY[0], MANY[1], { ...MANY[2], status: 'draft' }, MANY[3]]);
+      await settle(fixture);
+      expect(titles(fixture)).toEqual(['CLAT English Mock 1']);
+    });
+  });
 });

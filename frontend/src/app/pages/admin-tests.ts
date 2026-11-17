@@ -287,11 +287,39 @@ const SHOWN_AT_MOST = 100;
     } @else if (!tests().length) {
       <div class="empty-state"><app-icon name="clipboard" [size]="32" /><p>No tests yet</p></div>
     } @else {
-      <div class="table-wrap">
+      <div class="toolbar" id="test-filters">
+        <div class="field" style="flex: 2 1 14rem">
+          <label class="sr-only" for="tf-search">Search tests</label>
+          <input id="tf-search" name="tfsearch" type="search" placeholder="Search tests by name" [ngModel]="testFilter().search" (ngModelChange)="setFilter('search', $event)" />
+        </div>
+        <div class="field">
+          <label class="sr-only" for="tf-course">Course</label>
+          <select id="tf-course" name="tfcourse" [ngModel]="testFilter().course" (ngModelChange)="setFilter('course', $event)">
+            <option value="">All courses</option>
+            @for (course of courses(); track course.id) { <option [value]="course.id">{{ course.name }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label class="sr-only" for="tf-status">Status</label>
+          <select id="tf-status" name="tfstatus" [ngModel]="testFilter().status" (ngModelChange)="setFilter('status', $event)">
+            <option value="">All statuses</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+        @if (filtering()) {
+          <button class="icon-btn" type="button" id="tf-clear" title="Clear filters" (click)="clearFilters()"><app-icon name="x" /><span class="sr-only">Clear filters</span></button>
+        }
+      </div>
+      <p class="soft" id="test-count">{{ shownTests().length === tests().length ? tests().length + (tests().length === 1 ? ' test' : ' tests') : shownTests().length + ' of ' + tests().length + ' tests' }}</p>
+      @if (!shownTests().length) {
+        <div class="empty-state"><app-icon name="search" [size]="28" /><p>No tests match</p></div>
+      }
+      <div class="table-wrap" [hidden]="!shownTests().length">
         <table class="compact" id="test-table">
           <thead><tr><th>Test</th><th class="hide-sm">Courses</th><th class="hide-sm">Window</th><th>Questions</th><th class="hide-sm">Time</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
-            @for (item of tests(); track item.id) {
+            @for (item of shownTests(); track item.id) {
               <tr [attr.data-test]="item.title">
                 <td><strong>{{ item.title }}</strong><div class="soft">{{ item.total_marks }} marks · pass {{ item.pass_percentage }}% · {{ item.max_attempts }} {{ item.max_attempts === 1 ? 'attempt' : 'attempts' }}</div></td>
                 <td class="soft hide-sm">{{ courseNames(item) }}</td>
@@ -326,6 +354,23 @@ export class AdminTests implements OnInit {
   readonly emptyRule = emptyRule;
 
   readonly tests = signal<TestSummary[]>([]);
+  /** The search words and the course and status chosen above the list. */
+  readonly testFilter = signal({ search: '', course: '', status: '' });
+  readonly filtering = computed(() => {
+    const f = this.testFilter();
+    return !!(f.search.trim() || f.course || f.status);
+  });
+  /** The tests that match the search and filters, in the same order as the full list. */
+  readonly shownTests = computed(() => {
+    const f = this.testFilter();
+    const words = f.search.toLowerCase().split(/\s+/).filter(Boolean);
+    return this.tests().filter(
+      (item) =>
+        words.every((word) => item.title.toLowerCase().includes(word)) &&
+        (!f.course || item.courses.includes(f.course)) &&
+        (!f.status || item.status === f.status),
+    );
+  });
   readonly courses = signal<AdminCourse[]>([]);
   readonly papers = signal<Paper[]>([]);
   readonly loading = signal(false);
@@ -395,6 +440,14 @@ export class AdminTests implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  setFilter(field: 'search' | 'course' | 'status', value: string): void {
+    this.testFilter.update((f) => ({ ...f, [field]: value ?? '' }));
+  }
+
+  clearFilters(): void {
+    this.testFilter.set({ search: '', course: '', status: '' });
   }
 
   topicsOf(paperId: string): string[] {
