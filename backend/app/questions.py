@@ -205,6 +205,31 @@ def update_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
     return scoped.get_question(question_id)
 
 
+MAX_BULK = 500
+
+
+def set_status(scoped: TenantRepo, ids: list, status: str, admin_email: str) -> dict:
+    """Publish or un-publish many questions at once. Questions already in that status are left alone."""
+    if status not in STATUSES:
+        raise ValidationError("Status must be draft or published.")
+    if not isinstance(ids, list) or not ids or not all(isinstance(item, str) for item in ids):
+        raise ValidationError("Choose at least one question.")
+    ids = list(dict.fromkeys(ids))
+    if len(ids) > MAX_BULK:
+        raise ValidationError(f"Choose up to {MAX_BULK} questions at a time.")
+    changed = unchanged = missing = 0
+    for question_id in ids:
+        current = scoped.get_question(question_id)
+        if current is None:
+            missing += 1
+        elif current.get("status") == status:
+            unchanged += 1
+        else:
+            scoped.update_question(question_id, {"status": status, "edited_by": admin_email, "edited_at": now_iso()})
+            changed += 1
+    return {"changed": changed, "unchanged": unchanged, "missing": missing}
+
+
 def _drop(scoped: TenantRepo, storage: ContentStorage, pictures: list[dict]) -> None:
     for picture in pictures:
         storage.delete(picture["key"])

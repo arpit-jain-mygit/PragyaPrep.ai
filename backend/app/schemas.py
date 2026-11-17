@@ -286,6 +286,11 @@ class QuestionIn(BaseModel):
     explanation: str | None = None
 
 
+class QuestionStatusIn(BaseModel):
+    ids: Any = None
+    status: Any = None
+
+
 class QuestionPictureOut(BaseModel):
     id: str
     url: str

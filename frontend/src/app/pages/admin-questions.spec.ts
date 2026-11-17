@@ -625,4 +625,88 @@ describe('Admin question bank: fill-in questions', () => {
     http.expectOne(`${API}/api/admin/question-images/pb`).flush(null);
     expect(all(fixture, '#question-form img').length).toBe(0);
   });
+
+  describe('publishing many at once', () => {
+    const Q2 = { ...Q1, id: 'q2', text: 'Second question', status: 'draft' };
+    const Q3 = { ...Q1, id: 'q3', text: 'Third question', status: 'draft' };
+
+    it('shows no bulk buttons until something is ticked', async () => {
+      const { fixture } = await open([Q1, Q2, Q3]);
+      expect(text(fixture)).toContain('Select all 3 shown');
+      expect(text(fixture)).not.toContain('Publish selected');
+    });
+
+    it('publishes only the ticked questions and shows the fresh list', async () => {
+      const { fixture, http } = await open([Q1, Q2, Q3]);
+      el<HTMLInputElement>(fixture, '[data-question="q2"] .pick').click();
+      el<HTMLInputElement>(fixture, '[data-question="q3"] .pick').click();
+      await settle(fixture);
+      expect(text(fixture)).toContain('2 selected');
+      clickButton(fixture, 'Publish selected');
+      const request = http.expectOne(`${API}/api/admin/questions/status`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ ids: ['q2', 'q3'], status: 'published' });
+      request.flush({ changed: 2, unchanged: 0, missing: 0 });
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions`).flush([Q1, { ...Q2, status: 'published' }, { ...Q3, status: 'published' }]);
+      await settle(fixture);
+      expect(text(fixture)).toContain('Published 2 questions.');
+      expect(text(fixture)).not.toContain('selected');
+    });
+
+    it('ticks everything shown with Select all, and mentions the ones already published', async () => {
+      const { fixture, http } = await open([Q1, Q2]);
+      el<HTMLInputElement>(fixture, '#select-all').click();
+      await settle(fixture);
+      expect(text(fixture)).toContain('2 selected');
+      clickButton(fixture, 'Publish selected');
+      http.expectOne(`${API}/api/admin/questions/status`).flush({ changed: 1, unchanged: 1, missing: 0 });
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions`).flush([Q1, Q2]);
+      await settle(fixture);
+      expect(text(fixture)).toContain('Published 1 question. 1 already published.');
+    });
+
+    it('can move the ticked questions back to draft', async () => {
+      const { fixture, http } = await open([Q1]);
+      el<HTMLInputElement>(fixture, '[data-question="q1"] .pick').click();
+      await settle(fixture);
+      clickButton(fixture, 'Move to draft');
+      const request = http.expectOne(`${API}/api/admin/questions/status`);
+      expect(request.request.body).toEqual({ ids: ['q1'], status: 'draft' });
+      request.flush({ changed: 1, unchanged: 0, missing: 0 });
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions`).flush([{ ...Q1, status: 'draft' }]);
+      await settle(fixture);
+      expect(text(fixture)).toContain('Moved to draft: 1 question.');
+    });
+
+    it('Clear unticks everything and changing a filter drops the ticks', async () => {
+      const { fixture, http } = await open([Q1, Q2]);
+      el<HTMLInputElement>(fixture, '#select-all').click();
+      await settle(fixture);
+      clickButton(fixture, 'Clear');
+      await settle(fixture);
+      expect(text(fixture)).not.toContain('selected');
+
+      el<HTMLInputElement>(fixture, '[data-question="q1"] .pick').click();
+      await settle(fixture);
+      pick(fixture, '#f-status', 'draft');
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions?status=draft`).flush([Q2]);
+      await settle(fixture);
+      expect(text(fixture)).not.toContain('selected');
+    });
+
+    it('shows the problem and keeps the list when the change fails', async () => {
+      const { fixture, http } = await open([Q2]);
+      el<HTMLInputElement>(fixture, '[data-question="q2"] .pick').click();
+      await settle(fixture);
+      clickButton(fixture, 'Publish selected');
+      http.expectOne(`${API}/api/admin/questions/status`).flush({ detail: 'Nope.' }, { status: 422, statusText: 'x' });
+      await settle(fixture);
+      expect(text(fixture)).toContain('Second question');
+      expect(text(fixture)).toContain('Nope.');
+    });
+  });
 });

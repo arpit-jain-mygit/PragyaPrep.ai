@@ -272,9 +272,25 @@ function draftFrom(question: Question): Draft {
       @if (loading()) {
         <p class="muted">Loading…</p>
       } @else {
+        @if (questions().length) {
+          <div class="row bulk">
+            <label class="check">
+              <input type="checkbox" id="select-all" [checked]="allSelected()" (change)="toggleAll($any($event.target).checked)" />
+              Select all {{ questions().length }} shown
+            </label>
+            @if (selectedCount()) {
+              <span class="muted" id="selected-count">{{ selectedCount() }} selected</span>
+              <button class="btn small" type="button" [disabled]="saving()" (click)="setStatus('published')">Publish selected</button>
+              <button class="btn secondary small" type="button" [disabled]="saving()" (click)="setStatus('draft')">Move to draft</button>
+              <button class="btn secondary small" type="button" (click)="selected.set([])">Clear</button>
+            }
+          </div>
+        }
         @for (question of questions(); track question.id) {
           <div class="question" [attr.data-question]="question.id">
             <div class="row">
+              <input type="checkbox" class="pick" [attr.aria-label]="'Select question: ' + question.text"
+                [checked]="selected().includes(question.id)" (change)="toggle(question.id, $any($event.target).checked)" />
               <span class="chip" [class]="'chip ' + (question.status === 'published' ? 'open' : 'hidden')">{{ question.status }}</span>
               <span class="muted">{{ paperName(question.paper) }} · {{ question.topic }} · {{ question.difficulty }}</span>
               @if (question.kind === 'fill_in') { <span class="chip pictures">fill in</span> }
@@ -335,6 +351,10 @@ export class AdminQuestions implements OnInit {
   readonly form = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly confirming = signal<string | null>(null);
+  /** The ids ticked for a bulk change. */
+  readonly selected = signal<string[]>([]);
+  readonly selectedCount = computed(() => this.selected().length);
+  readonly allSelected = computed(() => this.questions().length > 0 && this.selected().length === this.questions().length);
   /** How many questions were added in a row, without closing the form. */
   readonly addedCount = signal(0);
 
@@ -399,8 +419,36 @@ export class AdminQuestions implements OnInit {
     return this.papers().find((paper) => paper.id === paperId)?.name ?? paperId;
   }
 
+  toggle(id: string, on: boolean): void {
+    this.selected.update((ids) => (on ? [...ids, id] : ids.filter((item) => item !== id)));
+  }
+
+  toggleAll(on: boolean): void {
+    this.selected.set(on ? this.questions().map((question) => question.id) : []);
+  }
+
+  /** Publish or un-publish every ticked question, then show the fresh list. */
+  async setStatus(status: 'draft' | 'published'): Promise<void> {
+    const ids = this.selected();
+    if (!ids.length) return;
+    this.saving.set(true);
+    this.reset();
+    try {
+      const result = await this.api.setQuestionStatus(ids, status);
+      const word = status === 'published' ? 'Published' : 'Moved to draft:';
+      const skipped = result.unchanged ? ` ${result.unchanged} already ${status === 'published' ? 'published' : 'drafts'}.` : '';
+      this.notice.set(`${word} ${result.changed} ${result.changed === 1 ? 'question' : 'questions'}.${skipped}`);
+      await this.load();
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   async load(): Promise<void> {
     try {
+      this.selected.set([]);
       this.questions.set(await this.api.questions(this.filter));
     } catch (error) {
       this.error.set(error as ApiError);

@@ -204,6 +204,11 @@ export class ApiService {
     return this.delete(`/api/admin/question-images/${encodeURIComponent(id)}`);
   }
 
+  /** Publish (or move back to draft) many questions in one go. */
+  setQuestionStatus(ids: string[], status: 'draft' | 'published'): Promise<{ changed: number; unchanged: number; missing: number }> {
+    return this.post('/api/admin/questions/status', { ids, status });
+  }
+
   deleteQuestion(id: string): Promise<void> {
     return this.delete(`/api/admin/questions/${encodeURIComponent(id)}`);
   }

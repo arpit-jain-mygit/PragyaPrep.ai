@@ -7,7 +7,7 @@ from app.config import Settings
 from app.deps import TENANT_ADMIN, get_settings, get_storage, get_tenant_repo, require_roles
 from app.papers import PAPERS
 from app.repo import TenantRepo
-from app.schemas import PaperOut, QuestionImageStartIn, QuestionImageStartOut, QuestionIn, QuestionOut, QuestionPictureOut
+from app.schemas import PaperOut, QuestionImageStartIn, QuestionImageStartOut, QuestionIn, QuestionOut, QuestionPictureOut, QuestionStatusIn
 from app.storage import ContentStorage
 from app.tenants import ValidationError
 
@@ -83,6 +83,19 @@ def change_question(
     except questions.QuestionErrors as error:
         return _errors(error)
     return QuestionOut.model_validate(_present(question, storage))
+
+
+@router.post("/api/admin/questions/status")
+def change_status(
+    body: QuestionStatusIn,
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    admin: dict = Depends(require_roles(TENANT_ADMIN)),
+):
+    """Publish (or move back to draft) the chosen questions in one go."""
+    try:
+        return questions.set_status(scoped, body.ids, body.status, admin["email"])
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.delete("/api/admin/questions/{question_id}", status_code=204, dependencies=[Depends(require_roles(TENANT_ADMIN))])
