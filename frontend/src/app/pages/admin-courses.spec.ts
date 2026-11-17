@@ -3,14 +3,22 @@ import { describe, expect, it } from 'vitest';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { AdminCourses } from './admin-courses';
 
-const CAT = { id: 'c1', name: 'CAT', fee: 10000, access: { type: 'unlimited' }, active: true, created_at: '' };
-const CLAT = { id: 'c2', name: 'CLAT', fee: 12500, access: { type: 'days', days: 365 }, active: false, created_at: '' };
+const PAPERS = [
+  { id: 'english', name: 'English', section: 'I: Language', stream: 'All', topics: ['Grammar'] },
+  { id: 'physics', name: 'Physics', section: 'II: Domain', stream: 'Science', topics: ['Optics'] },
+  { id: 'quantitative-ability', name: 'Quantitative Ability', section: 'IV: Management and law entrance', stream: 'All', topics: ['Arithmetic'] },
+  { id: 'logical-reasoning', name: 'Logical Reasoning', section: 'IV: Management and law entrance', stream: 'All', topics: ['Puzzles'] },
+];
+const CAT = { id: 'c1', name: 'CAT', fee: 10000, access: { type: 'unlimited' }, active: true, created_at: '', papers: ['quantitative-ability', 'logical-reasoning'] };
+const CLAT = { id: 'c2', name: 'CLAT', fee: 12500, access: { type: 'days', days: 365 }, active: false, created_at: '', papers: [] };
 
 async function open(courses: object[] = [CAT, CLAT]) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('tenant_admin'));
   const fixture = TestBed.createComponent(AdminCourses);
   fixture.detectChanges();
+  env.http.expectOne(`${API}/api/admin/papers`).flush(PAPERS);
+  await settle(fixture);
   env.http.expectOne(`${API}/api/admin/courses`).flush(courses);
   await settle(fixture);
   return { ...env, fixture };
@@ -47,7 +55,7 @@ describe('Admin courses page', () => {
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     const request = http.expectOne(`${API}/api/admin/courses`);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ name: 'IPMAT', fee: 9000, access: { type: 'unlimited' } });
+    expect(request.request.body).toEqual({ name: 'IPMAT', fee: 9000, access: { type: 'unlimited' }, papers: [] });
     request.flush({ ...CAT, id: 'c3', name: 'IPMAT', fee: 9000 });
     await settle(fixture);
     answerReload(http, [CAT, { ...CAT, id: 'c3', name: 'IPMAT', fee: 9000 }]);
@@ -68,7 +76,7 @@ describe('Admin courses page', () => {
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     expect(http.expectOne(`${API}/api/admin/courses`).request.body).toEqual({
-      name: 'CUET', fee: 5000, access: { type: 'days', days: 180 },
+      name: 'CUET', fee: 5000, access: { type: 'days', days: 180 }, papers: [],
     });
   });
 
@@ -82,7 +90,7 @@ describe('Admin courses page', () => {
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     expect(http.expectOne(`${API}/api/admin/courses`).request.body).toEqual({
-      name: 'CUET', fee: 5000, access: { type: 'until_date', until: '2027-06-30' },
+      name: 'CUET', fee: 5000, access: { type: 'until_date', until: '2027-06-30' }, papers: [],
     });
   });
 
@@ -130,7 +138,7 @@ describe('Admin courses page', () => {
     clickButton(fixture, 'Save');
     const request = http.expectOne(`${API}/api/admin/courses/c1`);
     expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ name: 'CAT 2027', fee: 11000, access: { type: 'days', days: 90 } });
+    expect(request.request.body).toEqual({ name: 'CAT 2027', fee: 11000, access: { type: 'days', days: 90 }, papers: ['quantitative-ability', 'logical-reasoning'] });
     request.flush({ ...CAT, name: 'CAT 2027', fee: 11000 });
     await settle(fixture);
     answerReload(http, [{ ...CAT, name: 'CAT 2027', fee: 11000, access: { type: 'days', days: 90 } }, CLAT]);
@@ -187,8 +195,98 @@ describe('Admin courses page', () => {
     const env = setupTestBed();
     const fixture = TestBed.createComponent(AdminCourses);
     fixture.detectChanges();
+    env.http.expectOne(`${API}/api/admin/papers`).flush({ detail: "You don't have access to this." }, { status: 403, statusText: 'Forbidden' });
+    await settle(fixture);
+    expect(text(fixture)).toContain("You don't have access to this.");
+  });
+
+  it('explains it when the course list cannot be loaded', async () => {
+    const env = setupTestBed();
+    const fixture = TestBed.createComponent(AdminCourses);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/admin/papers`).flush(PAPERS);
+    await settle(fixture);
     env.http.expectOne(`${API}/api/admin/courses`).flush({ detail: "You don't have access to this." }, { status: 403, statusText: 'Forbidden' });
     await settle(fixture);
     expect(text(fixture)).toContain("You don't have access to this.");
+  });
+
+  describe('papers on a course', () => {
+    it('shows the papers of each course: names when there are few, a count when many, or none yet', async () => {
+      const many = { ...CAT, id: 'c3', name: 'CUET', papers: ['english', 'physics', 'quantitative-ability', 'logical-reasoning', 'english2'] };
+      const { fixture } = await open([CAT, CLAT, many]);
+      const rows = all(fixture, 'tbody tr').map((r) => r.textContent?.replace(/\s+/g, ' ').trim());
+      expect(rows[0]).toContain('Quantitative Ability, Logical Reasoning');
+      expect(rows[1]).toContain('No papers yet');
+      expect(rows[2]).toContain('5 papers');
+    });
+
+    it('ticks the course\'s papers when editing and sends the changed list', async () => {
+      const { fixture, http } = await open();
+      clickButton(fixture, 'Edit');
+      await settle(fixture);
+      expect(el<HTMLInputElement>(fixture, '#papers-c1-quantitative-ability').checked).toBe(true);
+      expect(el<HTMLInputElement>(fixture, '#papers-c1-english').checked).toBe(false);
+      expect(text(fixture)).toContain('2 of 4 selected');
+      el<HTMLInputElement>(fixture, '#papers-c1-english').click();
+      el<HTMLInputElement>(fixture, '#papers-c1-logical-reasoning').click();
+      await settle(fixture);
+      expect(text(fixture)).toContain('2 of 4 selected');
+      clickButton(fixture, 'Save');
+      const request = http.expectOne(`${API}/api/admin/courses/c1`);
+      expect(request.request.body.papers).toEqual(['quantitative-ability', 'english']);
+    });
+
+    it('groups the papers by section and has Select all and Clear', async () => {
+      const { fixture } = await open();
+      clickButton(fixture, 'Edit');
+      await settle(fixture);
+      const editor = el(fixture, '.paper-checklist');
+      expect(Array.from(editor.querySelectorAll('.paper-group legend')).map((l) => l.textContent?.trim())).toEqual([
+        'I: Language', 'II: Domain', 'IV: Management and law entrance']);
+      const press = (name: string) => Array.from(editor.querySelectorAll('button')).find((b) => b.textContent?.trim() === name)!.click();
+      press('Select all');
+      await settle(fixture);
+      expect(editor.textContent).toContain('4 of 4 selected');
+      press('Clear');
+      await settle(fixture);
+      expect(editor.textContent).toContain('0 of 4 selected');
+    });
+
+    it('ticks the usual papers when a known course name is typed, and sends them', async () => {
+      const { fixture, http } = await open([]);
+      type(fixture, '#new-name', 'CAT 2027');
+      type(fixture, '#new-fee', '9000');
+      el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
+      const ask = http.expectOne(`${API}/api/admin/course-papers/suggested?name=CAT%202027`);
+      expect(ask.request.method).toBe('GET');
+      ask.flush({ papers: ['quantitative-ability', 'logical-reasoning'] });
+      await settle(fixture);
+      expect(el<HTMLInputElement>(fixture, '#new-papers-quantitative-ability').checked).toBe(true);
+      expect(text(fixture)).toContain('2 of 4 selected');
+      el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
+      expect(http.expectOne(`${API}/api/admin/courses`).request.body.papers).toEqual(['quantitative-ability', 'logical-reasoning']);
+    });
+
+    it('does not override papers the admin has already ticked', async () => {
+      const { fixture, http } = await open([]);
+      el<HTMLInputElement>(fixture, '#new-papers-english').click();
+      await settle(fixture);
+      type(fixture, '#new-name', 'CAT');
+      el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
+      await settle(fixture);
+      http.expectNone((r) => r.url.includes('/course-papers/suggested'));
+      expect(text(fixture)).toContain('1 of 4 selected');
+    });
+
+    it('carries on when the suggestion cannot be fetched', async () => {
+      const { fixture, http } = await open([]);
+      type(fixture, '#new-name', 'CAT');
+      el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
+      http.expectOne((r) => r.url.includes('/course-papers/suggested')).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+      await settle(fixture);
+      expect(text(fixture)).toContain('0 of 4 selected');
+      expect(all(fixture, '.alert.error').length).toBe(0);
+    });
   });
 });

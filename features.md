@@ -85,6 +85,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Give a student a course, renew it, or take it away, from the student's details.
 - Add and delete PDF and MP4 files in a course, from the course's **Files** page.
 - Keep a **question bank** (see below).
+- Choose the **papers (subjects)** each course covers, from the fixed list, with a tick list on the course form. Known course names (CUET, IPMAT, CAT, CLAT) start with their usual papers, and the admin can change them. This is stored for the student side later.
 - *(Phase 2)* Review payments: verify or reject a screenshot, with a reason, and upload the payment QR code.
 - *(Phase 2)* Edit the institute's own branding. Today only the platform admin changes the name, colour and logo.
 
@@ -96,7 +97,7 @@ The login page shows these messages straight away. When an email isn't registere
 
 ## Question bank
 - Each institute has its own private bank of multiple-choice questions. Only its admin sees it. Students can't see questions yet, and mock tests that use them come later.
-- The admin chooses a **paper** and a **topic** from a fixed list shared by all institutes: 37 CUET-style papers (13 languages, 23 domain papers such as Physics or Accountancy, and General Aptitude), each with its own topics.
+- The admin chooses a **paper** and a **topic** from a fixed list shared by all institutes: 43 papers: the 37 CUET-style papers (13 languages, 23 domain papers such as Physics or Accountancy, and General Aptitude) and 6 for management and law entrance exams (Quantitative Ability, Verbal Ability and Reading Comprehension, Data Interpretation, Logical Reasoning, Legal Reasoning, Current Affairs and General Knowledge), each with its own topics.
 - A question has the question text, **four options**, the **correct option**, and a **reason for every option** saying why it is right or wrong. It also has a difficulty (easy, medium, hard) and a status (draft or published).
 - The admin chooses a paper and topic once and keeps adding questions for that combination: **Save and add another** keeps the paper, topic, difficulty and status, clears the rest and counts the questions added. **Save and close** ends the run.
 - **Fill-in questions:** besides multiple choice, a question can be a **fill-in**: one box the student types the answer into, with no options.

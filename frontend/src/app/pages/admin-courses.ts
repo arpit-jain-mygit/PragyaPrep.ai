@@ -3,7 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { describeAccess, formatFee } from '../core/format';
-import { Access, AdminCourse, ApiError } from '../core/models';
+import { Access, AdminCourse, ApiError, Paper } from '../core/models';
+import { PaperChecklist } from './paper-checklist';
 import { TenantService } from '../core/tenant.service';
 
 interface Draft {
@@ -12,10 +13,11 @@ interface Draft {
   accessType: 'unlimited' | 'days' | 'until_date';
   days: number | null;
   until: string;
+  papers: string[];
 }
 
 function emptyDraft(): Draft {
-  return { name: '', fee: null, accessType: 'unlimited', days: null, until: '' };
+  return { name: '', fee: null, accessType: 'unlimited', days: null, until: '', papers: [] };
 }
 
 function draftFrom(course: AdminCourse): Draft {
@@ -26,6 +28,7 @@ function draftFrom(course: AdminCourse): Draft {
     accessType: access.type,
     days: access.type === 'days' ? access.days : null,
     until: access.type === 'until_date' ? access.until : '',
+    papers: [...(course.papers ?? [])],
   };
 }
 
@@ -38,7 +41,7 @@ function accessFrom(draft: Draft): Access {
 /** The institute's courses: what appears in the registration dropdown, with each one's fee and access length. */
 @Component({
   selector: 'app-admin-courses',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, PaperChecklist],
   template: `
     <h1>Courses</h1>
     <p class="muted">These are the courses students can choose when they register. Hidden courses don't appear in the list.</p>
@@ -52,13 +55,13 @@ function accessFrom(draft: Draft): Access {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Course</th><th>Fee</th><th>Access</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
+            <tr><th>Course</th><th>Fee</th><th>Access</th><th>Papers</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             @for (course of courses(); track course.id) {
               @if (editing() === course.id) {
                 <tr>
-                  <td colspan="5">
+                  <td colspan="6">
                     <div class="grid-2">
                       <div class="field">
                         <label [attr.for]="'name-' + course.id">Name</label>
@@ -91,6 +94,7 @@ function accessFrom(draft: Draft): Access {
                         </div>
                       }
                     </div>
+                    <app-paper-checklist [papers]="papers()" [idPrefix]="'papers-' + course.id" [(selected)]="draft.papers" />
                     <p class="hint">Changing access length affects new payments only. Students who already have access keep what they have.</p>
                     <div class="actions">
                       <button class="btn small" type="button" [disabled]="saving()" (click)="saveEdit(course)">Save</button>
@@ -103,6 +107,7 @@ function accessFrom(draft: Draft): Access {
                   <td><strong>{{ course.name }}</strong></td>
                   <td>{{ fee(course.fee) }}</td>
                   <td>{{ access(course.access) }}</td>
+                  <td class="papers-cell">{{ papersShown(course) }}</td>
                   <td><span class="chip" [class]="'chip ' + (course.active ? 'open' : 'hidden')">{{ course.active ? 'open' : 'hidden' }}</span></td>
                   <td>
                     <div class="row">
@@ -116,7 +121,7 @@ function accessFrom(draft: Draft): Access {
                 </tr>
               }
             } @empty {
-              <tr><td colspan="5" class="empty">No courses yet. Add the first one below.</td></tr>
+              <tr><td colspan="6" class="empty">No courses yet. Add the first one below.</td></tr>
             }
           </tbody>
         </table>
@@ -128,7 +133,7 @@ function accessFrom(draft: Draft): Access {
           <div class="grid-2">
             <div class="field">
               <label for="new-name">Name</label>
-              <input id="new-name" name="newName" type="text" [(ngModel)]="newCourse.name" />
+              <input id="new-name" name="newName" type="text" [(ngModel)]="newCourse.name" (change)="suggest()" />
             </div>
             <div class="field">
               <label for="new-fee">Fee (₹)</label>
@@ -157,6 +162,8 @@ function accessFrom(draft: Draft): Access {
               </div>
             }
           </div>
+          <app-paper-checklist [papers]="papers()" idPrefix="new-papers" [(selected)]="newCourse.papers" />
+          <p class="hint">Typing a known course name (CUET, IPMAT, CAT or CLAT) ticks its usual papers. Change them as you like.</p>
           <button class="btn" type="submit" [disabled]="saving() || !newCourse.name.trim() || newCourse.fee === null">Add course</button>
         </form>
       </div>
@@ -168,6 +175,7 @@ export class AdminCourses implements OnInit {
   readonly tenants = inject(TenantService);
 
   readonly courses = signal<AdminCourse[]>([]);
+  readonly papers = signal<Paper[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<ApiError | null>(null);
@@ -187,11 +195,31 @@ export class AdminCourses implements OnInit {
   async load(): Promise<void> {
     this.loading.set(true);
     try {
+      this.papers.set(await this.api.papers());
       this.courses.set(await this.api.adminCourses());
     } catch (error) {
       this.error.set(error as ApiError);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** What the Papers column shows: the names when there are only a few, otherwise the count. */
+  papersShown(course: AdminCourse): string {
+    const ids = course.papers ?? [];
+    if (!ids.length) return 'No papers yet';
+    if (ids.length > 4) return `${ids.length} papers`;
+    return ids.map((id) => this.papers().find((paper) => paper.id === id)?.name ?? id).join(', ');
+  }
+
+  /** When a course name is typed, tick the usual papers for it, unless the admin has already ticked some. */
+  async suggest(): Promise<void> {
+    if (this.newCourse.papers.length) return;
+    try {
+      const ids = await this.api.suggestedPapers(this.newCourse.name);
+      if (!this.newCourse.papers.length) this.newCourse.papers = ids;
+    } catch {
+      // A missing suggestion is not a problem: the admin can tick papers by hand.
     }
   }
 
@@ -208,6 +236,7 @@ export class AdminCourses implements OnInit {
         name: this.draft.name,
         fee: Number(this.draft.fee),
         access: accessFrom(this.draft),
+        papers: this.draft.papers,
       });
       this.editing.set(null);
       this.notice.set(`Saved ${this.draft.name.trim()}.`);
@@ -227,6 +256,7 @@ export class AdminCourses implements OnInit {
         name: this.newCourse.name,
         fee: Number(this.newCourse.fee),
         access: accessFrom(this.newCourse),
+        papers: this.newCourse.papers,
       });
       this.newCourse = emptyDraft();
       this.notice.set(`Added ${created.name}.`);

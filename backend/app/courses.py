@@ -2,7 +2,7 @@
 from datetime import date
 from uuid import uuid4
 
-from app import clock
+from app import clock, papers as paper_list
 from app.repo import ConflictError, TenantRepo, now_iso
 from app.tenants import ValidationError
 
@@ -54,12 +54,25 @@ def clean_access(access: dict | None) -> dict:
     raise ValidationError("Access length must be 'unlimited', 'days' or 'until_date'.")
 
 
-def create_course(scoped: TenantRepo, name: str, fee: int, access: dict | None = None) -> dict:
+def clean_papers(raw) -> list[str]:
+    """The papers (subjects) a course covers: ids from the fixed paper list, each once, in the list's own order."""
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise ValidationError("Choose the papers from the list.")
+    unknown = [item for item in raw if item not in paper_list.BY_ID]
+    if unknown:
+        raise ValidationError("Choose the papers from the list.")
+    chosen = set(raw)
+    return [paper["id"] for paper in paper_list.PAPERS if paper["id"] in chosen]
+
+
+def create_course(scoped: TenantRepo, name: str, fee: int, access: dict | None = None, papers=None) -> dict:
+    """papers: the ids the admin chose. Left out (None), the usual papers for the course name are used, if we know it."""
     course = {
         "id": uuid4().hex,
         "name": clean_name(name),
         "fee": clean_fee(fee),
         "access": clean_access(access),
+        "papers": clean_papers(papers) if papers is not None else paper_list.suggested_for(name),
         "active": True,
         "created_at": now_iso(),
     }
@@ -77,6 +90,7 @@ def update_course(
     fee: int | None = None,
     access: dict | None = None,
     active: bool | None = None,
+    papers=None,
 ) -> dict:
     """Change a course. Only the things you pass are changed. Existing students keep the access they already have."""
     course = scoped.get_course(course_id)
@@ -90,6 +104,8 @@ def update_course(
         fields["access"] = clean_access(access)
     if active is not None:
         fields["active"] = bool(active)
+    if papers is not None:
+        fields["papers"] = clean_papers(papers)
     if fields:
         scoped.update_course(course_id, **fields)
 

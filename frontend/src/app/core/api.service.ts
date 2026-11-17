@@ -133,13 +133,19 @@ export class ApiService {
     return this.get('/api/admin/courses');
   }
 
-  addCourse(body: { name: string; fee: number; access: Access }): Promise<AdminCourse> {
+  addCourse(body: { name: string; fee: number; access: Access; papers?: string[] }): Promise<AdminCourse> {
     return this.post('/api/admin/courses', body);
+  }
+
+  /** The usual papers for a course name (CUET, IPMAT, CAT, CLAT), to tick in the form. */
+  async suggestedPapers(name: string): Promise<string[]> {
+    const reply = await this.get<{ papers: string[] }>(`/api/admin/course-papers/suggested?name=${encodeURIComponent(name)}`);
+    return reply.papers;
   }
 
   updateCourse(
     id: string,
-    body: { name?: string; fee?: number; access?: Access; active?: boolean },
+    body: { name?: string; fee?: number; access?: Access; active?: boolean; papers?: string[] },
   ): Promise<AdminCourse> {
     return this.patch(`/api/admin/courses/${id}`, body);
   }

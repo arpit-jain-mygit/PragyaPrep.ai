@@ -1,7 +1,7 @@
 """Courses. Anyone can see an institute's open courses (for the registration dropdown). Only its admin can manage them."""
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import courses
+from app import courses, papers as paper_list
 from app.deps import TENANT_ADMIN, get_tenant_repo, require_roles
 from app.repo import TenantRepo
 from app.schemas import CourseAdminOut, CourseIn, CoursePublicOut, CourseUpdateIn
@@ -24,6 +24,12 @@ def all_courses(scoped: TenantRepo = Depends(get_tenant_repo)):
     return scoped.list_courses()
 
 
+@router.get("/api/admin/course-papers/suggested", dependencies=[Depends(require_roles(TENANT_ADMIN))])
+def suggested_papers(name: str = ""):
+    """The usual papers for a course name (CUET, IPMAT, CAT, CLAT), to tick in the form before saving."""
+    return {"papers": paper_list.suggested_for(name)}
+
+
 @router.post(
     "/api/admin/courses",
     status_code=201,
@@ -32,7 +38,7 @@ def all_courses(scoped: TenantRepo = Depends(get_tenant_repo)):
 )
 def add_course(body: CourseIn, scoped: TenantRepo = Depends(get_tenant_repo)):
     try:
-        return courses.create_course(scoped, body.name, body.fee, body.access.model_dump())
+        return courses.create_course(scoped, body.name, body.fee, body.access.model_dump(), body.papers)
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -52,6 +58,7 @@ def change_course(course_id: str, body: CourseUpdateIn, scoped: TenantRepo = Dep
             fee=body.fee,
             access=body.access.model_dump() if body.access is not None else None,
             active=body.active,
+            papers=body.papers,
         )
     except courses.CourseNotFound:
         raise HTTPException(status_code=404, detail="We couldn't find that course.")

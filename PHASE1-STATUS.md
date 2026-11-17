@@ -35,7 +35,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | F3 | **Frontend: tenant admin payments** (payments queue, QR code and settings) | **Moved to Phase 2** | Goes with M5. Content upload and access are done in F2a |
 | M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | **Tested live** | Run on 17 Nov 2026 at https://d1szng4oy9m4an.cloudfront.net with a throwaway institute `zz-e2e`, in a real browser. Platform admin added the institute (welcome email sent). Its admin added a course. A student registered through the form and was told "waiting for approval" at login. The admin approved (email sent), uploaded a real PDF and MP4, and gave the student the course. The student saw the course, played the video from S3 and opened the PDF link. Suspending the student cut them off at once, and suspending the institute locked out everyone. No problems found, no Lambda errors, and the institute's rows and files were removed afterwards. Not covered: typing a real emailed login code (done in M2) and a phone-sized screen |
 | M7 | **Frontend hosting:** the Angular app on S3 behind CloudFront (HTTPS, deep links work on refresh, the bucket is private), a one-command `deploy-web.sh`, and the site's address added to the allowed origins for the API and S3 uploads | **Tested live** | Address: https://d1szng4oy9m4an.cloudfront.net. Checked with curl (deep links, security headers, a year's caching for hashed files and none for `index.html`, the bucket refuses direct reads, CORS from the site) and in a real browser (login page with the institute's colour and logo, admin screens, a real PDF upload and delete from that address). No Lambda errors |
-| Q1 | **Question bank (admin side):** the admin picks a paper and topic from the fixed list of 37 CUET-style papers, writes a multiple-choice question with four options, marks the correct one, and explains why each option is right or wrong. Difficulty and draft/published. List with filters, edit, delete. Private to each institute. Students don't see questions yet | **Tested live** | 32 backend and 14 frontend tests (451 and 214 in all). Added later: **Upload from Excel** (see Q2) and **Save and add another** keeps the paper, topic, difficulty and status, so the admin can enter many questions for one combination. Real browser on the sandbox: both mistakes (a repeated option, no correct answer) were shown at once, then the question saved and listed with the correct option marked. On dev (backend and website deployed): the paper list came back, a `ZZ TEST` question was added, a bad topic was refused with every error, the question was filtered, published and deleted, a call with no login got 401, and AaptPrep's bank is empty again. No Lambda errors. The page itself was not opened against dev |
+| Q1 | **Question bank (admin side):** the admin picks a paper and topic from the fixed list of CUET-style papers (37 at first, 43 since step Q10), writes a multiple-choice question with four options, marks the correct one, and explains why each option is right or wrong. Difficulty and draft/published. List with filters, edit, delete. Private to each institute. Students don't see questions yet | **Tested live** | 32 backend and 14 frontend tests (451 and 214 in all). Added later: **Upload from Excel** (see Q2) and **Save and add another** keeps the paper, topic, difficulty and status, so the admin can enter many questions for one combination. Real browser on the sandbox: both mistakes (a repeated option, no correct answer) were shown at once, then the question saved and listed with the correct option marked. On dev (backend and website deployed): the paper list came back, a `ZZ TEST` question was added, a bad topic was refused with every error, the question was filtered, published and deleted, a call with no login got 401, and AaptPrep's bank is empty again. No Lambda errors. The page itself was not opened against dev |
 | Q2 | **Upload questions from Excel:** the admin downloads an `.xlsx` template (dropdowns for paper, topic, correct answer, difficulty and status, an instructions sheet and the paper list), fills one row per question, uploads it, sees a preview (ready, problems with row and column, duplicates), then confirms. Only `.xlsx`, up to 500 rows. Pictures are added in Q4 | **Tested live** | 25 backend and 9 frontend tests (476 and 223 in all). Real browser on the sandbox: a 5-row file previewed as 3 ready, 1 bad topic, 1 duplicate; confirming imported 3 including Hindi text. On dev (the real Lambda): the template downloaded, the preview and import worked, uploading again skipped all as duplicates, a text file and a call with no login were refused, and the test questions were deleted. No Lambda errors. The template was not opened in Excel itself |
 | Q3 | **Pictures on questions:** the admin can attach one PNG or JPG (up to 1 MB) to a question and one to each option. An option may be picture-only (the reason is still required). Pictures show in the form and the list, and can be replaced or removed. Deleting a question, or replacing or removing a picture, deletes the file from storage. Students don't see questions yet | **Tested live** | 37 backend and 19 frontend tests (513 and 242 in all). On dev with real S3, from the real website: a real PNG went onto the question and onto option B (which had no text), a fake `.png` was refused and removed from S3, the question saved and showed both pictures, removing the question's picture deleted its file, deleting the question deleted the other, and afterwards there were no files and no question or picture rows left. No Lambda errors |
 | Q4 | **Pictures in the Excel upload:** the template gets optional columns Question image and Image A to D. The admin first chooses all the pictures in a picture step on the upload card, then types each picture's file name in the sheet. The preview says how many pictures will be attached and flags a missing picture, or one used twice, by row and column. A picture-only option may leave its text empty | **Tested live** | 14 new backend tests and 7 new frontend tests (527 and 249 in all). On dev from the real website: two real PNGs and a fake `.png` were chosen (the fake one was refused), an Excel file named them, the preview showed 2 ready (2 pictures) and one row with problems (a picture used twice and one not uploaded), the import attached both pictures and they loaded in the list. I then deleted the questions: no files, no rows and no Lambda errors left |
@@ -44,6 +44,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q7 | **Bulk publish:** tick questions in the list (or **Select all shown**) and click **Publish selected** to publish them, or **Move to draft** to take them back. Up to 500 at a time; questions already in that status are left alone and counted. Ticks are cleared when the list reloads or a filter changes | **Tested live** | 15 backend and 6 frontend tests (616 and 270 in all). On dev, through the real API: 3 `ZZ` drafts were made, 2 published with one unknown id (changed 2, missing 1), all 3 moved back to draft, an empty list was refused, and the `ZZ` questions were deleted; AaptPrep's real questions were not touched. The new website was deployed; the buttons themselves are covered by the frontend tests and weren't clicked in a browser |
 | Q8 | **Bulk delete:** with questions ticked, **Delete selected** opens a box that says how many will be deleted for good (pictures too) and asks the admin to type `DELETE`. The Delete button stays off until the word is typed exactly. The server refuses the call unless it also carries `confirm: "DELETE"`. Up to 500 at a time | **Tested live** | 19 backend and 5 frontend tests (635 and 275 in all). On dev, through the real API: 3 `ZZ` questions were made, a call with the word `delete` was refused and nothing was removed, then 2 plus one unknown id deleted (2 deleted, 1 missing), then the last one; no `ZZ` questions were left, and the real questions were not touched. The deleting of pictures is proved by the backend tests (fake storage). The buttons weren't clicked in a browser |
 | Q9 | **Reading passages:** a passage (title and text, up to 5,000 characters) is saved once per institute, and any number of questions can point to it. A **Reading passages** card on the Question bank page adds, edits and deletes passages (a passage that questions use can't be deleted). The question form has a Passage dropdown; the list keeps a passage's questions together with the passage shown once above them, and has a Passage filter. The Excel template has a **Passages** sheet (Title, Text) and an optional **Passage** column on Questions that names a passage by its title; a title already in the bank is reused, and a title with different text is refused so nothing is overwritten | **Tested live** | 41 backend and 11 frontend tests (659 and 286 in all). On dev, with the real template downloaded from the site: a file with a passage and three questions was previewed (2 ready, 1 new passage, the row naming a missing passage flagged on its Passage column, nothing saved), imported (one passage shared by 2 questions, paragraph break kept), deleting the passage while in use was refused (409), and after deleting the questions it could be deleted. Only `ZZ` records were used and all were removed. The new screens weren't clicked in a browser |
+| Q10 | **Papers on a course:** each course now lists the papers (subjects) it covers. Six new papers for management and law entrance exams join the shared list (Quantitative Ability, Verbal Ability and Reading Comprehension, Data Interpretation, Logical Reasoning, Legal Reasoning, Current Affairs and General Knowledge), making 43. The course form has a tick list grouped by section with Select all and Clear; typing a known course name (CUET, IPMAT, CAT, CLAT) ticks its usual papers, and the admin can change them. The course list shows each course's papers (names, or a count when more than four). The question bank is unchanged; students see nothing yet | **Tested live** | 30 backend and 7 frontend tests (689 and 293 in all). On dev: the paper list has 43; a `ZZ` course named like CLAT got its 5 papers, a bad paper id was refused, the list was changed by hand, and the public course list still shows only id, name and fee. There is no way to delete a course in the app, so I removed my `ZZ` course straight from the table. I then filled AaptPrep's real **CAT (4), CLAT (5) and IPMAT (3)** with the suggested papers; nothing else changed. The new screens weren't clicked in a browser |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -133,7 +134,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `659 passed`.
+You should see `689 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -384,6 +385,17 @@ On the Question bank page, in the **Questions** list.
 | 3 | Set it to **Without pictures** | Only the others |
 | 4 | Combine it with Paper, Topic or Status | The filters work together |
 
+### Q10 (papers on a course): what to try
+In **Courses** (`/aaptprep/admin/courses`).
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Look at the table | A **Papers** column: CAT, CLAT and IPMAT already show their papers |
+| 2 | Click **Edit** on CAT | A tick list of papers by section, with the course's papers ticked and "4 of 43 selected" |
+| 3 | Tick or untick some, click **Save** | The Papers column updates |
+| 4 | Under **Add a course**, type `CUET` as the name and click outside the box | All 37 CUET papers get ticked (you can change them) |
+| 5 | Type a name like `Foundation` | Nothing is ticked; choose papers by hand |
+
 ### Q9 (reading passages): what to try
 | Step | What to do | What you should see |
 |---|---|---|
@@ -490,7 +502,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 659 passed, 0 failed. Frontend: 286 passed, 0 failed. Total: 945.**
+**Backend, run on my machine: 689 passed, 0 failed. Frontend: 293 passed, 0 failed. Total: 982.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -515,7 +527,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_question_status` | Q7 bulk publish (publish, back to draft, counts, bad requests, who may, privacy between institutes) | 15 |
 | `test_question_bulk_delete` | Q8 bulk delete (the word DELETE, counts, pictures removed, who may, privacy between institutes) | 19 |
 | `test_passages` | Q9 reading passages (the API, limits and unique titles, link from a question, delete rules, privacy, the Excel Passages sheet and column) | 24 |
-| | **Total** | **659** |
+| `test_course_papers` | Q10 papers on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) | 30 |
+| | **Total** | **689** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -523,7 +536,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | `register.spec` | Registration page | 16 |
 | `login.spec` | Login page: status messages, Register buttons, code step, countdown, redirects by role | 23 |
 | `admin-registrations.spec` | Queue, details, decisions, editing a student, course access | 35 |
-| `admin-courses.spec` | Courses list, add, edit, hide | 12 |
+| `admin-courses.spec` | Courses list, add, edit, hide, papers on a course | 19 |
 | `admin-course-files.spec` | Files page: list, upload with progress, refusals, delete | 13 |
 | `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
 | `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
@@ -531,7 +544,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures, pictures filter, fill-in questions, bulk publish, bulk delete, reading passages | 61 |
 | `question-upload.spec` | Excel upload card: template download, preview, problems, confirm, wrong file type, picture step | 15 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
-| | **Total** | **286** |
+| | **Total** | **293** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

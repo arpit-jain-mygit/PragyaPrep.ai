@@ -38,20 +38,21 @@ def question(**overrides) -> dict:
 
 # ---- The paper list ----
 
-def test_the_paper_list_has_all_37_papers_in_three_sections():
-    assert len(PAPERS) == 37
-    assert len({paper["id"] for paper in PAPERS}) == 37
+def test_the_paper_list_has_the_37_cuet_papers_and_6_entrance_exam_papers_in_four_sections():
+    assert len(PAPERS) == 43
+    assert len({paper["id"] for paper in PAPERS}) == 43
     sections = [paper["section"] for paper in PAPERS]
     assert sections.count("I: Language") == 13
     assert sections.count("II: Domain") == 23
     assert sections.count("III: General") == 1
+    assert sections.count("IV: Management and law entrance") == 6
     assert all(paper["topics"] for paper in PAPERS)
 
 
 def test_the_admin_can_fetch_the_papers(client, admin):
     response = client.get("/api/admin/papers", headers=admin)
     assert response.status_code == 200
-    assert len(response.json()) == 37
+    assert len(response.json()) == 43
     assert "Optics" in {p["id"]: p for p in response.json()}["physics"]["topics"]
 
 

@@ -248,7 +248,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Sec
 
 ## 13. Testing approach
 
-**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 659 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 286 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
+**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 689 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 293 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
 
 **Alternatives considered:** DynamoDB Local in Docker, or testing only against real AWS.
 
@@ -868,7 +868,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 ### 27.1 Decisions
 
-- **The paper list is fixed and shared.** It has 37 papers in three sections (13 languages, 23 domain papers, General Aptitude), taken from the CUET-style list. It lives in the code (`app/papers.py`) and is the same for every institute. It is not editable in Phase 1.
+- **The paper list is fixed and shared.** It had 37 papers in three sections (13 languages, 23 domain papers, General Aptitude), taken from the CUET-style list, and since step Q10 it has 43: a fourth section, "IV: Management and law entrance", adds six papers for IPMAT, CAT and CLAT. It lives in the code (`app/papers.py`) and is the same for every institute. It is not editable in Phase 1.
 - **Topics are split from the "main topics" text.** Each paper has its own list. The 13 language papers share one: Reading comprehension, Vocabulary, Grammar, Verbal ability. A question's topic must belong to its paper.
 - **One format:** plain text, four options, one correct. Hindi and the other language papers work because the text is Unicode. Several correct answers, numerical answers, images and formulas can come later.
 - **Every option needs a reason.** This is the point of the bank: students will later learn from why each wrong option is wrong.
@@ -899,6 +899,11 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
   - **Delete is refused while questions use the passage** (409 with the count), so no question is left pointing at nothing. Deleting a passage's last question leaves the passage for reuse. The question's passage is checked to exist when saved; removing it is done by sending an empty passage.
   - **Limits:** 5,000 characters of text (paragraph breaks kept), 150 for the title, 100 passages per Excel file. The Passage column has a dropdown from the Passages sheet that only warns, so a title that is already in the bank can still be typed.
   - **Left out:** pictures inside a passage, several passages on one question, ordering questions within a passage (the list keeps them together, newest first), and anything on the student side.
+- **Papers on a course (step Q10):** a course stores `papers`, a list of ids from the fixed paper list. The ids are kept once each in the list's own order, and unknown ids are refused. The data is for the student side later (what a course's student will practise); the question bank is unchanged and questions are still tagged by paper only, not by course.
+  - **Why six new papers:** the 37 papers are CUET papers, and only English and General Aptitude loosely fit IPMAT, CAT and CLAT. Without Data Interpretation, Legal Reasoning and CAT-style verbal topics, those courses would have almost nothing to map. English's CUET topics and the new Verbal Ability paper overlap in name; we kept them apart because CAT-style verbal (para jumbles, summary, odd sentence out) is a different test from CUET language comprehension.
+  - **Suggested, not forced:** the usual papers for a course are found by a whole word in its name (so "CAT 2027" matches CAT but "Category" doesn't): CUET gets the 37 CUET papers; IPMAT gets Quantitative Ability, Verbal Ability and Reading Comprehension, Logical Reasoning; CAT gets Verbal Ability and Reading Comprehension, Data Interpretation, Logical Reasoning, Quantitative Ability; CLAT gets Verbal Ability and Reading Comprehension, Current Affairs and GK, Legal Reasoning, Logical Reasoning, Quantitative Ability. These come from the usual published sections and may change each year, so they are a starting point the admin edits. The form asks the server for the suggestion when the name is typed and fills the ticks only if none are ticked yet.
+  - **Existing courses** had no papers; the real AaptPrep CAT, CLAT and IPMAT courses on dev were filled with the suggestions once, by a one-off script. A course with no papers shows "No papers yet". Papers are optional.
+  - **No course delete:** there is still no way to delete a course in the app (only hide), so a test course can only be removed straight from the table.
 - **Why Excel and not CSV:** Excel opens a CSV with the wrong encoding, which garbles Hindi and other scripts, commas and line breaks in question text break CSV, and an `.xlsx` template can have dropdowns. CSV can be added later without changing anything else.
 - **Rules:** question up to 2,000 characters, option up to 500, reason up to 1,000. The four options must differ. All mistakes are returned together, field by field, like the registration form.
 - **Storage:** one row per question under the institute's own key prefix (`T#<institute>#QUESTION#<id>`), listed newest first through the existing index. The admin's list is filtered in the code, which is fine for thousands of questions.

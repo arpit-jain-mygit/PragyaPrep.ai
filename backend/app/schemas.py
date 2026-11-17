@@ -66,6 +66,8 @@ class CourseIn(BaseModel):
     name: str
     fee: int
     access: AccessIn = AccessIn()
+    # Paper ids. Left out, the usual papers for the course name are used (CUET, IPMAT, CAT, CLAT).
+    papers: Any = None
 
 
 class CourseUpdateIn(BaseModel):
@@ -73,6 +75,7 @@ class CourseUpdateIn(BaseModel):
     fee: int | None = None
     access: AccessIn | None = None
     active: bool | None = None
+    papers: Any = None
 
 
 class CoursePublicOut(BaseModel):
@@ -90,6 +93,7 @@ class CourseAdminOut(BaseModel):
     access: dict
     active: bool
     created_at: str = ""
+    papers: list[str] = []
 
 
 # ---- Registration ----

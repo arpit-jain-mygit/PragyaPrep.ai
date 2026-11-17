@@ -59,7 +59,7 @@ def test_the_template_has_the_columns_dropdowns_and_instructions(client, admin):
     book = load_workbook(BytesIO(response.content))
     assert book.sheetnames[0] == "Instructions"
     assert [cell.value for cell in book["Questions"][1]] == qi.COLUMNS + qi.OPTIONAL_COLUMNS
-    assert len(book["Papers and topics"][1]) == 37
+    assert len(book["Papers and topics"][1]) == 43
     assert len(book["Questions"].data_validations.dataValidation) == 8
 
 

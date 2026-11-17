@@ -218,3 +218,9 @@ img.qimg { margin: 0.4rem 0; }
 .passage-head { background: #f3f6fd; border-left: 4px solid #2563eb; padding: 0.75rem 1rem; margin: 1rem 0 0.5rem; border-radius: 6px; }
 .question.in-passage { margin-left: 1rem; }
 .passage-view { margin-bottom: 1rem; }
+.paper-checklist { margin: 0.75rem 0; }
+.paper-box { max-height: 16rem; overflow-y: auto; border: 1px solid var(--border, #d1d5db); border-radius: 8px; padding: 0.5rem 0.9rem; margin-top: 0.5rem; }
+.paper-group { border: 0; padding: 0; margin: 0.4rem 0; }
+.paper-group legend { font-weight: 600; font-size: 0.85rem; padding: 0; margin-bottom: 0.2rem; }
+.paper-group .check { margin-bottom: 0.2rem; }
+.papers-cell { max-width: 16rem; font-size: 0.9rem; }

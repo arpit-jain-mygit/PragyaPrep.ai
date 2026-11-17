@@ -1,8 +1,10 @@
 """The papers (subjects) and their topics that every institute's question bank uses.
 
-This list is the same for all institutes and is not editable in Phase 1. It follows the CUET-style paper list:
-37 papers in three sections. Each question belongs to one paper and one topic of that paper.
+This list is the same for all institutes and is not editable in Phase 1. It follows the CUET-style paper list
+(37 papers in three sections), plus six papers for management and law entrance exams (IPMAT, CAT, CLAT) in a fourth
+section. Each question belongs to one paper and one topic of that paper.
 """
+import re
 
 LANGUAGE_TOPICS = ["Reading comprehension", "Vocabulary", "Grammar", "Verbal ability"]
 
@@ -79,6 +81,27 @@ _GENERAL_TOPICS = [
     "General knowledge", "Current affairs", "Mental ability", "Numerical ability", "Quantitative reasoning",
     "Logical reasoning"]
 
+# Papers for the management and law entrance exams. Topics follow the usual published sections.
+_ENTRANCE = [
+    ("quantitative-ability", "Quantitative Ability", [
+        "Arithmetic", "Algebra", "Geometry and mensuration", "Number system", "Modern mathematics",
+        "Data sufficiency"]),
+    ("verbal-ability-rc", "Verbal Ability and Reading Comprehension", [
+        "Reading comprehension", "Para jumbles", "Para summary", "Odd sentence out", "Sentence completion",
+        "Grammar and usage", "Vocabulary"]),
+    ("data-interpretation", "Data Interpretation", [
+        "Tables", "Bar and line graphs", "Pie charts", "Caselets", "Mixed charts"]),
+    ("logical-reasoning", "Logical Reasoning", [
+        "Arrangements", "Puzzles", "Syllogisms", "Blood relations and directions", "Sets and Venn diagrams",
+        "Critical reasoning", "Series and coding"]),
+    ("legal-reasoning", "Legal Reasoning", [
+        "Legal principles and facts", "Legal knowledge", "Constitutional law", "Contract law", "Law of torts",
+        "Criminal law"]),
+    ("current-affairs-gk", "Current Affairs and General Knowledge", [
+        "Current affairs", "India and the world", "Polity", "Economy", "History and culture", "Science and technology",
+        "Static GK"]),
+]
+
 PAPERS: list[dict] = (
     [{"id": pid, "name": name, "section": "I: Language", "stream": "All", "topics": LANGUAGE_TOPICS}
      for pid, name in LANGUAGES]
@@ -86,6 +109,28 @@ PAPERS: list[dict] = (
        for pid, name, stream, topics in _DOMAIN]
     + [{"id": "general-aptitude", "name": "General Aptitude Test", "section": "III: General", "stream": "All",
         "topics": _GENERAL_TOPICS}]
+    + [{"id": pid, "name": name, "section": "IV: Management and law entrance", "stream": "All", "topics": topics}
+       for pid, name, topics in _ENTRANCE]
 )
 
 BY_ID = {paper["id"]: paper for paper in PAPERS}
+
+
+# The papers usually used by each course, found by a word in the course name (so "CAT 2027" matches CAT).
+# The admin can always change them. CUET uses the original 37 papers.
+_ENTRANCE_IDS = {pid for pid, _, _ in _ENTRANCE}
+SUGGESTED = {
+    "cuet": [paper["id"] for paper in PAPERS if paper["id"] not in _ENTRANCE_IDS],
+    "ipmat": ["quantitative-ability", "verbal-ability-rc", "logical-reasoning"],
+    "cat": ["verbal-ability-rc", "data-interpretation", "logical-reasoning", "quantitative-ability"],
+    "clat": ["verbal-ability-rc", "current-affairs-gk", "legal-reasoning", "logical-reasoning", "quantitative-ability"],
+}
+
+
+def suggested_for(course_name: str) -> list[str]:
+    """The usual papers for a course, from its name. Empty when the name isn't one we know."""
+    words = set(re.findall(r"[a-z0-9]+", str(course_name).lower()))
+    for key, ids in SUGGESTED.items():
+        if key in words:
+            return list(ids)
+    return []
