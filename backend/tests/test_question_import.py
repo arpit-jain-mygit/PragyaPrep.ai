@@ -60,7 +60,7 @@ def test_the_template_has_the_columns_dropdowns_and_instructions(client, admin):
     assert book.sheetnames[0] == "Instructions"
     assert [cell.value for cell in book["Questions"][1]] == qi.COLUMNS + qi.OPTIONAL_COLUMNS
     assert len(book["Papers and topics"][1]) == 37
-    assert len(book["Questions"].data_validations.dataValidation) == 7
+    assert len(book["Questions"].data_validations.dataValidation) == 8
 
 
 def test_the_template_itself_is_empty_and_not_importable(client, admin):
@@ -81,7 +81,7 @@ def test_a_good_file_is_previewed_and_nothing_is_saved(client, admin):
     result = post(client, admin, workbook([good_row(), good_row(Question="Second question?")])).json()
     assert result["confirmed"] is False and result["imported"] == 0
     assert [r["row"] for r in result["ready"]] == [2, 3]
-    assert result["ready"][0] == {"row": 2, "paper": "physics", "topic": "Optics", "text": "Which colour bends the most?", "pictures": 0}
+    assert result["ready"][0] == {"row": 2, "paper": "physics", "topic": "Optics", "text": "Which colour bends the most?", "pictures": 0, "passage": None}
     assert result["problems"] == [] and result["duplicates"] == []
     assert client.get(URL, headers=admin).json() == []
 

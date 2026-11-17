@@ -59,6 +59,22 @@ describe('Question upload', () => {
     http.expectNone(`${API}/api/admin/questions/import?confirm=true`);
   });
 
+  it('says how many new passages the file brings, and a passage problem shows on its column', async () => {
+    const { fixture, http } = open();
+    await choose(fixture);
+    http.expectOne(`${API}/api/admin/questions/import?confirm=false`).flush({
+      confirmed: false,
+      ready: [{ ...READY[0], passage: 'Monsoon' }],
+      problems: [{ row: 4, errors: { Passage: "'Nowhere' isn't on the Passages sheet or in your bank." } }],
+      duplicates: [],
+      new_passages: 1,
+      imported: 0,
+    });
+    await settle(fixture);
+    expect(text(fixture)).toContain('1 new passage');
+    expect(text(fixture)).toContain("Passage: 'Nowhere' isn't on the Passages sheet");
+  });
+
   it('lists each problem with its row and column, and the duplicates', async () => {
     const { fixture, http } = open();
     await choose(fixture);

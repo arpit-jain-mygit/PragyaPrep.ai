@@ -248,12 +248,25 @@ export interface Question {
   status: 'draft' | 'published';
   created_at: string;
   images: Record<string, Picture>;
+  /** The id of the reading passage this question belongs to. */
+  passage?: string | null;
   edited_by?: string | null;
   edited_at?: string | null;
 }
 
+/** A reading passage, saved once and shared by the questions that use it. */
+export interface Passage {
+  id: string;
+  title: string;
+  text: string;
+  /** How many questions use it. */
+  questions: number;
+}
+
 /** What the admin sends. For an edit, only what changed. */
-export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images' | 'answer' | 'correct'>> & {
+export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images' | 'answer' | 'correct' | 'passage'>> & {
+  /** A passage id. An empty string takes the question off its passage. */
+  passage?: string;
   correct?: number | null;
   answer?: { type: 'text'; accepted: string[] } | { type: 'number'; value: string; tolerance: string };
   /** Picture ids by position. null takes a picture off. */
@@ -263,7 +276,9 @@ export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited
 /** What the server says about an uploaded Excel file of questions. Nothing is saved until the admin confirms. */
 export interface QuestionImport {
   confirmed: boolean;
-  ready: { row: number; paper: string; topic: string; text: string; pictures: number }[];
+  ready: { row: number; paper: string; topic: string; text: string; pictures: number; passage?: string | null }[];
+  /** How many passages from the Passages sheet would be saved for the first time. */
+  new_passages?: number;
   problems: { row: number; errors: Record<string, string> }[];
   duplicates: { row: number; text: string }[];
   imported: number;

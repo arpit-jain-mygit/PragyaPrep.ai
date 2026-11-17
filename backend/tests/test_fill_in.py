@@ -242,8 +242,8 @@ def upload(client, admin, rows, confirm=False):
 
 def test_the_template_has_the_fill_in_columns_and_dropdowns(client, admin):
     book = load_workbook(BytesIO(client.get(f"{URL}/template", headers=admin).content))
-    assert [c.value for c in book["Questions"][1]][19:] == ["Type", "Answer", "Answer type", "Tolerance", "Explanation"]
-    assert len(book["Questions"].data_validations.dataValidation) == 7
+    assert [c.value for c in book["Questions"][1]][19:24] == ["Type", "Answer", "Answer type", "Tolerance", "Explanation"]
+    assert len(book["Questions"].data_validations.dataValidation) == 8
     assert "Fill-in questions" in "".join(str(c.value) for row in book["Instructions"].iter_rows() for c in row)
 
 

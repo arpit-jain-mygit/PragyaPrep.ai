@@ -1,7 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
-import { ApiError, PICTURE_SLOTS, Paper, Picture, Question } from '../core/models';
+import { ApiError, PICTURE_SLOTS, Paper, Passage, Picture, Question } from '../core/models';
+import { AdminPassages } from './admin-passages';
 import { PicturePicker } from './picture-picker';
 import { QuestionUpload } from './question-upload';
 
@@ -20,6 +21,8 @@ interface Draft {
   correct: number | null;
   difficulty: 'easy' | 'medium' | 'hard';
   status: 'draft' | 'published';
+  /** The id of the reading passage, or '' for none. */
+  passage: string;
   /** The picture in each position (question, A to D), or null. */
   pictures: Record<string, Picture | null>;
 }
@@ -41,6 +44,7 @@ function emptyDraft(): Draft {
     correct: null,
     difficulty: 'medium',
     status: 'draft',
+    passage: '',
     pictures: { question: null, A: null, B: null, C: null, D: null },
   };
 }
@@ -61,6 +65,7 @@ function draftFrom(question: Question): Draft {
     correct: question.correct,
     difficulty: question.difficulty,
     status: question.status,
+    passage: question.passage ?? '',
     pictures: Object.fromEntries(PICTURE_SLOTS.map((slot) => [slot, question.images?.[slot] ?? null])),
   };
 }
@@ -68,7 +73,7 @@ function draftFrom(question: Question): Draft {
 /** The institute's question bank: choose a paper and topic, write the question, its four options and why each is right or wrong. */
 @Component({
   selector: 'app-admin-questions',
-  imports: [FormsModule, PicturePicker, QuestionUpload],
+  imports: [FormsModule, PicturePicker, QuestionUpload, AdminPassages],
   template: `
     <h1>Question bank</h1>
     <p class="muted">Pick a paper and topic, write the question and its four options, mark the correct one, and explain why each option is right or wrong. Only published questions will be used in tests later.</p>
@@ -118,6 +123,19 @@ function draftFrom(question: Question): Draft {
             @if (fieldErrors()['topic']) { <div class="error-text">{{ fieldErrors()['topic'] }}</div> }
           </div>
         </div>
+
+        <div class="field">
+          <label for="q-passage">Reading passage (optional)</label>
+          <select id="q-passage" name="passage" [(ngModel)]="draft.passage" (ngModelChange)="clearError('passage')" [attr.aria-invalid]="fieldErrors()['passage'] ? 'true' : null">
+            <option value="">No passage</option>
+            @for (passage of passages(); track passage.id) { <option [value]="passage.id">{{ passage.title }}</option> }
+          </select>
+          <div class="hint">For questions that refer to a text. Add passages in the Reading passages card below the form.</div>
+          @if (fieldErrors()['passage']) { <div class="error-text">{{ fieldErrors()['passage'] }}</div> }
+        </div>
+        @if (passageOf(draft.passage); as chosen) {
+          <details class="passage-view" id="chosen-passage"><summary>Show the passage</summary><p class="passage-text">{{ chosen.text }}</p></details>
+        }
 
         <div class="field">
           <label for="q-text">Question</label>
@@ -224,6 +242,8 @@ function draftFrom(question: Question): Draft {
 
     <app-question-upload (imported)="uploaded($event)" />
 
+    <app-admin-passages [passages]="passages()" (changed)="passagesChanged()" />
+
     <div class="card">
       <h2>Questions</h2>
       <div class="grid-2">
@@ -257,6 +277,14 @@ function draftFrom(question: Question): Draft {
             <option value="">All types</option>
             <option value="mcq">Multiple choice</option>
             <option value="fill_in">Fill in</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-passage">Passage</label>
+          <select id="f-passage" name="fpassage" [(ngModel)]="filter.passage" (ngModelChange)="load()">
+            <option value="">All questions</option>
+            <option value="none">Without a passage</option>
+            @for (passage of passages(); track passage.id) { <option [value]="passage.id">{{ passage.title }}</option> }
           </select>
         </div>
         <div class="field">
@@ -303,8 +331,16 @@ function draftFrom(question: Question): Draft {
             </div>
           }
         }
-        @for (question of questions(); track question.id) {
-          <div class="question" [attr.data-question]="question.id">
+        @for (question of ordered(); track question.id; let first = $first; let at = $index) {
+          @if (question.passage && (first || ordered()[at - 1].passage !== question.passage)) {
+            @if (passageOf(question.passage); as shared) {
+              <div class="passage-head" [attr.data-passage-head]="shared.id">
+                <strong>Reading passage: {{ shared.title }}</strong>
+                <p class="passage-text">{{ shared.text }}</p>
+              </div>
+            }
+          }
+          <div class="question" [class.in-passage]="!!question.passage" [attr.data-question]="question.id">
             <div class="row">
               <input type="checkbox" class="pick" [attr.aria-label]="'Select question: ' + question.text"
                 [checked]="selected().includes(question.id)" (change)="toggle(question.id, $any($event.target).checked)" />
@@ -360,6 +396,16 @@ export class AdminQuestions implements OnInit {
 
   readonly papers = signal<Paper[]>([]);
   readonly questions = signal<Question[]>([]);
+  readonly passages = signal<Passage[]>([]);
+  /** The questions with those of one passage kept together, so the passage is shown once above them. */
+  readonly ordered = computed(() => {
+    const groups = new Map<string, Question[]>();
+    for (const question of this.questions()) {
+      const key = question.passage || `single:${question.id}`;
+      groups.set(key, [...(groups.get(key) ?? []), question]);
+    }
+    return [...groups.values()].flat();
+  });
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<ApiError | null>(null);
@@ -381,7 +427,9 @@ export class AdminQuestions implements OnInit {
   draft: Draft = emptyDraft();
   /** The pictures the question already had when it was opened for editing, by position. */
   private original: Record<string, string> = {};
-  filter = { paper: '', topic: '', status: '', pictures: '', kind: '' };
+  /** The passage the question had when the form opened, so only a change is sent. */
+  private originalPassage = '';
+  filter = { paper: '', topic: '', status: '', pictures: '', kind: '', passage: '' };
 
   /** Papers grouped by section, for the dropdown. */
   readonly groups = computed(() => {
@@ -398,12 +446,27 @@ export class AdminQuestions implements OnInit {
     this.loading.set(true);
     try {
       this.papers.set(await this.api.papers());
+      this.passages.set(await this.api.passages());
       this.questions.set(await this.api.questions());
     } catch (error) {
       this.error.set(error as ApiError);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  passageOf(id: string | null | undefined): Passage | undefined {
+    return id ? this.passages().find((passage) => passage.id === id) : undefined;
+  }
+
+  /** A passage was added, edited or deleted: refresh the dropdown and the list. */
+  async passagesChanged(): Promise<void> {
+    try {
+      this.passages.set(await this.api.passages());
+    } catch (error) {
+      this.error.set(error as ApiError);
+    }
+    await this.load();
   }
 
   topicsOf(paperId: string): string[] {
@@ -503,7 +566,7 @@ export class AdminQuestions implements OnInit {
   async uploaded(count: number): Promise<void> {
     this.reset();
     this.notice.set(`Imported ${count} ${count === 1 ? 'question' : 'questions'}.`);
-    this.filter = { paper: '', topic: '', status: '', pictures: '', kind: '' };
+    this.filter = { paper: '', topic: '', status: '', pictures: '', kind: '', passage: '' };
     await this.load();
   }
 
@@ -549,6 +612,7 @@ export class AdminQuestions implements OnInit {
     this.reset();
     this.draft = emptyDraft();
     this.original = {};
+    this.originalPassage = '';
     this.addedCount.set(0);
     this.editingId.set(null);
     this.form.set(true);
@@ -558,6 +622,7 @@ export class AdminQuestions implements OnInit {
     this.dropUnsavedPictures();
     this.reset();
     this.draft = draftFrom(question);
+    this.originalPassage = question.passage ?? '';
     this.original = Object.fromEntries(Object.entries(question.images ?? {}).map(([slot, picture]) => [slot, picture.id]));
     this.editingId.set(question.id);
     this.form.set(true);
@@ -593,7 +658,8 @@ export class AdminQuestions implements OnInit {
             explanation: d.explanation,
           }
         : { options: d.options, correct: d.correct as number };
-    const body = { ...common, ...kindFields, ...(Object.keys(images).length ? { images } : {}) };
+    const passage = d.passage !== this.originalPassage ? { passage: d.passage } : {};
+    const body = { ...common, ...kindFields, ...passage, ...(Object.keys(images).length ? { images } : {}) };
     const editing = this.editingId();
     try {
       if (editing) await this.api.updateQuestion(editing, body);
@@ -603,7 +669,8 @@ export class AdminQuestions implements OnInit {
         this.addedCount.update((count) => count + 1);
         const total = this.addedCount();
         this.notice.set(`Added question ${total} in ${this.paperName(body.paper)} · ${body.topic}. Add the next one.`);
-        this.draft = { ...emptyDraft(), kind: body.kind, answerType: d.answerType, paper: body.paper, topic: body.topic, difficulty: body.difficulty, status: body.status };
+        this.draft = { ...emptyDraft(), kind: body.kind, answerType: d.answerType, paper: body.paper, topic: body.topic, difficulty: body.difficulty, status: body.status, passage: d.passage };
+        this.originalPassage = '';
         // Show the list for the same paper and topic, so the admin sees what is already there.
         this.filter = { ...this.filter, paper: body.paper, topic: body.topic };
         this.scrollToForm();

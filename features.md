@@ -109,7 +109,8 @@ The login page shows these messages straight away. When an email isn't registere
 - The admin can list questions, filter by paper, topic, status and **pictures** (all, with pictures, without pictures), edit and delete them. A question with a picture on it or on any option carries a "pictures" tag. This is worked out from the pictures attached, so it needs no column in the Excel file.
 - **Bulk publish:** the admin ticks questions in the list (or **Select all shown**) and clicks **Publish selected**, or **Move to draft**. Up to 500 at a time; questions already in that status are left alone. Handy after an Excel upload of drafts.
 - **Bulk delete:** **Delete selected** asks the admin to type `DELETE` before anything is removed, and then deletes the ticked questions and their pictures for good. Up to 500 at a time.
-- Not yet: pictures in the reasons, formulas, several correct answers, per-institute papers or topics.
+- **Reading passages:** a passage (title and text, up to 5,000 characters) is saved once and any number of questions can use it, for example five questions on one Reading comprehension passage. The admin manages passages on the Question bank page. A question picks its passage in the form; the list keeps a passage's questions together and shows the passage once above them, and can be filtered by passage. A passage that questions use can't be deleted. In the Excel template, passages go on a **Passages** sheet (Title, Text) and each question names its passage by title in the optional **Passage** column; a passage already in the bank can be named by title without repeating its text.
+- Not yet: pictures in passages and reasons, formulas, several correct answers, per-institute papers or topics.
 
 ## Platform admin
 - Created only by a script, never from the screens.

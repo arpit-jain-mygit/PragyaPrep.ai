@@ -43,6 +43,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q6 | **Fill-in questions:** a second question type with one box the student types the answer into. The answer is text (accepted spellings separated by `|`, capitals and extra spaces ignored) or a number (compared as a number, with an optional tolerance). It has one explanation instead of per-option reasons, and may have a question picture. The form has a Type choice, the Excel template has optional columns Type, Answer, Answer type, Tolerance and Explanation, and the list has a Type filter and a "fill in" tag. The marking rules are built and tested; students don't see questions yet | **Tested live** | 70 backend and 12 frontend tests (601 and 264 in all). On dev, from the real website: a fill-in question was added through the form (a missing explanation was refused first), an Excel file with two fill-in rows and a bad number imported 2 and flagged the bad row on its Answer column, and the Type filter showed them. I deleted only my three `ZZ` questions; the 25 real questions already in AaptPrep were not touched. No Lambda errors |
 | Q7 | **Bulk publish:** tick questions in the list (or **Select all shown**) and click **Publish selected** to publish them, or **Move to draft** to take them back. Up to 500 at a time; questions already in that status are left alone and counted. Ticks are cleared when the list reloads or a filter changes | **Tested live** | 15 backend and 6 frontend tests (616 and 270 in all). On dev, through the real API: 3 `ZZ` drafts were made, 2 published with one unknown id (changed 2, missing 1), all 3 moved back to draft, an empty list was refused, and the `ZZ` questions were deleted; AaptPrep's real questions were not touched. The new website was deployed; the buttons themselves are covered by the frontend tests and weren't clicked in a browser |
 | Q8 | **Bulk delete:** with questions ticked, **Delete selected** opens a box that says how many will be deleted for good (pictures too) and asks the admin to type `DELETE`. The Delete button stays off until the word is typed exactly. The server refuses the call unless it also carries `confirm: "DELETE"`. Up to 500 at a time | **Tested live** | 19 backend and 5 frontend tests (635 and 275 in all). On dev, through the real API: 3 `ZZ` questions were made, a call with the word `delete` was refused and nothing was removed, then 2 plus one unknown id deleted (2 deleted, 1 missing), then the last one; no `ZZ` questions were left, and the real questions were not touched. The deleting of pictures is proved by the backend tests (fake storage). The buttons weren't clicked in a browser |
+| Q9 | **Reading passages:** a passage (title and text, up to 5,000 characters) is saved once per institute, and any number of questions can point to it. A **Reading passages** card on the Question bank page adds, edits and deletes passages (a passage that questions use can't be deleted). The question form has a Passage dropdown; the list keeps a passage's questions together with the passage shown once above them, and has a Passage filter. The Excel template has a **Passages** sheet (Title, Text) and an optional **Passage** column on Questions that names a passage by its title; a title already in the bank is reused, and a title with different text is refused so nothing is overwritten | **Tested live** | 41 backend and 11 frontend tests (659 and 286 in all). On dev, with the real template downloaded from the site: a file with a passage and three questions was previewed (2 ready, 1 new passage, the row naming a missing passage flagged on its Passage column, nothing saved), imported (one passage shared by 2 questions, paragraph break kept), deleting the passage while in use was refused (409), and after deleting the questions it could be deleted. Only `ZZ` records were used and all were removed. The new screens weren't clicked in a browser |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -132,7 +133,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `635 passed`.
+You should see `659 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -383,6 +384,15 @@ On the Question bank page, in the **Questions** list.
 | 3 | Set it to **Without pictures** | Only the others |
 | 4 | Combine it with Paper, Topic or Status | The filters work together |
 
+### Q9 (reading passages): what to try
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | In **Question bank**, find the **Reading passages** card and click **Add a passage**. Give it a title and some text with a blank line between paragraphs | "Added the passage." and it is listed with "0 questions" |
+| 2 | Click **Add a question**, choose the passage in the **Reading passage** dropdown | "Show the passage" appears so you can read it while writing |
+| 3 | Save two questions with the same passage | In the list, the passage appears once above both questions |
+| 4 | Try **Delete** on the passage | Refused: "2 questions use this passage." |
+| 5 | Download the template: it has a **Passages** sheet and a **Passage** column. Put a passage on the Passages sheet and its title on several question rows. Upload it | The preview says "1 new passage"; after Import, the questions share it |
+
 ### Q8 (bulk delete): what to try
 Use only test questions for this.
 
@@ -480,7 +490,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 635 passed, 0 failed. Frontend: 275 passed, 0 failed. Total: 910.**
+**Backend, run on my machine: 659 passed, 0 failed. Frontend: 286 passed, 0 failed. Total: 945.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -504,7 +514,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_fill_in` | Q6 fill-in questions (marking rules for text and numbers, checking the admin's answer, the API, switching type, pictures, the Excel columns) | 70 |
 | `test_question_status` | Q7 bulk publish (publish, back to draft, counts, bad requests, who may, privacy between institutes) | 15 |
 | `test_question_bulk_delete` | Q8 bulk delete (the word DELETE, counts, pictures removed, who may, privacy between institutes) | 19 |
-| | **Total** | **635** |
+| `test_passages` | Q9 reading passages (the API, limits and unique titles, link from a question, delete rules, privacy, the Excel Passages sheet and column) | 24 |
+| | **Total** | **659** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -517,10 +528,10 @@ My own test rows and files are always removed after each live test. Login codes 
 | `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
 | `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
 | `shell.spec` | Page frame, logo in the top bar, student home, start page, not found | 20 |
-| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures, pictures filter, fill-in questions, bulk publish, bulk delete | 50 |
+| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures, pictures filter, fill-in questions, bulk publish, bulk delete, reading passages | 61 |
 | `question-upload.spec` | Excel upload card: template download, preview, problems, confirm, wrong file type, picture step | 15 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
-| | **Total** | **275** |
+| | **Total** | **286** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

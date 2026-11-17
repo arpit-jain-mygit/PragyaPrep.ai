@@ -154,8 +154,17 @@ def _resolve_images(scoped: TenantRepo, requested: dict, current: dict) -> tuple
     return now, gone, problem
 
 
-def _check(data: dict, pictures: dict, problem: str | None) -> dict:
-    """clean(), plus the picture problem, reported together as one set of mistakes."""
+def _passage(scoped: TenantRepo, raw) -> tuple[str | None, str | None]:
+    """The passage id to keep, and a problem if there is one. Blank means no passage."""
+    if raw is None or raw == "":
+        return None, None
+    if not isinstance(raw, str) or scoped.get_passage(raw) is None:
+        return None, "Choose a passage from the list."
+    return raw, None
+
+
+def _check(data: dict, pictures: dict, problem: str | None, passage_problem: str | None = None) -> dict:
+    """clean(), plus the picture and passage problems, reported together as one set of mistakes."""
     if (data.get("kind") or "mcq") == "fill_in" and any(slot != "question" for slot in pictures):
         problem = "A fill-in question has no options, so it can't have option pictures. Remove them first."
     try:
@@ -165,6 +174,8 @@ def _check(data: dict, pictures: dict, problem: str | None) -> dict:
         cleaned, errors = {}, dict(error.errors)
     if problem:
         errors["images"] = problem
+    if passage_problem:
+        errors["passage"] = passage_problem
     if errors:
         raise QuestionErrors(errors)
     return cleaned
@@ -172,8 +183,10 @@ def _check(data: dict, pictures: dict, problem: str | None) -> dict:
 
 def create_question(scoped: TenantRepo, data: dict, admin_email: str) -> dict:
     pictures, _, problem = _resolve_images(scoped, data.get("images") or {}, {})
+    passage, passage_problem = _passage(scoped, data.get("passage"))
     question = {
-        **_check(data, pictures, problem),
+        **_check(data, pictures, problem, passage_problem),
+        "passage": passage,
         "images": pictures,
         "id": uuid4().hex,
         "created_by": admin_email,
@@ -193,8 +206,9 @@ def update_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
     asked = changes.get("images") or {}
     pictures, gone, problem = _resolve_images(scoped, asked, current.get("images") or {})
     merged = {**current, **{key: value for key, value in changes.items() if value is not None and key != "images"}}
-    fields = _check(merged, pictures, problem)
-    fields.update(images=pictures, edited_by=admin_email, edited_at=now_iso())
+    passage, passage_problem = _passage(scoped, changes["passage"] if "passage" in changes else current.get("passage"))
+    fields = _check(merged, pictures, problem, passage_problem)
+    fields.update(passage=passage, images=pictures, edited_by=admin_email, edited_at=now_iso())
     if fields["kind"] == "mcq":
         fields.update(answer=None, explanation=None)  # nothing left over from when it was a fill-in question
     scoped.update_question(question_id, fields)
@@ -319,12 +333,16 @@ def discard_image(scoped: TenantRepo, storage: ContentStorage, image_id: str) ->
     _drop(scoped, storage, [image])
 
 
-def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, difficulty=None, pictures=None, kind=None) -> list[dict]:
+def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, difficulty=None, pictures=None, kind=None, passage=None) -> list[dict]:
     """Newest first, optionally filtered. pictures='yes' keeps questions with a picture on the question or any option,
     'no' keeps those with none."""
     items = scoped.list_questions()
     if kind:
         items = [item for item in items if item.get("kind", "mcq") == kind]
+    if passage == "none":
+        items = [item for item in items if not item.get("passage")]
+    elif passage:
+        items = [item for item in items if item.get("passage") == passage]
     if pictures == "yes":
         items = [item for item in items if item.get("images")]
     elif pictures == "no":

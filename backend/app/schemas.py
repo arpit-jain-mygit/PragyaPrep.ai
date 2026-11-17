@@ -284,6 +284,23 @@ class QuestionIn(BaseModel):
     kind: str | None = None
     answer: dict | None = None
     explanation: str | None = None
+    # The reading passage this question belongs to (its id). An empty string removes it.
+    passage: Any = None
+
+
+class PassageIn(BaseModel):
+    title: str | None = None
+    text: str | None = None
+
+
+class PassageOut(BaseModel):
+    id: str
+    title: str
+    text: str
+    questions: int = 0
+    created_at: str = ""
+    edited_by: str | None = None
+    edited_at: str | None = None
 
 
 class QuestionStatusIn(BaseModel):
@@ -325,6 +342,7 @@ class QuestionOut(BaseModel):
     status: str
     created_at: str = ""
     images: dict[str, QuestionPictureOut] = {}
+    passage: str | None = None
     edited_by: str | None = None
     edited_at: str | None = None
 

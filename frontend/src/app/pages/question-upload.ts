@@ -58,6 +58,7 @@ interface Staged {
           <p>
             <strong>{{ r.ready.length }} ready</strong>
             @if (picturesIn(r); as count) { ({{ count }} {{ count === 1 ? 'picture' : 'pictures' }}) }
+            @if (r.new_passages) { · {{ r.new_passages }} new {{ r.new_passages === 1 ? 'passage' : 'passages' }} } 
             @if (r.problems.length) { · <span class="bad">{{ r.problems.length }} with problems</span> }
             @if (r.duplicates.length) { · {{ r.duplicates.length }} already in the bank (skipped) }
           </p>

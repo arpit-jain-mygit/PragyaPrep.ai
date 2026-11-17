@@ -2,12 +2,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 
-from app import question_import, questions
+from app import passages, question_import, questions
 from app.config import Settings
 from app.deps import TENANT_ADMIN, get_settings, get_storage, get_tenant_repo, require_roles
 from app.papers import PAPERS
 from app.repo import TenantRepo
-from app.schemas import PaperOut, QuestionImageStartIn, QuestionImageStartOut, QuestionIn, QuestionOut, QuestionDeleteIn, QuestionPictureOut, QuestionStatusIn
+from app.schemas import PaperOut, QuestionImageStartIn, QuestionImageStartOut, QuestionIn, QuestionOut, PassageIn, PassageOut, QuestionDeleteIn, QuestionPictureOut, QuestionStatusIn
 from app.storage import ContentStorage
 from app.tenants import ValidationError
 
@@ -45,10 +45,54 @@ def list_questions(
     difficulty: str | None = Query(None),
     pictures: str | None = Query(None, description="yes: only questions with pictures. no: only questions without."),
     kind: str | None = Query(None, description="mcq or fill_in"),
+    passage: str | None = Query(None, description="A passage id, or 'none' for questions without one"),
     scoped: TenantRepo = Depends(get_tenant_repo),
     storage: ContentStorage = Depends(get_storage),
 ):
-    return [_present(item, storage) for item in questions.list_questions(scoped, paper, topic, status, difficulty, pictures, kind)]
+    return [_present(item, storage) for item in questions.list_questions(scoped, paper, topic, status, difficulty, pictures, kind, passage)]
+
+
+# ---- Reading passages ----
+
+@router.get("/api/admin/passages", response_model=list[PassageOut], dependencies=[Depends(require_roles(TENANT_ADMIN))])
+def list_passages(scoped: TenantRepo = Depends(get_tenant_repo)):
+    return passages.list_passages(scoped)
+
+
+@router.post("/api/admin/passages", status_code=201, response_model=PassageOut)
+def add_passage(
+    body: PassageIn, scoped: TenantRepo = Depends(get_tenant_repo), admin: dict = Depends(require_roles(TENANT_ADMIN))
+):
+    try:
+        return passages.create_passage(scoped, body.model_dump(), admin["email"])
+    except questions.QuestionErrors as error:
+        return _errors(error)
+
+
+@router.patch("/api/admin/passages/{passage_id}", response_model=PassageOut)
+def change_passage(
+    passage_id: str,
+    body: PassageIn,
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    admin: dict = Depends(require_roles(TENANT_ADMIN)),
+):
+    try:
+        passages.update_passage(scoped, passage_id, body.model_dump(exclude_unset=True), admin["email"])
+    except passages.PassageNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that passage.")
+    except questions.QuestionErrors as error:
+        return _errors(error)
+    return next(item for item in passages.list_passages(scoped) if item["id"] == passage_id)
+
+
+@router.delete("/api/admin/passages/{passage_id}", status_code=204, dependencies=[Depends(require_roles(TENANT_ADMIN))])
+def remove_passage(passage_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
+    try:
+        passages.delete_passage(scoped, passage_id)
+    except passages.PassageNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that passage.")
+    except ValidationError as error:
+        raise HTTPException(status_code=409, detail=str(error))
 
 
 @router.post("/api/admin/questions", status_code=201)
@@ -143,16 +187,28 @@ async def import_questions(
     With confirm=true, save every row that passed. Rows with problems and duplicates are never saved."""
     content = await request.body()
     try:
-        result = question_import.read(content, scoped.list_questions(), scoped.find_loose_image)
+        result = question_import.read(content, scoped.list_questions(), scoped.find_loose_image, scoped.list_passages())
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
     imported = 0
     if confirm:
+        made: dict[str, str] = {}  # a new passage is saved the first time a question uses it
         for item in list(result["ready"]):
             try:
-                questions.create_question(scoped, {**item["question"], "images": item["images"]}, admin["email"])
+                passage = item["passage"]
+                if passage and "id" not in passage:
+                    key = " ".join(passage["title"].lower().split())
+                    if key not in made:
+                        made[key] = passages.ensure(scoped, passage["title"], passage["text"], admin["email"])
+                    passage = {"id": made[key]}
+                questions.create_question(
+                    scoped, {**item["question"], "images": item["images"], "passage": passage["id"] if passage else None}, admin["email"]
+                )
                 imported += 1
+            except ValidationError as error:
+                result["ready"].remove(item)
+                result["problems"].append({"row": item["row"], "errors": {"Passage": str(error)}})
             except questions.QuestionErrors as error:
                 # A picture was taken between the preview and now. The row is reported, not imported.
                 result["ready"].remove(item)
@@ -166,11 +222,13 @@ async def import_questions(
                 "topic": item["question"]["topic"],
                 "text": item["question"]["text"],
                 "pictures": len(item["images"]),
+                "passage": item["passage"]["title"] if item["passage"] else None,
             }
             for item in result["ready"]
         ],
         "problems": result["problems"],
         "duplicates": result["duplicates"],
+        "new_passages": len({" ".join(i["passage"]["title"].lower().split()) for i in result["ready"] if i["passage"] and "id" not in i["passage"]}),
         "imported": imported,
     }
 

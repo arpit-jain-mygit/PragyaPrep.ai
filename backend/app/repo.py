@@ -435,6 +435,46 @@ class TenantRepo:
     def delete_question(self, question_id: str) -> None:
         self.table.delete_item(Key=self._question_key(question_id))
 
+    # ---- Reading passages ----
+
+    def _passage_key(self, passage_id: str) -> dict:
+        return {"PK": f"{self._prefix}PASSAGE#{passage_id}", "SK": "META"}
+
+    def create_passage(self, passage: dict) -> None:
+        _put_new(
+            self.table,
+            {
+                **self._passage_key(passage["id"]),
+                **passage,
+                "GSI1PK": f"{self._prefix}PASSAGES",
+                "GSI1SK": f"{' '.join(passage['title'].lower().split())}#{passage['id']}",
+            },
+        )
+
+    def get_passage(self, passage_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._passage_key(passage_id)).get("Item"))
+
+    def list_passages(self) -> list[dict]:
+        """All of this institute's passages, by title."""
+        items, start = [], None
+        while True:
+            args = {"IndexName": "GSI1", "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}PASSAGES")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_passage(self, passage_id: str, fields: dict) -> None:
+        if "title" in fields:
+            fields = {**fields, "GSI1SK": f"{' '.join(fields['title'].lower().split())}#{passage_id}"}
+        _update(self.table, self._passage_key(passage_id), fields)
+
+    def delete_passage(self, passage_id: str) -> None:
+        self.table.delete_item(Key=self._passage_key(passage_id))
+
     # ---- Question pictures: uploaded first, then attached to a question ----
 
     def _image_key(self, image_id: str) -> dict:
