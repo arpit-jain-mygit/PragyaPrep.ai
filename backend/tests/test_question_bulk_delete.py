@@ -20,14 +20,14 @@ def test_chosen_questions_are_deleted_and_the_rest_stay(client, admin):
     a, b, c = make(client, admin, 3)
     response = client.post(BULK, json={"ids": [a, b], "confirm": "DELETE"}, headers=admin)
     assert response.status_code == 200
-    assert response.json() == {"deleted": 2, "missing": 0}
+    assert response.json() == {"deleted": 2, "missing": 0, "blocked": 0}
     assert left(client, admin) == {c}
 
 
 def test_unknown_and_repeated_ids_are_counted_not_errors(client, admin):
     a, b = make(client, admin, 2)
     response = client.post(BULK, json={"ids": [a, a, "nope"], "confirm": "DELETE"}, headers=admin)
-    assert response.json() == {"deleted": 1, "missing": 1}
+    assert response.json() == {"deleted": 1, "missing": 1, "blocked": 0}
     assert left(client, admin) == {b}
 
 
@@ -65,5 +65,5 @@ def test_another_institute_cannot_delete_our_questions(client, admin, make_tenan
     (a,) = make(client, admin, 1)
     make_tenant("other-school", "Other", "boss@example.com")
     other = sign_in("other-school", "boss@example.com")
-    assert client.post(BULK, json={"ids": [a], "confirm": "DELETE"}, headers=other).json() == {"deleted": 0, "missing": 1}
+    assert client.post(BULK, json={"ids": [a], "confirm": "DELETE"}, headers=other).json() == {"deleted": 0, "missing": 1, "blocked": 0}
     assert left(client, admin) == {a}

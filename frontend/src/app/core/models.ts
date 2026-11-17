@@ -286,3 +286,65 @@ export interface QuestionImport {
   duplicates: { row: number; text: string }[];
   imported: number;
 }
+
+// ---- Tests built from the question bank ----
+
+export interface AutoRule {
+  paper: string;
+  topic: string;
+  difficulty: '' | 'easy' | 'medium' | 'hard';
+  count: number | null;
+}
+
+export interface TestSummary {
+  id: string;
+  title: string;
+  description: string;
+  /** India time, "2027-01-31T23:59", or null for no limit. */
+  start_at: string | null;
+  end_at: string | null;
+  duration_minutes: number;
+  max_attempts: number;
+  pass_percentage: number;
+  /** Marks are text with up to 2 decimals, for example "3", "-1" or "0.25". */
+  marks_correct: string;
+  marks_incorrect: string;
+  show_answers: boolean;
+  /** Ids of the courses the test is assigned to. */
+  courses: string[];
+  mode: 'manual' | 'auto';
+  rules: { paper: string; topic: string; difficulty: string; count: number }[];
+  question_ids: string[];
+  status: 'draft' | 'published';
+  question_count: number;
+  total_marks: string;
+}
+
+export interface TestDetail extends TestSummary {
+  questions: Question[];
+}
+
+export interface TestInput {
+  title?: string;
+  description?: string;
+  start_at?: string;
+  end_at?: string;
+  duration_minutes?: number;
+  max_attempts?: number;
+  pass_percentage?: number;
+  marks_correct?: string;
+  marks_incorrect?: string;
+  show_answers?: boolean;
+  courses?: string[];
+  mode?: 'manual' | 'auto';
+  rules?: { paper: string; topic: string; difficulty: string; count: number }[];
+  question_ids?: string[];
+  status?: 'draft' | 'published';
+}
+
+export interface AutoPickResult {
+  question_ids: string[];
+  picked: number;
+  added_for_passages: number;
+  short: { rule: number; wanted: number; found: number }[];
+}

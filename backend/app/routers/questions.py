@@ -171,6 +171,9 @@ def remove_question(
         questions.delete_question(scoped, storage, question_id)
     except questions.QuestionNotFound:
         raise HTTPException(status_code=404, detail="We couldn't find that question.")
+    except questions.QuestionInUse as error:
+        names = ", ".join(f"'{title}'" for title in error.titles)
+        raise HTTPException(status_code=409, detail=f"This question is in the published test {names}. Take it out of the test first.")
 
 
 @router.get("/api/admin/questions/template", dependencies=[Depends(require_roles(TENANT_ADMIN))])

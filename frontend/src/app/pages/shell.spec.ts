@@ -23,7 +23,7 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Registrations', 'Courses', 'Question bank']);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Registrations', 'Courses', 'Question bank', 'Tests']);
     expect(text(fixture)).toContain('Asha');
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });

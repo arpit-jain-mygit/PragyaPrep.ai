@@ -85,6 +85,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Give a student a course, renew it, or take it away, from the student's details.
 - Add and delete PDF and MP4 files in a course, from the course's **Files** page.
 - Keep a **question bank** (see below).
+- Build **tests** from the question bank (see below).
 - Choose the **subjects (subjects)** each course covers, from the fixed list, with a tick list on the course form. Known course names (CUET, IPMAT, CAT, CLAT) start with their usual subjects, and the admin can change them. This is stored for the student side later.
 - *(Phase 2)* Review payments: verify or reject a screenshot, with a reason, and upload the payment QR code.
 - *(Phase 2)* Edit the institute's own branding. Today only the platform admin changes the name, colour and logo.
@@ -113,6 +114,13 @@ The login page shows these messages straight away. When an email isn't registere
 - **Bulk upload:** the Upload tab takes a **zip** holding Excel files and pictures (or several files chosen together). Pictures are sent automatically, every Excel file is checked, and one combined preview shows ready questions and problems per file. One Import saves everything; duplicates between files are skipped. Up to 30 Excel files and 1000 pictures per run.
 - **Reading passages:** a question can have a passage (up to 5,000 characters, paragraph breaks kept). The admin pastes the passage into each related question, and **Save and add another** keeps it filled in. Questions with the same text share one saved passage and are shown together, with the passage once above them; the group header has an edit icon that changes the text for every question in the group. A passage no question uses any more is removed. In the Excel template the **Passage** column holds the text, repeated on each row; older files that name a passage by title still work. The list can be filtered to questions with or without a passage.
 - Not yet: pictures in passages and reasons, formulas, several correct answers, per-institute subjects or topics.
+
+## Tests (admin side)
+- The tenant admin builds tests on the **Tests** page. A test has: a title and instructions; a **start** and an **end** (date and time pickers, India time; students can attempt it only between them; each is optional); a **duration** in minutes; the **maximum attempts**; the **pass percentage**; **marks for a correct** and **for a wrong** answer (0 or negative, for example -1; decimals such as -0.25 work); whether students may **see the correct answers after submitting**; and the **courses** it is assigned to (checkboxes, for example CAT, IPMAT, CLAT).
+- **Adding questions:** *Manually* (choose from the published questions, with search, subject, topic and level filters) or *Automatically* (rules of subject, optional topic, optional level and how many; the system picks random published questions, and can pick again). The test keeps a fixed list, so every student gets the same questions.
+- Only published questions can be added. A question on a passage always comes with the rest of its passage, so the picked total can be a little more than asked. The page shows the count, the total marks and the count per subject.
+- A test needs at least one question and one course to be published. A question in a published test can't be deleted; deleting a question takes it out of draft tests.
+- Students taking tests (timing, answers, results, reasons afterwards) is the next step and isn't built yet.
 
 ## Platform admin
 - Created only by a script, never from the screens.

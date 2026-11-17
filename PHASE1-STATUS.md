@@ -51,6 +51,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | U2 | **Sleek look rolled out to the other admin pages:** **Registrations** (status dots; Approve as a button, Details, Edit, Reject and Suspend as icons; explanations behind ⓘ), **Course files** (icon header, compact upload panel, delete as an icon with a confirm), and the **Question bank**, now with three tabs: **Questions** (a compact filter toolbar, icon Edit and Delete, a bulk bar, passages shown once above their questions), **Passages** and **Upload**. The add-question form is tighter: Type, Subject and Topic on one row; Passage, Difficulty and Status on the next; each option's text and reason side by side; hints behind ⓘ. Behaviour and the API are unchanged | **Tested** | 300 frontend tests (2 new for the tabs; many updated for the new labels and tabs). Checked in a real browser on the sandbox (Registrations, Course files, Question bank list and form), and deployed to dev. Backend unchanged (693). The Passages and Upload tabs were covered by tests, not by a screenshot |
 | Q13 | **Passages by pasted text, grouped on screen:** the question form has a **Passage** box; paste the passage into each related question (Save and add another keeps it filled). Questions with the same text (capitals and spaces ignored) share one saved passage and are shown together with the passage once above them; the group header has an edit icon that fixes the text for every question in the group. In Excel the **Passage** column holds the text, repeated on each row, and the Passages sheet is gone from the template (older files that name a passage by title still work). The Passages tab and the passage dropdown are removed, so the Question bank has two tabs, Questions and Upload. A passage no question uses any more is removed automatically | **Tested live** | 24 new backend tests and 7 frontend tests changed or added (713 and 299 in all). On dev, with the real template: two questions with the same pasted text (one in capitals) shared one passage, editing the group changed both, an Excel file repeating a passage on two rows previewed 1 new passage and imported 2 questions in one group, and after deleting my `ZZ` questions the passage count was back to what it was before. The new screens weren't clicked in a browser |
 | Q14 | **Bulk upload:** the Upload tab has one box that takes a **zip** (with Excel files and pictures inside, in any folders) or several files chosen together. The browser opens the zip, sends the pictures straight to storage four at a time with a progress bar, has the server check every Excel file, and shows one combined preview (a table with ready, problems and skipped per file, and a "What to fix" list per file). One **Import** saves every ready question, file by file; a question already saved by an earlier file is skipped as a duplicate. Computer clutter in zips (`__MACOSX`, hidden files, Excel lock files) is ignored; unsupported files are counted. Limits: 30 Excel files and 1000 pictures per run, a zip up to 250 MB, each Excel file up to 500 rows and 2 MB, each picture up to 1 MB. A small open-source zip library (JSZip) is loaded only when a zip is chosen | **Tested** | 24 frontend tests for the upload (301 in all, 1,014 with the backend's 713). In a real browser on the sandbox: one zip holding three of your converted Excel files previewed 300 ready in a table, imported in one click, and the list showed 300 questions with their passages grouped. Deployed to dev. Not yet tried with the Data Interpretation pictures, and the preview's "new passages" adds up per file, so a passage shared by two files is counted twice there (it is saved once) |
+| T1 | **Tests built from the question bank (admin side):** a new **Tests** page. A test has a title and instructions, a start and an end (date and time pickers, India time, each optional), a duration, the maximum attempts, the pass percentage, marks for a correct and for a wrong answer (the wrong-answer marks are 0 or negative, decimals such as -0.25 are fine), whether students may see the correct answers after submitting, and the courses it is assigned to (checkboxes: CAT, CLAT, IPMAT and so on). Questions are added **Manually** (a picker over the published questions with search, subject, topic and level filters) or **Automatically** (rules of subject, optional topic, optional level and how many; **Pick questions** chooses at random, **Pick again** re-rolls). Either way the test keeps a fixed list, so every student gets the same questions. Only published questions can be added; a question on a passage always brings the rest of its passage; the page shows the count, total marks and a count per subject. A test needs at least one question and one course to be published. A question that is in a published test can't be deleted (single or bulk), and deleting a question takes it out of draft tests | **Tested live** | 79 backend and 17 frontend tests (792 and 318 in all, 1,110 with both). On dev through the real API: a published `ZZ` test was created (2 questions, 6 marks), marks of +1 for a wrong answer were refused, the auto-pick respected the exclusions and reported a shortfall, deleting a question in the published test gave 409 and bulk delete skipped it, then the test and my `ZZ` questions were removed. In a real browser on the sandbox: an automatic test with three rules picked 10 questions (2 pulled in with their passage), saved, and showed in the list. Students can't take tests yet; that is the next step |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -140,7 +141,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `713 passed`.
+You should see `792 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -402,6 +403,17 @@ In **Courses** (`/aaptprep/admin/courses`).
 | 4 | Under **Add a course**, type `CUET` as the name and click outside the box | All 37 CUET subjects get ticked (you can change them) |
 | 5 | Type a name like `Foundation` | Nothing is ticked; choose subjects by hand |
 
+### T1 (tests): what to try
+Click **Tests** in the menu (publish some questions first: tick them in the Question bank and use Publish selected).
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Click **New test**, fill the title, start and end (date and time pickers), duration, maximum attempts, pass percentage, marks for correct (for example 3) and wrong (for example -1) | The fields accept them; a wrong-answer mark above 0 is refused when you save |
+| 2 | Tick the courses under **Assign to** | CAT, CLAT, IPMAT and so on |
+| 3 | Choose **Manually**, filter or search, tick questions and click **Add** | They move to the list below with the count and total marks; picking a passage question adds its whole passage |
+| 4 | Choose **Automatically**, set rules (subject, topic, level, how many) and click **Pick questions** | A random set appears; **Pick again** gives another |
+| 5 | Set Status to Published and Save test | It shows in the list with a green dot; try deleting one of its questions in the Question bank and you get a message that it is in a published test |
+
 ### Q13 (passages by pasted text): what to try
 | Step | What to do | What you should see |
 |---|---|---|
@@ -508,7 +520,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 713 passed, 0 failed. Frontend: 301 passed, 0 failed. Total: 1014.**
+**Backend, run on my machine: 792 passed, 0 failed. Frontend: 318 passed, 0 failed. Total: 1110.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -534,7 +546,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_question_bulk_delete` | Q8 bulk delete (the word DELETE, counts, pictures removed, who may, privacy between institutes) | 19 |
 | `test_passages` | Q9 and Q13 reading passages (the API, limits and unique titles, passage text pasted on a question and grouped by text, clean-up of unused passages, privacy, the Excel Passage column) | 45 |
 | `test_course_papers` | Q10 subjects on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) and Q11 courses without a fee | 32 |
-| | **Total** | **713** |
+| `test_quizzes` | T1 tests (every field and its checks, dates, marks, courses, choosing questions by hand, passages kept together, random picking and its repeatability, questions used by tests, who may, privacy between institutes) | 79 |
+| | **Total** | **792** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -551,7 +564,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `question-upload.spec` | Bulk upload (template download, one or many Excel files, zip with pictures and clutter, picture limits and failures, combined preview, problems per file, import in order, partial failures, clean-up of unused pictures) | 17 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
 | `ui.spec` | The icon kit (every icon draws, sizes, the info tip, short access wording) | 5 |
-| | **Total** | **301** |
+| `admin-tests.spec` | Tests page (list, form with date pickers and courses, picking by hand with filters, passages brought along, automatic rules, errors, edit, publish, delete) | 17 |
+| | **Total** | **318** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

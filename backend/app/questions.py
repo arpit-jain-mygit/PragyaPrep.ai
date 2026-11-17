@@ -3,7 +3,7 @@ and an explanation). Private to one institute."""
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from app import answers, clock, logos, passages
+from app import answers, clock, logos, passages, quizzes
 from app.config import Settings
 from app.papers import BY_ID
 from app.repo import TenantRepo, now_iso
@@ -21,6 +21,14 @@ PENDING_HOURS = 24  # a picture that is never attached to a question is forgotte
 
 class QuestionNotFound(Exception):
     pass
+
+
+class QuestionInUse(Exception):
+    """A question can't be deleted while a published test uses it. 'titles' are those tests."""
+
+    def __init__(self, titles: list[str]):
+        super().__init__("The question is in a published test")
+        self.titles = titles
 
 
 class QuestionErrors(Exception):
@@ -275,14 +283,16 @@ def delete_many(scoped: TenantRepo, storage: ContentStorage, ids: list, confirm:
     ids = list(dict.fromkeys(ids))
     if len(ids) > MAX_BULK:
         raise ValidationError(f"Choose up to {MAX_BULK} questions at a time.")
-    deleted = missing = 0
+    deleted = missing = blocked = 0
     for question_id in ids:
         try:
             delete_question(scoped, storage, question_id)
             deleted += 1
         except QuestionNotFound:
             missing += 1
-    return {"deleted": deleted, "missing": missing}
+        except QuestionInUse:
+            blocked += 1  # a published test uses it, so it stays
+    return {"deleted": deleted, "missing": missing, "blocked": blocked}
 
 
 def _drop(scoped: TenantRepo, storage: ContentStorage, pictures: list[dict]) -> None:
@@ -295,7 +305,11 @@ def delete_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
     question = scoped.get_question(question_id)
     if question is None:
         raise QuestionNotFound()
+    using = [test["title"] for test in quizzes.published_tests_using(scoped, question_id)]
+    if using:
+        raise QuestionInUse(using)
     scoped.delete_question(question_id)
+    quizzes.forget_question(scoped, question_id)
     _drop(scoped, storage, list((question.get("images") or {}).values()))
     passages.drop_if_unused(scoped, question.get("passage"))
 

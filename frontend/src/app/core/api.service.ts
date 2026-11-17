@@ -20,7 +20,11 @@ import {
   InstituteUpdate,
   Member,
   MyCourse,
+  AutoPickResult,
   Paper,
+  TestDetail,
+  TestInput,
+  TestSummary,
   Passage,
   Picture,
   Question,
@@ -221,8 +225,35 @@ export class ApiService {
   }
 
   /** Delete many questions for good. The server insists on the word DELETE. */
-  deleteQuestions(ids: string[]): Promise<{ deleted: number; missing: number }> {
+  deleteQuestions(ids: string[]): Promise<{ deleted: number; missing: number; blocked: number }> {
     return this.post('/api/admin/questions/delete', { ids, confirm: 'DELETE' });
+  }
+
+  // ---- Tests (admin) ----
+
+  tests(): Promise<TestSummary[]> {
+    return this.get('/api/admin/tests');
+  }
+
+  test(id: string): Promise<TestDetail> {
+    return this.get(`/api/admin/tests/${encodeURIComponent(id)}`);
+  }
+
+  addTest(body: TestInput): Promise<TestDetail> {
+    return this.post('/api/admin/tests', body);
+  }
+
+  updateTest(id: string, body: TestInput): Promise<TestDetail> {
+    return this.patch(`/api/admin/tests/${encodeURIComponent(id)}`, body);
+  }
+
+  deleteTest(id: string): Promise<void> {
+    return this.delete(`/api/admin/tests/${encodeURIComponent(id)}`);
+  }
+
+  /** Pick random published questions for the rules. Saves nothing. */
+  autoPick(rules: { paper: string; topic: string; difficulty: string; count: number }[], exclude: string[]): Promise<AutoPickResult> {
+    return this.post('/api/admin/tests/auto-pick', { rules, exclude });
   }
 
   deleteQuestion(id: string): Promise<void> {

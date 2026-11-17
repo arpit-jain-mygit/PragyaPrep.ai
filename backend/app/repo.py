@@ -475,6 +475,44 @@ class TenantRepo:
     def delete_passage(self, passage_id: str) -> None:
         self.table.delete_item(Key=self._passage_key(passage_id))
 
+    # ---- Tests (quizzes) ----
+
+    def _test_key(self, test_id: str) -> dict:
+        return {"PK": f"{self._prefix}TEST#{test_id}", "SK": "META"}
+
+    def create_test(self, test: dict) -> None:
+        _put_new(
+            self.table,
+            {
+                **self._test_key(test["id"]),
+                **test,
+                "GSI1PK": f"{self._prefix}TESTS",
+                "GSI1SK": f"{test['created_at']}#{test['id']}",
+            },
+        )
+
+    def get_test(self, test_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._test_key(test_id)).get("Item"))
+
+    def list_tests(self) -> list[dict]:
+        """All of this institute's tests, newest first."""
+        items, start = [], None
+        while True:
+            args = {"IndexName": "GSI1", "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}TESTS"), "ScanIndexForward": False}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_test(self, test_id: str, fields: dict) -> None:
+        _update(self.table, self._test_key(test_id), fields)
+
+    def delete_test(self, test_id: str) -> None:
+        self.table.delete_item(Key=self._test_key(test_id))
+
     # ---- Question pictures: uploaded first, then attached to a question ----
 
     def _image_key(self, image_id: str) -> dict:

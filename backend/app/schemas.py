@@ -310,6 +310,31 @@ class PassageOut(BaseModel):
     edited_at: str | None = None
 
 
+class TestIn(BaseModel):
+    """A test. Every field is checked by hand so all mistakes come back together."""
+
+    title: Any = None
+    description: Any = None
+    start_at: Any = None
+    end_at: Any = None
+    duration_minutes: Any = None
+    max_attempts: Any = None
+    pass_percentage: Any = None
+    marks_correct: Any = None
+    marks_incorrect: Any = None
+    show_answers: Any = None
+    courses: Any = None
+    mode: Any = None
+    rules: Any = None
+    question_ids: Any = None
+    status: Any = None
+
+
+class AutoPickIn(BaseModel):
+    rules: Any = None
+    exclude: Any = None
+
+
 class QuestionStatusIn(BaseModel):
     ids: Any = None
     status: Any = None

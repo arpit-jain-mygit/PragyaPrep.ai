@@ -546,7 +546,7 @@ export class AdminQuestions implements OnInit {
     this.reset();
     try {
       const result = await this.api.deleteQuestions(ids);
-      this.notice.set(`Deleted ${result.deleted} ${result.deleted === 1 ? 'question' : 'questions'}.`);
+      this.notice.set(`Deleted ${result.deleted} ${result.deleted === 1 ? 'question' : 'questions'}.${result.blocked ? ` ${result.blocked} stayed because a published test uses ${result.blocked === 1 ? 'it' : 'them'}.` : ''}`);
       this.deleteAsk.set(false);
       await this.load();
     } catch (error) {
