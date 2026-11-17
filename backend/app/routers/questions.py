@@ -43,10 +43,11 @@ def list_questions(
     topic: str | None = Query(None),
     status: str | None = Query(None),
     difficulty: str | None = Query(None),
+    pictures: str | None = Query(None, description="yes: only questions with pictures. no: only questions without."),
     scoped: TenantRepo = Depends(get_tenant_repo),
     storage: ContentStorage = Depends(get_storage),
 ):
-    return [_present(item, storage) for item in questions.list_questions(scoped, paper, topic, status, difficulty)]
+    return [_present(item, storage) for item in questions.list_questions(scoped, paper, topic, status, difficulty, pictures)]
 
 
 @router.post("/api/admin/questions", status_code=201)

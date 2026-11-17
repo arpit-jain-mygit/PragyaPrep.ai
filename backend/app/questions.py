@@ -256,9 +256,14 @@ def discard_image(scoped: TenantRepo, storage: ContentStorage, image_id: str) ->
     _drop(scoped, storage, [image])
 
 
-def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, difficulty=None) -> list[dict]:
-    """Newest first, optionally filtered."""
+def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, difficulty=None, pictures=None) -> list[dict]:
+    """Newest first, optionally filtered. pictures='yes' keeps questions with a picture on the question or any option,
+    'no' keeps those with none."""
     items = scoped.list_questions()
+    if pictures == "yes":
+        items = [item for item in items if item.get("images")]
+    elif pictures == "no":
+        items = [item for item in items if not item.get("images")]
     for field, wanted in (("paper", paper), ("topic", topic), ("status", status), ("difficulty", difficulty)):
         if wanted:
             items = [item for item in items if item.get(field) == wanted]

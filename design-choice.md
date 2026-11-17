@@ -248,7 +248,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Sec
 
 ## 13. Testing approach
 
-**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 527 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 249 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
+**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 531 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 252 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
 
 **Alternatives considered:** DynamoDB Local in Docker, or testing only against real AWS.
 
@@ -883,6 +883,7 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
   - **Why this and not a ZIP or pictures pasted into cells:** a ZIP would hit the API's 6 MB request limit and needs a zip reader; pictures pasted into cells float, resize and lose their names. Choosing pictures first reuses the Q3 upload path and has no size ceiling beyond 1 MB each.
   - **The preview checks pictures too:** a name that wasn't uploaded, and a picture named on two questions in the file (a picture can be on one question only), are problems in their own column. A question that is already in the bank is skipped before pictures are looked at, so uploading a file twice still does no harm.
   - **Clean-up:** after a confirmed import the browser discards the pictures it staged that weren't used. Pictures that were used are on their questions. If the browser is closed first, unused pictures stay in storage until the database row expires after 24 hours, and then can no longer be named.
+- **Finding questions with pictures (step Q5):** a question "has pictures" when it has a picture on the question or on any option. This is read from the pictures actually attached, never from a column the admin fills in, so it can't disagree with reality and covers both ways of adding a question. The list has a Pictures filter (`?pictures=yes` or `no`) and each such question shows a tag. We turned down a manual "has picture" column in the template because it could be wrong, for example if the admin forgets it or a picture fails to upload. A "picture needed" flag for pictures still to come was offered and not chosen.
 - **Why Excel and not CSV:** Excel opens a CSV with the wrong encoding, which garbles Hindi and other scripts, commas and line breaks in question text break CSV, and an `.xlsx` template can have dropdowns. CSV can be added later without changing anything else.
 - **Rules:** question up to 2,000 characters, option up to 500, reason up to 1,000. The four options must differ. All mistakes are returned together, field by field, like the registration form.
 - **Storage:** one row per question under the institute's own key prefix (`T#<institute>#QUESTION#<id>`), listed newest first through the existing index. The admin's list is filtered in the code, which is fine for thousands of questions.

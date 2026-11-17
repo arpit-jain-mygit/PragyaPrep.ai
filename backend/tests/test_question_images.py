@@ -270,3 +270,38 @@ def test_another_institute_cannot_use_or_remove_a_picture(client, admin, repo, s
     errors = client.post(URL, json=question(images={"question": image_id}), headers=other).json()["errors"]
     assert "images" in errors
     assert repo.scoped("aaptprep").get_image(image_id)["status"] == "ready"
+
+
+# ---- Finding questions with pictures ----
+
+def test_the_list_can_be_filtered_to_questions_with_or_without_pictures(client, admin, repo, s3, fake_clock):
+    plain = client.post(URL, json=question(text="No picture"), headers=admin).json()
+    fake_clock.advance(1)
+    on_question = client.post(URL, json=question(text="Picture on question", images={"question": ready_picture(client, s3, repo, admin)}), headers=admin).json()
+    fake_clock.advance(1)
+    on_option = client.post(URL, json=question(text="Picture on option", images={"D": ready_picture(client, s3, repo, admin)}), headers=admin).json()
+
+    ids = lambda params: [q["id"] for q in client.get(URL, params=params, headers=admin).json()]
+    assert ids({"pictures": "yes"}) == [on_option["id"], on_question["id"]]
+    assert ids({"pictures": "no"}) == [plain["id"]]
+    assert len(ids({})) == 3 and len(ids({"pictures": ""})) == 3
+
+
+def test_the_pictures_filter_combines_with_the_others(client, admin, repo, s3):
+    client.post(URL, json=question(text="Physics pic", images={"question": ready_picture(client, s3, repo, admin)}), headers=admin)
+    client.post(URL, json=question(paper="chemistry", topic="Solutions", text="Chem pic", images={"question": ready_picture(client, s3, repo, admin)}), headers=admin)
+    found = client.get(URL, params={"pictures": "yes", "paper": "chemistry"}, headers=admin).json()
+    assert [q["text"] for q in found] == ["Chem pic"]
+
+
+def test_a_question_loses_the_tag_when_its_pictures_are_removed(client, admin, repo, s3):
+    saved = client.post(URL, json=question(images={"question": ready_picture(client, s3, repo, admin)}), headers=admin).json()
+    client.patch(f"{URL}/{saved['id']}", json={"images": {"question": None}}, headers=admin)
+    assert client.get(URL, params={"pictures": "yes"}, headers=admin).json() == []
+
+
+def test_excel_imported_pictures_are_found_too(client, admin, repo, s3):
+    from test_question_import import good_row, pic_book, post, stage
+    stage(client, admin, repo, "imp.png")
+    post(client, admin, pic_book([good_row(**{"Question image": "imp.png"}), good_row(Question="Second?")]), confirm=True)
+    assert [q["text"] for q in client.get(URL, params={"pictures": "yes"}, headers=admin).json()] == ["Which colour bends the most?"]

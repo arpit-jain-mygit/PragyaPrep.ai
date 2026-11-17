@@ -412,3 +412,41 @@ describe('Admin question bank: pictures', () => {
     expect(all(fixture, '#question-form img').length).toBe(1);
   });
 });
+
+describe('Admin question bank: finding questions with pictures', () => {
+  it('tags questions that have a picture on the question or on any option, and only those', async () => {
+    const withOne = { ...Q1, id: 'qa', images: { D: { id: 'a', url: 'https://s3.example/a' } } };
+    const without = { ...Q1, id: 'qb', images: {} };
+    const { fixture } = await open([withOne, without]);
+    const rows = all(fixture, '[data-question]');
+    expect(rows[0].querySelector('.chip.pictures')?.textContent?.trim()).toBe('pictures');
+    expect(rows[1].querySelector('.chip.pictures')).toBeNull();
+  });
+
+  it('asks the server for only questions with pictures, or only without', async () => {
+    const { fixture, http } = await open();
+    pick(fixture, '#f-pictures', 'yes');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions?pictures=yes`).flush([]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('No questions yet.');
+    pick(fixture, '#f-pictures', 'no');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions?pictures=no`).flush([Q1]);
+    await settle(fixture);
+    pick(fixture, '#f-pictures', '');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+  });
+
+  it('combines the pictures filter with paper and topic', async () => {
+    const { fixture, http } = await open();
+    pick(fixture, '#f-paper', 'physics');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions?paper=physics`).flush([Q1]);
+    await settle(fixture);
+    pick(fixture, '#f-pictures', 'yes');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions?paper=physics&pictures=yes`).flush([]);
+  });
+});

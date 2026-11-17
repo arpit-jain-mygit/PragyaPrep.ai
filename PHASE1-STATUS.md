@@ -39,6 +39,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q2 | **Upload questions from Excel:** the admin downloads an `.xlsx` template (dropdowns for paper, topic, correct answer, difficulty and status, an instructions sheet and the paper list), fills one row per question, uploads it, sees a preview (ready, problems with row and column, duplicates), then confirms. Only `.xlsx`, up to 500 rows. Pictures are added in Q4 | **Tested live** | 25 backend and 9 frontend tests (476 and 223 in all). Real browser on the sandbox: a 5-row file previewed as 3 ready, 1 bad topic, 1 duplicate; confirming imported 3 including Hindi text. On dev (the real Lambda): the template downloaded, the preview and import worked, uploading again skipped all as duplicates, a text file and a call with no login were refused, and the test questions were deleted. No Lambda errors. The template was not opened in Excel itself |
 | Q3 | **Pictures on questions:** the admin can attach one PNG or JPG (up to 1 MB) to a question and one to each option. An option may be picture-only (the reason is still required). Pictures show in the form and the list, and can be replaced or removed. Deleting a question, or replacing or removing a picture, deletes the file from storage. Students don't see questions yet | **Tested live** | 37 backend and 19 frontend tests (513 and 242 in all). On dev with real S3, from the real website: a real PNG went onto the question and onto option B (which had no text), a fake `.png` was refused and removed from S3, the question saved and showed both pictures, removing the question's picture deleted its file, deleting the question deleted the other, and afterwards there were no files and no question or picture rows left. No Lambda errors |
 | Q4 | **Pictures in the Excel upload:** the template gets optional columns Question image and Image A to D. The admin first chooses all the pictures in a picture step on the upload card, then types each picture's file name in the sheet. The preview says how many pictures will be attached and flags a missing picture, or one used twice, by row and column. A picture-only option may leave its text empty | **Tested live** | 14 new backend tests and 7 new frontend tests (527 and 249 in all). On dev from the real website: two real PNGs and a fake `.png` were chosen (the fake one was refused), an Excel file named them, the preview showed 2 ready (2 pictures) and one row with problems (a picture used twice and one not uploaded), the import attached both pictures and they loaded in the list. I then deleted the questions: no files, no rows and no Lambda errors left |
+| Q5 | **Find questions with pictures:** each question that has a picture on the question or on any option shows a "pictures" tag, and the list has a **Pictures** filter (All questions, With pictures, Without pictures) that combines with Paper, Topic and Status. It is worked out from the pictures actually attached, so it covers questions added by the form or by Excel, and there is no manual column to keep in step | **Tested live** | 4 backend and 3 frontend tests (531 and 252 in all). On dev: a question with a picture on option B and one without were added, the filter returned each correctly, and both were deleted with no files, rows or Lambda errors left |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -128,7 +129,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `527 passed`.
+You should see `531 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -369,6 +370,16 @@ On the Question bank page, in the **Upload many questions** card.
 
 Delete your test questions afterwards.
 
+### Q5 (find questions with pictures): what to try
+On the Question bank page, in the **Questions** list.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Look at the list | Each question with a picture on it or on any option has a blue "pictures" tag |
+| 2 | Set **Pictures** to **With pictures** | Only those questions |
+| 3 | Set it to **Without pictures** | Only the others |
+| 4 | Combine it with Paper, Topic or Status | The filters work together |
+
 ### M7 (hosting): what to try
 The dev website is at **https://d1szng4oy9m4an.cloudfront.net**. Open it on any device. There is no start page content yet, so use an institute's address:
 
@@ -431,7 +442,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 527 passed, 0 failed. Frontend: 249 passed, 0 failed. Total: 776.**
+**Backend, run on my machine: 531 passed, 0 failed. Frontend: 252 passed, 0 failed. Total: 783.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -451,8 +462,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_logo` | P3 logos (who may, types and size, checking contents, replace, remove, the public address) | 30 |
 | `test_questions` | Q1 question bank (the 37 papers, checks with all mistakes at once, filters, edit, delete, who may, privacy between institutes) | 32 |
 | `test_question_import` | Q2 and Q4 Excel upload (template, preview, import, problems by row and column, duplicates, unreadable files, 500-row limit, privacy, pictures named in the sheet) | 39 |
-| `test_question_images` | Q3 pictures (who may, types and size, real contents, attach to question and options, replace, remove, delete clean-up, privacy) | 37 |
-| | **Total** | **527** |
+| `test_question_images` | Q3 pictures (who may, types and size, real contents, attach to question and options, replace, remove, delete clean-up, privacy) and Q5 the pictures filter | 41 |
+| | **Total** | **531** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -465,10 +476,10 @@ My own test rows and files are always removed after each live test. Login codes 
 | `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
 | `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
 | `shell.spec` | Page frame, logo in the top bar, student home, start page, not found | 20 |
-| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures | 24 |
+| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures, pictures filter | 27 |
 | `question-upload.spec` | Excel upload card: template download, preview, problems, confirm, wrong file type, picture step | 15 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
-| | **Total** | **249** |
+| | **Total** | **252** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

@@ -174,13 +174,23 @@ function draftFrom(question: Question): Draft {
           </select>
         </div>
       </div>
-      <div class="field">
-        <label for="f-status">Status</label>
-        <select id="f-status" name="fstatus" [(ngModel)]="filter.status" (ngModelChange)="load()">
-          <option value="">All</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-        </select>
+      <div class="grid-2">
+        <div class="field">
+          <label for="f-status">Status</label>
+          <select id="f-status" name="fstatus" [(ngModel)]="filter.status" (ngModelChange)="load()">
+            <option value="">All</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-pictures">Pictures</label>
+          <select id="f-pictures" name="fpictures" [(ngModel)]="filter.pictures" (ngModelChange)="load()">
+            <option value="">All questions</option>
+            <option value="yes">With pictures</option>
+            <option value="no">Without pictures</option>
+          </select>
+        </div>
       </div>
 
       @if (loading()) {
@@ -191,6 +201,7 @@ function draftFrom(question: Question): Draft {
             <div class="row">
               <span class="chip" [class]="'chip ' + (question.status === 'published' ? 'open' : 'hidden')">{{ question.status }}</span>
               <span class="muted">{{ paperName(question.paper) }} · {{ question.topic }} · {{ question.difficulty }}</span>
+              @if (hasPictures(question)) { <span class="chip pictures">pictures</span> }
             </div>
             <p><strong>{{ question.text }}</strong></p>
             @if (question.images?.['question']; as picture) {
@@ -245,7 +256,7 @@ export class AdminQuestions implements OnInit {
   draft: Draft = emptyDraft();
   /** The pictures the question already had when it was opened for editing, by position. */
   private original: Record<string, string> = {};
-  filter = { paper: '', topic: '', status: '' };
+  filter = { paper: '', topic: '', status: '', pictures: '' };
 
   /** Papers grouped by section, for the dropdown. */
   readonly groups = computed(() => {
@@ -274,6 +285,10 @@ export class AdminQuestions implements OnInit {
     return this.papers().find((paper) => paper.id === paperId)?.topics ?? [];
   }
 
+  hasPictures(question: Question): boolean {
+    return Object.keys(question.images ?? {}).length > 0;
+  }
+
   paperName(paperId: string): string {
     return this.papers().find((paper) => paper.id === paperId)?.name ?? paperId;
   }
@@ -290,7 +305,7 @@ export class AdminQuestions implements OnInit {
   async uploaded(count: number): Promise<void> {
     this.reset();
     this.notice.set(`Imported ${count} ${count === 1 ? 'question' : 'questions'}.`);
-    this.filter = { paper: '', topic: '', status: '' };
+    this.filter = { paper: '', topic: '', status: '', pictures: '' };
     await this.load();
   }
 

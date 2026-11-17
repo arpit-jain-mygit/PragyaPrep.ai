@@ -179,7 +179,7 @@ export class ApiService {
     return this.get('/api/admin/papers');
   }
 
-  questions(filter: { paper?: string; topic?: string; status?: string } = {}): Promise<Question[]> {
+  questions(filter: { paper?: string; topic?: string; status?: string; pictures?: string } = {}): Promise<Question[]> {
     const query = new URLSearchParams(Object.entries(filter).filter(([, value]) => !!value) as [string, string][]);
     return this.get(`/api/admin/questions${query.size ? '?' + query : ''}`);
   }
