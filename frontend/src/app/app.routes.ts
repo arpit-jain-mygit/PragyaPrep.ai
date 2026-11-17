@@ -65,6 +65,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests),
       },
       {
+        path: 'results',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults),
+      },
+      {
         path: 'tests/:id',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/student-test').then((m) => m.StudentTest),

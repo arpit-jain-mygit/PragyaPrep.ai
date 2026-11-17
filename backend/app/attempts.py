@@ -10,6 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from app import answers as answer_rules
 from app import clock, content
+from app.papers import BY_ID
 from app.repo import ConflictError, TenantRepo, now_iso
 from app.storage import ContentStorage
 from app.tenants import ValidationError
@@ -97,24 +98,30 @@ def score(attempt: dict, bank: dict[str, dict]) -> dict:
     given = attempt.get("answers") or {}
     right = wrong = blank = 0
     results = {}
+    topics: dict[str, list[int]] = {}  # "subject|topic" -> [right, wrong, not answered], for the student's results across tests
     for question_id in ids:
         question = bank.get(question_id)
         answer = given.get(question_id)
         if answer is None or question is None:
             blank += 1
             results[question_id] = "u"
+            slot = 2
         elif answer_rules.is_correct(question, answer):
             right += 1
             results[question_id] = "c"
+            slot = 0
         else:
             wrong += 1
             results[question_id] = "w"
+            slot = 1
+        if question is not None:
+            topics.setdefault(f"{question['paper']}|{question['topic']}", [0, 0, 0])[slot] += 1
     per_right, per_wrong = Decimal(attempt["marks_correct"]), Decimal(attempt["marks_incorrect"])
     marks = per_right * right + per_wrong * wrong
     total = per_right * len(ids)
     percentage = (max(marks, Decimal(0)) / total * 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if total else Decimal(0)
     return {
-        "correct": right, "wrong": wrong, "unanswered": blank, "results": results,
+        "correct": right, "wrong": wrong, "unanswered": blank, "results": results, "topics": topics,
         "marks": _fmt(marks), "total_marks": _fmt(total), "percentage": _fmt(percentage),
         "passed": percentage >= Decimal(attempt["pass_percentage"]),
     }
@@ -476,3 +483,59 @@ def admin_attempt(scoped: TenantRepo, storage: ContentStorage, test_id: str, ema
             "student": {"email": email, "name": person[email]}, "answered": len(attempt.get("answers") or {}), "questions": len(attempt["question_ids"]),
         }
     return {**result_view(scoped, storage, attempt, force_review=True), "student": {"email": email, "name": person[email]}}
+
+
+# ---- A student's results across all their tests ----
+
+TREND_ATTEMPTS = 10
+
+
+def _accuracy(right: int, total: int) -> str:
+    return _fmt((Decimal(right) * 100 / total).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) if total else "0"
+
+
+def my_results(scoped: TenantRepo, member: dict) -> dict:
+    """Everything the student's results page shows: totals, a score trend, every finished attempt, and accuracy by subject and topic."""
+    attempts = [_settle(scoped, a) for a in scoped.list_attempts(member["email"])]
+    done = sorted((a for a in attempts if a["status"] == "submitted"), key=lambda a: (a["started_at"], a["test_id"], a["number"]))
+    percentages = [Decimal(a["percentage"]) for a in done]
+    taken: dict[str, bool] = {}
+    for a in done:
+        taken[a["test_id"]] = taken.get(a["test_id"], False) or bool(a["passed"])
+    summary = {
+        "tests_taken": len(taken),
+        "attempts": len(done),
+        "in_progress": len(attempts) - len(done),
+        "average": _fmt((sum(percentages) / len(percentages)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) if percentages else None,
+        "best": _fmt(max(percentages)) if percentages else None,
+        "tests_passed": sum(1 for passed in taken.values() if passed),
+    }
+    rows = [
+        {
+            "test_id": a["test_id"], "title": a["title"], "number": a["number"], "started_at": a["started_at"], "submitted_at": a.get("submitted_at"),
+            "marks": a["marks"], "total_marks": a["total_marks"], "percentage": a["percentage"], "passed": a["passed"],
+            "auto_submitted": bool(a.get("auto_submitted")), "show_answers": a["show_answers"],
+        }
+        for a in reversed(done)
+    ]
+    trend = [{"title": r["title"], "number": r["number"], "percentage": r["percentage"], "passed": r["passed"], "started_at": r["started_at"]} for r in reversed(rows[:TREND_ATTEMPTS])]
+
+    totals: dict[str, list[int]] = {}
+    for a in done:
+        for key, counts in (a.get("topics") or {}).items():
+            have = totals.setdefault(key, [0, 0, 0])
+            for slot in range(3):
+                have[slot] += int(counts[slot])
+    subjects: dict[str, dict] = {}
+    for key, (right, wrong, blank) in totals.items():
+        paper, _, topic = key.partition("|")
+        subject = subjects.setdefault(paper, {"id": paper, "name": BY_ID[paper]["name"] if paper in BY_ID else paper, "correct": 0, "questions": 0, "topics": []})
+        faced = right + wrong + blank
+        subject["correct"] += right
+        subject["questions"] += faced
+        subject["topics"].append({"topic": topic, "correct": right, "wrong": wrong, "unanswered": blank, "questions": faced, "accuracy": _accuracy(right, faced)})
+    for subject in subjects.values():
+        subject["accuracy"] = _accuracy(subject["correct"], subject["questions"])
+        subject["topics"].sort(key=lambda t: (Decimal(t["accuracy"]), t["topic"]))
+    ordered = sorted(subjects.values(), key=lambda s: (Decimal(s["accuracy"]), s["name"]))
+    return {"summary": summary, "trend": trend, "attempts": rows, "subjects": ordered}

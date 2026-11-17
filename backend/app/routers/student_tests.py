@@ -94,3 +94,9 @@ def submit_attempt(
         return attempts.submit(scoped, storage, student, test_id, number)
     except attempts.AttemptNotFound:
         raise HTTPException(status_code=404, detail=NO_ATTEMPT)
+
+
+@router.get("/api/my/results")
+def my_results(scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    """The student's results across all their tests: totals, a score trend, every finished attempt, and accuracy by topic."""
+    return attempts.my_results(scoped, student)

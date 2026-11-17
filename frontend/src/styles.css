@@ -371,3 +371,15 @@ button.text-btn:hover { background: var(--info-bg); }
 .detail-cell { background: #fafbfc; padding: 0.8rem 1rem; }
 .clip { max-width: 28rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 40rem) { .clip { max-width: 12rem; } }
+.bars.trend { height: 7rem; }
+.bar.pass { background: #22c55e; }
+.bar.fail { background: #f87171; }
+.subject-card { padding: 0.8rem 1rem; }
+.topic-row { display: grid; grid-template-columns: 1fr 7rem 9.5rem 6.5rem; align-items: center; gap: 0.6rem; padding: 0.3rem 0; border-top: 1px solid var(--line); }
+.topic-row [data-weak] { text-transform: none; text-align: center; }
+@media (max-width: 40rem) { .topic-row { grid-template-columns: 1fr 5rem 7.5rem; } .topic-row [data-weak] { grid-column: 1 / -1; justify-self: start; } }
+.topic-name { min-width: 0; }
+.topic-score { white-space: nowrap; }
+.topic-row .meter { width: 100%; }
+.tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
+a.tab { text-decoration: none; }

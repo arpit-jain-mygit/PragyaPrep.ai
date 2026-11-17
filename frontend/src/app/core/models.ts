@@ -506,3 +506,48 @@ export interface TestResults {
 export type AdminAttempt =
   | (AttemptResult & { student: { email: string; name: string } })
   | { status: 'in_progress'; test_id: string; number: number; title: string; started_at: string; student: { email: string; name: string }; answered: number; questions: number };
+
+// ---- A student's results across tests ----
+
+export interface TopicResult {
+  topic: string;
+  correct: number;
+  wrong: number;
+  unanswered: number;
+  questions: number;
+  /** Percent of the questions faced that were answered correctly. */
+  accuracy: string;
+}
+
+export interface SubjectResult {
+  id: string;
+  name: string;
+  correct: number;
+  questions: number;
+  accuracy: string;
+  topics: TopicResult[];
+}
+
+export interface MyResultRow {
+  test_id: string;
+  title: string;
+  number: number;
+  started_at: string;
+  submitted_at: string | null;
+  marks: string;
+  total_marks: string;
+  percentage: string;
+  passed: boolean;
+  auto_submitted: boolean;
+  show_answers: boolean;
+}
+
+export interface MyResults {
+  summary: { tests_taken: number; attempts: number; in_progress: number; average: string | null; best: string | null; tests_passed: number };
+  /** The last attempts, oldest first. */
+  trend: { title: string; number: number; percentage: string; passed: boolean; started_at: string }[];
+  /** Every finished attempt, newest first. */
+  attempts: MyResultRow[];
+  /** Weakest first. */
+  subjects: SubjectResult[];
+}

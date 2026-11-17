@@ -24,6 +24,7 @@ import {
   AttemptResult,
   AttemptView,
   AutoPickResult,
+  MyResults,
   StudentTestCard,
   Paper,
   TestDetail,
@@ -295,6 +296,11 @@ export class ApiService {
 
   myTest(id: string): Promise<StudentTestCard> {
     return this.get(`/api/my/tests/${encodeURIComponent(id)}`);
+  }
+
+  /** The student's results across all their tests. */
+  myResults(): Promise<MyResults> {
+    return this.get('/api/my/results');
   }
 
   startTest(id: string): Promise<AttemptView> {
