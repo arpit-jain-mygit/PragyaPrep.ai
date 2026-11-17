@@ -121,7 +121,8 @@ The login page shows these messages straight away. When an email isn't registere
 - Only published questions can be added. A question on a passage always comes with the rest of its passage, so the picked total can be a little more than asked. The page shows the count, the total marks and the count per subject.
 - A test needs at least one question and one course to be published. A question in a published test can't be deleted; deleting a question takes it out of draft tests.
 - The list has a **search** by name, a **course** filter and a **status** filter, with a count and a clear button.
-- Students take tests from their own **Tests** page (see the Student section). The admin's view of students' results is not built yet.
+- Students take tests from their own **Tests** page (see the Student section).
+- **Results:** each test has a Results icon (with the number of attempts) that opens a page with a summary (students, attempts, average, highest, lowest, pass rate and a strip showing how scores spread), a table of every attempt with search, result filter, sort and a "best per student" switch, and a **question analysis** (percent correct per question and the wrong option chosen most, hardest first on request). The admin can open any attempt to see every answer with the right answers and reasons, even when the test hides answers from students. The attempts can be downloaded as a CSV file. A test that students have started can't be deleted (move it to draft).
 
 ## Platform admin
 - Created only by a script, never from the screens.

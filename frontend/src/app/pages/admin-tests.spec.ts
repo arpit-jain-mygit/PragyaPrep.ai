@@ -21,7 +21,7 @@ const BANK = [Q1, Q2, Q3, Q4];
 const T1 = {
   id: 't1', title: 'Mock 1', description: '', start_at: '2027-01-10T09:00', end_at: '2027-01-31T23:59', duration_minutes: 60,
   max_attempts: 2, pass_percentage: 40, marks_correct: '3', marks_incorrect: '-1', show_answers: true, courses: ['c1'],
-  mode: 'manual', rules: [], question_ids: ['q1', 'q2'], status: 'published', question_count: 2, total_marks: '6',
+  mode: 'manual', rules: [], question_ids: ['q1', 'q2'], status: 'published', question_count: 2, total_marks: '6', attempt_count: 0,
 };
 
 async function open(tests: object[] = [T1]) {
@@ -422,6 +422,28 @@ describe('Admin tests page', () => {
       http.expectOne(`${API}/api/admin/tests`).flush([MANY[0], MANY[1], { ...MANY[2], status: 'draft' }, MANY[3]]);
       await settle(fixture);
       expect(titles(fixture)).toEqual(['CLAT English Mock 1']);
+    });
+  });
+
+  describe('results link', () => {
+    it('has a Results icon on every test that opens its results, with the number of attempts', async () => {
+      const { fixture } = await open([{ ...T1, attempt_count: 12 }, { ...T1, id: 't2', title: 'No attempts yet', attempt_count: 0 }]);
+      const link = el<HTMLAnchorElement>(fixture, '[data-test="Mock 1"] a[title="Results"]');
+      expect(link.getAttribute('href')).toBe('/demo/admin/tests/t1/results');
+      expect(link.textContent).toContain('Results');
+      expect(el(fixture, '[data-test="Mock 1"] .count-badge').textContent?.trim()).toBe('12');
+      expect(all(fixture, '[data-test="No attempts yet"] .count-badge').length).toBe(0);
+    });
+
+    it('shows the server\'s reason when a test with attempts cannot be deleted', async () => {
+      const { fixture, http } = await open();
+      clickButton(fixture, 'Delete');
+      await settle(fixture);
+      clickButton(fixture, 'Yes, delete');
+      http.expectOne(`${API}/api/admin/tests/t1`).flush({ detail: '3 attempts have been started at this test. Move it to draft instead of deleting it.' }, { status: 409, statusText: 'x' });
+      await settle(fixture);
+      expect(text(fixture)).toContain('Move it to draft instead of deleting it.');
+      expect(all(fixture, '[data-test="Mock 1"]').length).toBe(1);
     });
   });
 });

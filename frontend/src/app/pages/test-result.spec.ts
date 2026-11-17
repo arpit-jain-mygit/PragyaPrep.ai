@@ -104,4 +104,24 @@ describe('Test result', () => {
     const links = all<HTMLAnchorElement>(fixture, '.page-head a').map((a) => a.getAttribute('href'));
     expect(links).toEqual(['/demo/tests/t1', '/demo/tests']);
   });
+
+  it('can be shown inside another page without its own heading and links', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(TestResult);
+    fixture.componentRef.setInput('result', { ...BASE, review: [item('1', 'c')] });
+    fixture.componentRef.setInput('embedded', true);
+    fixture.detectChanges();
+    await settle(fixture);
+    expect(all(fixture, '.page-head').length).toBe(0);
+    expect(all(fixture, '#result-card').length).toBe(1);
+    expect(all(fixture, '.review').length).toBe(1);
+  });
+
+  it('shows a review that is there even if the test hides answers from students (the admin\'s view)', async () => {
+    const { fixture } = open({ show_answers: false, review: [item('1', 'w')] });
+    await settle(fixture);
+    expect(all(fixture, '.review').length).toBe(1);
+    expect(all(fixture, '#no-review').length).toBe(0);
+  });
 });

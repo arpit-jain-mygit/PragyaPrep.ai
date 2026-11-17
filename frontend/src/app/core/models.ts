@@ -320,6 +320,8 @@ export interface TestSummary {
   status: 'draft' | 'published';
   question_count: number;
   total_marks: string;
+  /** How many attempts students have started at this test. */
+  attempt_count: number;
 }
 
 export interface TestDetail extends TestSummary {
@@ -443,3 +445,64 @@ export interface AttemptResult {
   show_answers: boolean;
   review: ReviewItem[] | null;
 }
+
+// ---- The admin's view of students' results ----
+
+export interface ResultRow {
+  email: string;
+  name: string;
+  number: number;
+  status: 'in_progress' | 'submitted';
+  started_at: string;
+  submitted_at: string | null;
+  auto_submitted: boolean;
+  marks?: string;
+  total_marks?: string;
+  percentage?: string;
+  passed?: boolean;
+  correct?: number;
+  wrong?: number;
+  unanswered?: number;
+  /** How long the attempt took, in seconds. */
+  seconds?: number | null;
+}
+
+export interface QuestionStat {
+  id: string;
+  text: string;
+  kind: 'mcq' | 'fill_in';
+  topic: string;
+  difficulty: string | null;
+  /** Students who got this question in a finished attempt, and how many answered it and got it right. */
+  faced: number;
+  answered: number;
+  correct: number;
+  percent_correct: string | null;
+  most_chosen_wrong: { option: number; count: number; text: string } | null;
+}
+
+export interface ResultsSummary {
+  students: number;
+  attempts: number;
+  submitted: number;
+  in_progress: number;
+  average: string | null;
+  highest: string | null;
+  lowest: string | null;
+  passed: number;
+  pass_rate: string | null;
+  /** How many finished attempts scored 0-9%, 10-19%, and so on up to 90-100%. */
+  distribution: number[];
+}
+
+export interface TestResults {
+  test: { id: string; title: string; question_count: number; pass_percentage: number; marks_correct: string; marks_incorrect: string };
+  summary: ResultsSummary;
+  attempts: ResultRow[];
+  questions: QuestionStat[];
+}
+
+/** One student's attempt as the admin sees it. A finished one carries the whole review. */
+export type AdminAttempt =
+  | (AttemptResult & { student: { email: string; name: string } })
+  | { status: 'in_progress'; test_id: string; number: number; title: string; started_at: string; student: { email: string; name: string }; answered: number; questions: number };

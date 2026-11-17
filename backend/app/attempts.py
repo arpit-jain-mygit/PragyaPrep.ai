@@ -189,8 +189,9 @@ def attempt_view(scoped: TenantRepo, storage: ContentStorage, attempt: dict) -> 
     }
 
 
-def result_view(scoped: TenantRepo, storage: ContentStorage, attempt: dict) -> dict:
-    """A finished attempt: the score, and, when the test allows it, every question with the right answer and the reasons."""
+def result_view(scoped: TenantRepo, storage: ContentStorage, attempt: dict, force_review: bool = False) -> dict:
+    """A finished attempt: the score, and, when the test allows it, every question with the right answer and the reasons.
+    The admin sees the review whatever the test says (force_review)."""
     out = {
         "status": "submitted",
         "test_id": attempt["test_id"],
@@ -212,7 +213,7 @@ def result_view(scoped: TenantRepo, storage: ContentStorage, attempt: dict) -> d
         "show_answers": attempt["show_answers"],
         "review": None,
     }
-    if attempt["show_answers"]:
+    if attempt["show_answers"] or force_review:
         bank = _bank(scoped, attempt["question_ids"])
         passages: dict = {}
         review = []
@@ -309,6 +310,7 @@ def start(scoped: TenantRepo, member: dict, test_id: str) -> dict:
     }
     try:
         scoped.create_attempt(attempt)
+        scoped.count_test_attempt(test_id)
     except ConflictError:  # a second click at the same moment: carry on with the one that won
         again = [a for a in scoped.list_attempts(member["email"], test_id) if a["status"] == "in_progress"]
         if again:
@@ -365,3 +367,112 @@ def submit(scoped: TenantRepo, storage: ContentStorage, member: dict, test_id: s
     if attempt is None:
         raise AttemptNotFound()
     return result_view(scoped, storage, _finish(scoped, attempt, auto=clock.now() > attempt["deadline"]))
+
+
+# ---- The admin's view of students' results ----
+
+def _seconds_between(start: str | None, end: str | None) -> int | None:
+    try:
+        return max(0, int((datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds()))
+    except (TypeError, ValueError):
+        return None
+
+
+def _names(scoped: TenantRepo, emails: set[str]) -> dict[str, str]:
+    names = {}
+    for email in emails:
+        person = scoped.get_member(email) or {}
+        names[email] = " ".join(part for part in (person.get("first_name"), person.get("last_name")) if part) or email
+    return names
+
+
+def admin_results(scoped: TenantRepo, test_id: str) -> dict:
+    """Everything the admin's results page shows for one test: a summary, every attempt, and how each question went."""
+    test = scoped.get_test(test_id)
+    if test is None:
+        raise TestNotAvailable()
+    attempts = [_settle(scoped, a) for a in scoped.list_test_attempts(test_id)]
+    names = _names(scoped, {a["email"] for a in attempts})
+    rows = []
+    for a in attempts:
+        row = {
+            "email": a["email"], "name": names[a["email"]], "number": a["number"], "status": a["status"], "started_at": a["started_at"],
+            "submitted_at": a.get("submitted_at"), "auto_submitted": bool(a.get("auto_submitted")),
+        }
+        if a["status"] == "submitted":
+            row.update(
+                marks=a["marks"], total_marks=a["total_marks"], percentage=a["percentage"], passed=a["passed"],
+                correct=a["correct"], wrong=a["wrong"], unanswered=a["unanswered"],
+                seconds=_seconds_between(a["started_at"], a.get("submitted_at")),
+            )
+        rows.append(row)
+    done = [a for a in attempts if a["status"] == "submitted"]
+    percentages = [Decimal(a["percentage"]) for a in done]
+    buckets = [0] * 10
+    for value in percentages:
+        buckets[min(9, int(value // 10))] += 1
+    summary = {
+        "students": len({a["email"] for a in attempts}),
+        "attempts": len(attempts),
+        "submitted": len(done),
+        "in_progress": len(attempts) - len(done),
+        "average": _fmt((sum(percentages) / len(percentages)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) if percentages else None,
+        "highest": _fmt(max(percentages)) if percentages else None,
+        "lowest": _fmt(min(percentages)) if percentages else None,
+        "passed": sum(1 for a in done if a["passed"]),
+        "pass_rate": _fmt((Decimal(sum(1 for a in done if a["passed"])) * 100 / len(done)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) if done else None,
+        "distribution": buckets,
+    }
+    return {
+        "test": {
+            "id": test["id"], "title": test["title"], "question_count": len(test.get("question_ids") or []), "pass_percentage": test["pass_percentage"],
+            "marks_correct": test["marks_correct"], "marks_incorrect": test["marks_incorrect"],
+        },
+        "summary": summary,
+        "attempts": rows,
+        "questions": _question_stats(scoped, test, done),
+    }
+
+
+def _question_stats(scoped: TenantRepo, test: dict, done: list[dict]) -> list[dict]:
+    """For each question of the test: how many students answered it, got it right, and which wrong option was chosen most."""
+    out = []
+    for question_id in test.get("question_ids") or []:
+        question = scoped.get_question(question_id)
+        if question is None:
+            continue
+        faced = [a for a in done if question_id in a["question_ids"]]
+        right = sum(1 for a in faced if a["results"].get(question_id) == "c")
+        answered = sum(1 for a in faced if a["results"].get(question_id) in ("c", "w"))
+        top = None
+        if question.get("kind", "mcq") == "mcq":
+            wrong = [(a.get("answers") or {}).get(question_id) for a in faced if a["results"].get(question_id) == "w"]
+            counts: dict[int, int] = {}
+            for choice in wrong:
+                if isinstance(choice, int):
+                    counts[choice] = counts.get(choice, 0) + 1
+            if counts:
+                option, number = max(counts.items(), key=lambda item: (item[1], -item[0]))
+                top = {"option": option, "count": number, "text": question["options"][option]["text"]}
+        out.append({
+            "id": question_id, "text": question["text"], "kind": question.get("kind", "mcq"), "topic": question["topic"],
+            "difficulty": question.get("difficulty"), "faced": len(faced), "answered": answered, "correct": right,
+            "percent_correct": _fmt((Decimal(right) * 100 / len(faced)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) if faced else None,
+            "most_chosen_wrong": top,
+        })
+    return out
+
+
+def admin_attempt(scoped: TenantRepo, storage: ContentStorage, test_id: str, email: str, number: int) -> dict:
+    """One student's attempt as the admin sees it: the score and every question with the right answer, whatever the test says."""
+    attempt = scoped.get_attempt(email, test_id, number)
+    if attempt is None:
+        raise AttemptNotFound()
+    attempt = _settle(scoped, attempt)
+    person = _names(scoped, {email})
+    if attempt["status"] != "submitted":
+        return {
+            "status": "in_progress", "test_id": test_id, "number": number, "title": attempt["title"], "started_at": attempt["started_at"],
+            "student": {"email": email, "name": person[email]}, "answered": len(attempt.get("answers") or {}), "questions": len(attempt["question_ids"]),
+        }
+    return {**result_view(scoped, storage, attempt, force_review=True), "student": {"email": email, "name": person[email]}}

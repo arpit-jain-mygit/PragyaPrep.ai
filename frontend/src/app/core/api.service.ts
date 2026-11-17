@@ -20,12 +20,14 @@ import {
   InstituteUpdate,
   Member,
   MyCourse,
+  AdminAttempt,
   AttemptResult,
   AttemptView,
   AutoPickResult,
   StudentTestCard,
   Paper,
   TestDetail,
+  TestResults,
   TestInput,
   TestSummary,
   Passage,
@@ -252,6 +254,16 @@ export class ApiService {
 
   deleteTest(id: string): Promise<void> {
     return this.delete(`/api/admin/tests/${encodeURIComponent(id)}`);
+  }
+
+  /** How students did at a test: a summary, every attempt, and how each question went. */
+  testResults(id: string): Promise<TestResults> {
+    return this.get(`/api/admin/tests/${encodeURIComponent(id)}/results`);
+  }
+
+  /** One student's attempt with every answer, the right answers and the reasons. */
+  studentAttempt(testId: string, email: string, number: number): Promise<AdminAttempt> {
+    return this.get(`/api/admin/tests/${encodeURIComponent(testId)}/results/${encodeURIComponent(email)}/${number}`);
   }
 
   /** Pick random published questions for the rules. Saves nothing. */

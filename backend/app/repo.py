@@ -329,6 +329,32 @@ class TenantRepo:
         )
         return [_plain(item) for item in response["Items"]]
 
+    def list_test_attempts(self, test_id: str) -> list[dict]:
+        """Every student's attempts at one test, oldest first (for the admin's results)."""
+        items, start = [], None
+        while True:
+            args = {"IndexName": "GSI1", "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}ATTEMPTS#{test_id}")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def count_test_attempt(self, test_id: str) -> None:
+        """One more attempt has been started at this test. Kept on the test so lists needn't count."""
+        try:
+            self.table.update_item(
+                Key=self._test_key(test_id),
+                UpdateExpression="ADD attempt_count :one",
+                ConditionExpression="attribute_exists(PK)",
+                ExpressionAttributeValues={":one": 1},
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                raise
+
     def update_attempt(self, email: str, test_id: str, number: int, fields: dict) -> None:
         _update(self.table, self._attempt_key(email, test_id, number), fields)
 

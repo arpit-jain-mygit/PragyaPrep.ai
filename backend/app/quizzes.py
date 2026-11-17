@@ -241,8 +241,15 @@ def update_test(scoped: TenantRepo, test_id: str, changes: dict, admin_email: st
 
 
 def delete_test(scoped: TenantRepo, test_id: str) -> None:
-    if scoped.get_test(test_id) is None:
+    """Delete a test. Not once students have attempted it: their results would be lost, so it can be moved to draft instead."""
+    test = scoped.get_test(test_id)
+    if test is None:
         raise TestNotFound()
+    started = int(test.get("attempt_count") or 0)
+    if started:
+        raise ValidationError(
+            f"{started} {'attempt has' if started == 1 else 'attempts have'} been started at this test. Move it to draft instead of deleting it."
+        )
     scoped.delete_test(test_id)
 
 
@@ -250,7 +257,10 @@ def summary(test: dict) -> dict:
     """A test with the numbers a list needs: how many questions and the most marks a student can get."""
     count = len(test.get("question_ids") or [])
     total = Decimal(test.get("marks_correct") or "0") * count
-    return {**test, "question_count": count, "total_marks": format(total.normalize(), "f") if total else "0"}
+    return {
+        **test, "question_count": count, "total_marks": format(total.normalize(), "f") if total else "0",
+        "attempt_count": int(test.get("attempt_count") or 0),
+    }
 
 
 def list_tests(scoped: TenantRepo) -> list[dict]:

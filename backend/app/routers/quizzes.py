@@ -1,7 +1,7 @@
 """Tests built from the question bank. Only an institute's admin can see or change them."""
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import questions, quizzes
+from app import attempts, questions, quizzes
 from app.deps import TENANT_ADMIN, get_storage, get_tenant_repo, require_roles
 from app.repo import TenantRepo
 from app.routers.questions import _errors, _present, _texts
@@ -77,9 +77,35 @@ def change_test(
     return _detail(scoped, storage, test)
 
 
+@router.get("/api/admin/tests/{test_id}/results")
+def test_results(test_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
+    """How students did at a test: a summary, every attempt, and how each question went."""
+    try:
+        return attempts.admin_results(scoped, test_id)
+    except attempts.TestNotAvailable:
+        raise HTTPException(status_code=404, detail="We couldn't find that test.")
+
+
+@router.get("/api/admin/tests/{test_id}/results/{email}/{number}")
+def student_attempt(
+    test_id: str,
+    email: str,
+    number: int,
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    storage: ContentStorage = Depends(get_storage),
+):
+    """One student's attempt with every question, the right answers and the reasons."""
+    try:
+        return attempts.admin_attempt(scoped, storage, test_id, email.strip().lower(), number)
+    except attempts.AttemptNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that attempt.")
+
+
 @router.delete("/api/admin/tests/{test_id}", status_code=204)
 def remove_test(test_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
     try:
         quizzes.delete_test(scoped, test_id)
     except quizzes.TestNotFound:
         raise HTTPException(status_code=404, detail="We couldn't find that test.")
+    except ValidationError as error:
+        raise HTTPException(status_code=409, detail=str(error))

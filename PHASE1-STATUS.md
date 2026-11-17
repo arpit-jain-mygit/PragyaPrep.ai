@@ -55,6 +55,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q15 | **No limit on bulk publish:** the 500-question limit on **Publish selected** and **Move to draft** is gone, so the whole bank (for example all 1,500 questions) can be published in one click. The screen sends the ids in groups of 200 and shows progress ("Publishing… 400 of 1500"); if a group fails it says how many were done and the same click finishes the rest later. The server reads the bank once and changes questions 16 at a time. Bulk delete also works on any number now, in groups of 100, still behind the typed DELETE | **Tested live** | 1 new backend test (publishes 1,200 at once), 4 frontend tests changed or added (792 and 321 in all, 1,113 with both). On dev, 600 `ZZ` questions: one call to publish all 600 took 7.5 seconds and back to draft 7.2 seconds, which is why the screen uses groups (the server's limit per request is 15 seconds); a delete of 500 took 14.5 seconds, so delete is grouped by 100. All `ZZ` questions were removed. The real bank (1,500 draft questions) was not changed |
 | T2 | **Search and filters on the Tests page:** above the list, a search box (by words in the test's name, any order, capitals ignored), a course filter (a test shared by several courses shows under each), a status filter (published or draft), a count ("12 of 55 tests"), a clear icon, and a "No tests match" message. The filters work on the list already loaded, so they are instant, and they stay while tests are published, moved to draft or deleted | **Tested** | 6 new frontend tests (327 in all, 1,119 with the backend's 792). Deployed to dev; not looked at in a browser |
 | S1 | **Students take tests:** a **Tests** link in the student's menu. The list shows tests for the courses the student can open now (state Open, Upcoming, Ended, In progress or Done; the window; attempts used; best score). The intro page shows the questions, total marks, marking, time, pass mark, window, attempts left and instructions, and an attempts table. **Start** begins the clock and opens the test: one question at a time with a numbered palette (answered, current, marked for review), the passage with its questions, pictures, multiple choice or a typed answer, Previous, Next, Clear answer, Mark for review, a countdown (red in the last five minutes) and Submit (with a count of what was answered). Answers save as the student goes (typed answers after a short pause; a failed save is kept and retried), and a refresh resumes the attempt with the answers and the time left. The server owns the clock: the deadline is fixed at the start, answers up to 3 seconds late are accepted, and later ones submit the attempt for the student. The **result** shows marks, percentage, pass or fail, and correct, wrong and unanswered counts; if the test allows it, a review of every question with the right answer, the student's answer and the reason for every option (filter: all, wrong, not answered). Each attempt freezes the test's questions and marking when it starts; correct answers and reasons are never sent before submitting | **Tested live** | 44 backend tests and 50 frontend tests (836 and 367 in all, 1,203 with both). On dev with a temporary `ZZ` student and a 4-question `ZZ` test (all removed afterwards): the student saw the tests of their course, started (no answers or reasons in the response), saved answers, resumed with them, submitted (marks 0 of 12 for 1 right and 3 wrong at +3 and -1), got a 4-question review, and an admin got 403 on the student endpoints. In a real browser on the sandbox: intro, taking a 7-question test with a passage and a typed answer, a refresh in the middle (time and answers kept), submit and a result with a review. Note: the 55 tests I created start on 18 Nov 2026 at 00:00, so students see them as Upcoming until then. Not done: the admin's view of students' results, the timer running out was tested only in the automated tests |
+| S2 | **The admin sees students' results:** a **Results** icon on each test (with the number of attempts started) opens `/admin/tests/:id/results`. It shows a summary (students, attempts and how many are in progress, average, highest, lowest, pass rate) and a bar strip of how scores spread in ten-percent bands; an attempts table (student name and email, attempt number, started, time taken, marks, percentage, passed or not, a clock mark when time ran out) with search by name or email, a result filter (passed, not passed, in progress), a sort (newest, highest, lowest, name) and a Best per student switch; a click on a row opens that attempt with every question, the student's answer, the right answer and every reason, even when the test hides answers from students; a Question analysis table (percent correct with a colour bar, answered of faced, the wrong option chosen most) with a Hardest first switch; and a **Download CSV** of the attempts (formula-safe). A test that students have started can no longer be deleted (move it to draft instead); a test's attempt count is kept on the test, so the list needn't count | **Tested live** | 16 backend and 24 frontend tests (852 and 390 in all, 1,242 with both). On dev with two temporary `ZZ` students and a `ZZ` test (all removed afterwards): the summary, attempt rows (one submitted, one in progress), per-question percentages, the admin's review (4 items) while the student's own copy had none, the attempt count on the list, a 409 when deleting a test with attempts, and 403 for a student on the admin endpoint. In a real browser on the sandbox with two students and four attempts: the summary, bars, filters, a row opened to its review, and the question analysis. The CSV download is covered by automated tests only |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -406,6 +407,15 @@ In **Courses** (`/aaptprep/admin/courses`).
 | 4 | Under **Add a course**, type `CUET` as the name and click outside the box | All 37 CUET subjects get ticked (you can change them) |
 | 5 | Type a name like `Foundation` | Nothing is ticked; choose subjects by hand |
 
+### S2 (admin sees results): what to try
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | On the **Tests** page, click the bar-chart icon on a test that students have attempted | The results page: summary tiles and a score-spread strip |
+| 2 | Use the search box, the result filter, the sort and **Best per student** | The attempts table narrows and reorders; the count shows "2 of 4 attempts" |
+| 3 | Click an attempt row | The attempt opens under the row with every question, the student's answer, the right answer and the reasons |
+| 4 | Look at **Question analysis**, click **Hardest first** | Each question's percent correct, and the wrong option chosen most; the hardest on top |
+| 5 | Click **Download CSV** | A spreadsheet file of the attempts |
+
 ### S1 (students take tests): what to try
 Sign in as a student whose course has a published test that is open now (a test shows as Upcoming until its start time).
 
@@ -534,7 +544,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 836 passed, 0 failed. Frontend: 367 passed, 0 failed. Total: 1203.**
+**Backend, run on my machine: 852 passed, 0 failed. Frontend: 390 passed, 0 failed. Total: 1242.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -562,7 +572,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_course_papers` | Q10 subjects on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) and Q11 courses without a fee | 32 |
 | `test_quizzes` | T1 tests (every field and its checks, dates, marks, courses, choosing questions by hand, passages kept together, random picking and its repeatability, questions used by tests, who may, privacy between institutes) | 79 |
 | `test_student_tests` | S1 students taking tests (which tests a student sees, the window in India time, starting and resuming, attempt limits, saving and clearing answers and what is refused, the clock and the grace seconds, auto-submit, scoring for choice, fill-in, decimal and negative marks, the review and its absence, frozen rules, privacy between students and institutes) | 44 |
-| | **Total** | **836** |
+| `test_admin_results` | S2 the admin's results (summary and buckets, attempt rows, unfinished and timed-out attempts, question analysis, one student's attempt with the full review, the attempt counter, deleting a test with attempts, who may, privacy between institutes) | 16 |
+| | **Total** | **852** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -579,11 +590,13 @@ My own test rows and files are always removed after each live test. Login codes 
 | `question-upload.spec` | Bulk upload (template download, one or many Excel files, zip with pictures and clutter, picture limits and failures, combined preview, problems per file, import in order, partial failures, clean-up of unused pictures) | 17 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
 | `ui.spec` | The icon kit (every icon draws, sizes, the info tip, short access wording) | 5 |
-| `admin-tests.spec` | Tests page (list, search and filters, form with date pickers and courses, picking by hand with filters, passages brought along, automatic rules, errors, edit, publish, delete) | 23 |
+| `admin-tests.spec` | Tests page (list, search and filters, results link, form with date pickers and courses, picking by hand with filters, passages brought along, automatic rules, errors, edit, publish, delete) | 23 |
 | `student-tests.spec` | S1 student list, intro and attempt pages | 15 |
 | `take-test.spec` | S1 taking a test (countdown, palette, saving and retrying, typing pause, clearing, marking for review, submit, time up, finished by the server) | 15 |
 | `test-result.spec` | S1 result and review | 8 |
-| | **Total** | **367** |
+| `admin-test-results.spec` | S2 results page (summary, bars, table, search, filters, best per student, sorting, opening an attempt, question analysis, CSV, empty and error states) | 14 |
+| `csv.spec` | S2 the CSV writer (quotes, formula safety, blanks) | 5 |
+| | **Total** | **390** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

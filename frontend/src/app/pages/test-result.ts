@@ -12,13 +12,15 @@ const LETTERS = ['A', 'B', 'C', 'D'];
   imports: [RouterLink, Icon],
   template: `
     @let r = result();
-    <div class="page-head">
-      <h1>{{ r.title }}</h1>
-      <div class="tools">
-        <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests', r.test_id]"><app-icon name="arrow-left" [size]="16" /> Test</a>
-        <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests']">All tests</a>
+    @if (!embedded()) {
+      <div class="page-head">
+        <h1>{{ r.title }}</h1>
+        <div class="tools">
+          <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests', r.test_id]"><app-icon name="arrow-left" [size]="16" /> Test</a>
+          <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests']">All tests</a>
+        </div>
       </div>
-    </div>
+    }
 
     <div class="card" id="result-card">
       <div class="row q-head">
@@ -32,7 +34,7 @@ const LETTERS = ['A', 'B', 'C', 'D'];
         <span class="chip hidden"><app-icon name="minus" [size]="12" /> {{ r.unanswered }} not answered</span>
       </div>
       @if (r.auto_submitted) { <p class="soft" id="auto-note" style="margin: 0.5rem 0 0">Time ran out, so your test was handed in for you.</p> }
-      @if (!r.show_answers) { <p class="soft" id="no-review" style="margin: 0.5rem 0 0">The correct answers are not shown for this test.</p> }
+      @if (!r.show_answers && !r.review) { <p class="soft" id="no-review" style="margin: 0.5rem 0 0">The correct answers are not shown for this test.</p> }
     </div>
 
     @if (r.review; as items) {
@@ -81,6 +83,8 @@ export class TestResult {
   readonly tenants = inject(TenantService);
   readonly letters = LETTERS;
   readonly result = input.required<AttemptResult>();
+  /** Shown inside another page (the admin's results), so without its own heading and links. */
+  readonly embedded = input(false);
   readonly filter = signal<'all' | 'w' | 'u'>('all');
 
   readonly shown = computed<ReviewItem[]>(() => {

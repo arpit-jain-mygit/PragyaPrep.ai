@@ -1,8 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
 import { AdminCourse, ApiError, AutoRule, Paper, Question, TestDetail, TestInput, TestSummary } from '../core/models';
+import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
@@ -42,7 +44,7 @@ const SHOWN_AT_MOST = 100;
 /** Tests the admin builds from the question bank: when they can be taken, how they are marked, who gets them, and which questions they hold. */
 @Component({
   selector: 'app-admin-tests',
-  imports: [FormsModule, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>
@@ -329,6 +331,10 @@ const SHOWN_AT_MOST = 100;
                 <td><span class="status" [class.ok]="item.status === 'published'">{{ item.status }}</span></td>
                 <td class="actions-cell">
                   <div class="icon-actions">
+                    <a class="icon-btn with-count" title="Results" [routerLink]="['/', tenants.slug(), 'admin', 'tests', item.id, 'results']">
+                      <app-icon name="chart" /><span class="sr-only">Results</span>
+                      @if (item.attempt_count) { <span class="count-badge" [attr.aria-label]="item.attempt_count + ' attempts'">{{ item.attempt_count }}</span> }
+                    </a>
                     <button class="icon-btn" type="button" title="Edit" (click)="startEdit(item)"><app-icon name="edit" /><span class="sr-only">Edit</span></button>
                     <button class="icon-btn" type="button" [attr.title]="item.status === 'published' ? 'Move to draft' : 'Publish'" [disabled]="saving()" (click)="toggleStatus(item)">
                       <app-icon [name]="item.status === 'published' ? 'eye-off' : 'eye'" /><span class="sr-only">{{ item.status === 'published' ? 'Move to draft' : 'Publish' }}</span>
@@ -351,6 +357,7 @@ const SHOWN_AT_MOST = 100;
 })
 export class AdminTests implements OnInit {
   private readonly api = inject(ApiService);
+  readonly tenants = inject(TenantService);
   readonly emptyRule = emptyRule;
 
   readonly tests = signal<TestSummary[]>([]);
