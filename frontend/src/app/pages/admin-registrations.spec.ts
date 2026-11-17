@@ -30,7 +30,7 @@ describe('Admin registrations page', () => {
     expect(content).toContain('CLAT');
     expect(content).toContain('Pooja Shah');
     expect(content).toContain('CAT');
-    expect(all(fixture, '.chip.pending').length).toBe(2);
+    expect(all(fixture, '.status.warn').length).toBe(2);
   });
 
   it('has a tab for each status, with pending selected first', async () => {
@@ -45,7 +45,7 @@ describe('Admin registrations page', () => {
     clickButton(fixture, 'approved');
     answerReload(http, 'approved', [registration({ status: 'approved' })]);
     await settle(fixture);
-    expect(all(fixture, '.chip.approved').length).toBe(1);
+    expect(all(fixture, '.status.ok').length).toBe(1);
     expect(all(fixture, '[role=tab]')[1].getAttribute('aria-selected')).toBe('true');
   });
 
@@ -371,7 +371,7 @@ describe('Admin registrations: course access', () => {
     expect(content).toContain('CLAT');
     expect(content).toContain('No end date');
     expect(content).toContain('given by ritesh@example.com');
-    expect(all(fixture, '.access .chip.open').length).toBe(1);
+    expect(all(fixture, '.access .status.ok').length).toBe(1);
   });
 
   it('says when they have none yet', async () => {
@@ -382,7 +382,7 @@ describe('Admin registrations: course access', () => {
   it('shows an ended course as ended', async () => {
     const { fixture } = await openDetails([{ ...GIVEN, expires_at: '2027-02-01T23:59:59+05:30', active: false }]);
     expect(text(fixture)).toContain('Ended 1 Feb 2027');
-    expect(all(fixture, '.access .chip.hidden').length).toBe(1);
+    expect(all(fixture, '.access .status:not(.ok)').length).toBe(1);
   });
 
   it('has no access section for a student who is not approved', async () => {

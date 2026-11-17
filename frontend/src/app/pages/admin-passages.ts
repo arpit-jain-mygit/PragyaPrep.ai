@@ -2,24 +2,25 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { ApiError, Passage } from '../core/models';
+import { Icon } from '../ui/icon';
+import { InfoTip } from '../ui/info-tip';
 
 /** Reading passages: write a passage once, then point many questions at it. */
 @Component({
   selector: 'app-admin-passages',
-  imports: [FormsModule],
+  imports: [FormsModule, Icon, InfoTip],
   template: `
-    <div class="card" id="passages-card">
-      <div class="row" style="justify-content: space-between; align-items: center">
-        <h2>Reading passages</h2>
-        @if (!open()) { <button class="btn secondary small" type="button" id="add-passage" (click)="startAdd()">Add a passage</button> }
+    <div id="passages-card">
+      <div class="row spread" style="margin-bottom: 0.75rem">
+        <span class="soft">Write a passage once; many questions can use it. <app-info text="Choose it in the question form, or name it in the Excel file." /></span>
+        @if (!open()) { <button class="btn small" type="button" id="add-passage" (click)="startAdd()"><app-icon name="plus" [size]="16" /> Add passage</button> }
       </div>
-      <p class="hint">A passage is saved once, and any number of questions can use it. Choose it in the question form, or name it in the Excel file.</p>
 
       @if (notice(); as text) { <div class="alert ok" role="status">{{ text }}</div> }
       @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
       @if (open()) {
-        <div class="passage-form" id="passage-form">
+        <div class="form-panel" id="passage-form">
           <div class="field">
             <label for="p-title">Title</label>
             <input id="p-title" name="ptitle" [(ngModel)]="title" (input)="clearError('title')" [attr.aria-invalid]="fieldErrors()['title'] ? 'true' : null" />
@@ -28,35 +29,35 @@ import { ApiError, Passage } from '../core/models';
           <div class="field">
             <label for="p-text">Passage</label>
             <textarea id="p-text" name="ptext" rows="8" [(ngModel)]="body" (input)="clearError('text')" [attr.aria-invalid]="fieldErrors()['text'] ? 'true' : null"></textarea>
-            <div class="hint">{{ body.length }} / 5000 characters. Blank lines keep your paragraphs apart.</div>
+            <div class="soft">{{ body.length }} / 5000</div>
             @if (fieldErrors()['text']) { <div class="error-text">{{ fieldErrors()['text'] }}</div> }
           </div>
           <div class="row">
-            <button class="btn small" type="button" id="save-passage" [disabled]="saving()" (click)="save()">{{ saving() ? 'Saving…' : editingId() ? 'Save passage' : 'Add passage' }}</button>
-            <button class="btn secondary small" type="button" (click)="open.set(false)">Cancel</button>
+            <button class="btn small" type="button" id="save-passage" [disabled]="saving()" (click)="save()"><app-icon name="check" [size]="16" /> {{ saving() ? 'Saving…' : editingId() ? 'Save passage' : 'Add passage' }}</button>
+            <button class="icon-btn" type="button" title="Cancel" (click)="open.set(false)"><app-icon name="x" /><span class="sr-only">Cancel</span></button>
           </div>
         </div>
       }
 
       @for (passage of passages(); track passage.id) {
         <div class="passage-row" [attr.data-passage]="passage.id">
-          <div class="row">
+          <div class="row q-head">
             <strong>{{ passage.title }}</strong>
             <span class="chip">{{ passage.questions }} {{ passage.questions === 1 ? 'question' : 'questions' }}</span>
+            <div class="icon-actions q-actions">
+              <button class="icon-btn" type="button" title="Edit" (click)="startEdit(passage)"><app-icon name="edit" /><span class="sr-only">Edit</span></button>
+              @if (confirming() === passage.id) {
+                <button class="btn danger small" type="button" [disabled]="saving()" (click)="remove(passage)">Yes, delete</button>
+                <button class="icon-btn" type="button" title="Keep" (click)="confirming.set(null)"><app-icon name="x" /><span class="sr-only">Keep</span></button>
+              } @else {
+                <button class="icon-btn danger" type="button" title="Delete" (click)="confirming.set(passage.id)"><app-icon name="trash" /><span class="sr-only">Delete</span></button>
+              }
+            </div>
           </div>
-          <p class="hint">{{ preview(passage.text) }}</p>
-          <div class="row">
-            <button class="btn secondary small" type="button" (click)="startEdit(passage)">Edit</button>
-            @if (confirming() === passage.id) {
-              <button class="btn danger small" type="button" [disabled]="saving()" (click)="remove(passage)">Yes, delete</button>
-              <button class="btn secondary small" type="button" (click)="confirming.set(null)">Keep</button>
-            } @else {
-              <button class="btn secondary small" type="button" (click)="confirming.set(passage.id)">Delete</button>
-            }
-          </div>
+          <p class="soft" style="margin: 0.25rem 0 0">{{ preview(passage.text) }}</p>
         </div>
       } @empty {
-        <p class="empty">No passages yet.</p>
+        <div class="empty-state"><app-icon name="file" [size]="32" /><p>No passages yet</p></div>
       }
     </div>
   `,

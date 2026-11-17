@@ -24,6 +24,11 @@ async function open(courses: object[] = [CAT, CLAT]) {
   return { ...env, fixture };
 }
 
+async function openAdd(fixture: Parameters<typeof clickButton>[0]) {
+  clickButton(fixture, 'Add course');
+  await settle(fixture);
+}
+
 function answerReload(http: ReturnType<typeof setupTestBed>['http'], courses: object[]) {
   http.expectOne(`${API}/api/admin/courses`).flush(courses);
 }
@@ -35,19 +40,21 @@ describe('Admin courses page', () => {
     expect(rows[0]).toContain('CAT');
     expect(rows[0]).not.toContain('₹');
     expect(rows[0]).toContain('Unlimited');
-    expect(rows[0]).toContain('open');
+    expect(rows[0]).toContain('Open');
     expect(rows[1]).toContain('CLAT');
-    expect(rows[1]).toContain('365 days after payment');
-    expect(rows[1]).toContain('hidden');
+    expect(rows[1]).toContain('365 days');
+    expect(rows[1]).not.toContain('after payment');
+    expect(rows[1]).toContain('Hidden');
   });
 
   it('invites the admin to add the first course when there are none', async () => {
     const { fixture } = await open([]);
-    expect(text(fixture)).toContain('No courses yet. Add the first one below.');
+    expect(text(fixture)).toContain('No courses yet');
   });
 
   it('adds a course with unlimited access', async () => {
     const { fixture, http } = await open([CAT]);
+    await openAdd(fixture);
     type(fixture, '#new-name', 'IPMAT');
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
@@ -61,11 +68,12 @@ describe('Admin courses page', () => {
 
     expect(text(fixture)).toContain('Added IPMAT.');
     expect(all(fixture, 'tbody tr').length).toBe(2);
-    expect(el<HTMLInputElement>(fixture, '#new-name').value).toBe('');
+    expect(all(fixture, '#add-panel').length).toBe(0); // the panel closes after adding
   });
 
   it('adds a course whose access lasts a number of days', async () => {
     const { fixture, http } = await open([]);
+    await openAdd(fixture);
     type(fixture, '#new-name', 'CUET');
     type(fixture, '#new-type', 'days');
     await settle(fixture);
@@ -79,6 +87,7 @@ describe('Admin courses page', () => {
 
   it('adds a course whose access ends on a date', async () => {
     const { fixture, http } = await open([]);
+    await openAdd(fixture);
     type(fixture, '#new-name', 'CUET');
     type(fixture, '#new-type', 'until_date');
     await settle(fixture);
@@ -92,6 +101,7 @@ describe('Admin courses page', () => {
 
   it('keeps the Add button off until there is a name, and has no fee box', async () => {
     const { fixture } = await open([]);
+    await openAdd(fixture);
     const add = () => all<HTMLButtonElement>(fixture, 'button[type=submit]')[0];
     expect(add().disabled).toBe(true);
     type(fixture, '#new-name', 'CAT');
@@ -102,6 +112,7 @@ describe('Admin courses page', () => {
 
   it('shows the API\'s message when a course cannot be added', async () => {
     const { fixture, http } = await open([CAT]);
+    await openAdd(fixture);
     type(fixture, '#new-name', 'cat');
     await settle(fixture);
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
@@ -120,7 +131,7 @@ describe('Admin courses page', () => {
     await settle(fixture);
     expect(el<HTMLInputElement>(fixture, '#name-c1').value).toBe('CAT');
     expect(all(fixture, '#fee-c1').length).toBe(0);
-    expect(text(fixture)).toContain('Students who already have access keep what they have.');
+    expect(all(fixture, '[data-tip]').map((e) => e.getAttribute('data-tip')).join(' ')).toContain('Students who already have access keep what they have.');
 
     type(fixture, '#name-c1', 'CAT 2027');
     type(fixture, '#type-c1', 'days');
@@ -138,7 +149,7 @@ describe('Admin courses page', () => {
 
     expect(text(fixture)).toContain('Saved CAT 2027.');
     expect(all(fixture, '#name-c1').length).toBe(0);
-    expect(text(fixture)).toContain('90 days after payment');
+    expect(text(fixture)).toContain('90 days');
   });
 
   it('lets the admin cancel an edit', async () => {
@@ -247,6 +258,7 @@ describe('Admin courses page', () => {
 
     it('ticks the usual subjects when a known course name is typed, and sends them', async () => {
       const { fixture, http } = await open([]);
+    await openAdd(fixture);
       type(fixture, '#new-name', 'CAT 2027');
         el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
       const ask = http.expectOne(`${API}/api/admin/course-papers/suggested?name=CAT%202027`);
@@ -261,6 +273,7 @@ describe('Admin courses page', () => {
 
     it('does not override subjects the admin has already ticked', async () => {
       const { fixture, http } = await open([]);
+    await openAdd(fixture);
       el<HTMLInputElement>(fixture, '#new-papers-english').click();
       await settle(fixture);
       type(fixture, '#new-name', 'CAT');
@@ -272,6 +285,7 @@ describe('Admin courses page', () => {
 
     it('carries on when the suggestion cannot be fetched', async () => {
       const { fixture, http } = await open([]);
+    await openAdd(fixture);
       type(fixture, '#new-name', 'CAT');
       el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
       http.expectOne((r) => r.url.includes('/course-papers/suggested')).flush({ detail: 'x' }, { status: 500, statusText: 'x' });

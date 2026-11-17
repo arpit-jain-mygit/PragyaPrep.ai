@@ -67,12 +67,12 @@ describe('Admin question bank page', () => {
 
   it('invites the admin to add the first question when there are none', async () => {
     const { fixture } = await open([]);
-    expect(text(fixture)).toContain('No questions yet.');
+    expect(text(fixture)).toContain('No questions yet');
   });
 
   it('shows papers grouped by section and topics only for the chosen paper', async () => {
     const { fixture } = await open();
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     const groups = all(fixture, '#q-subject optgroup').map((g) => g.getAttribute('label'));
     expect(groups).toEqual(['II: Domain', 'I: Language']);
@@ -86,7 +86,7 @@ describe('Admin question bank page', () => {
 
   it('adds a question with four options, reasons and the correct answer', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     clickButton(fixture, 'Save and close');
@@ -108,7 +108,7 @@ describe('Admin question bank page', () => {
 
   it('shows the server\'s messages next to the fields and keeps what was typed', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     clickButton(fixture, 'Save and close');
@@ -180,12 +180,12 @@ describe('Admin question bank page', () => {
     await settle(fixture);
     http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Optics&status=draft`).flush([]);
     await settle(fixture);
-    expect(text(fixture)).toContain('No questions yet.');
+    expect(text(fixture)).toContain('No questions yet');
   });
 
   it('cancel closes the form without saving', async () => {
     const { fixture, http } = await open();
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     clickButton(fixture, 'Cancel');
     await settle(fixture);
@@ -197,7 +197,7 @@ describe('Admin question bank page', () => {
 describe('Admin question bank: adding several in a row', () => {
   it('keeps the paper and topic after "Save and add another" and clears the rest', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     type(fixture, '#q-difficulty', 'hard');
@@ -219,14 +219,14 @@ describe('Admin question bank: adding several in a row', () => {
     expect(el<HTMLInputElement>(fixture, '#q-opt-0').value).toBe('');
     expect(el<HTMLInputElement>(fixture, '#q-correct-0').checked).toBe(false);
     expect(text(fixture)).toContain('Added question 1 in Physics · Magnetism. Add the next one.');
-    expect(el(fixture, '#working-on').textContent).toContain('1 added so far');
+    expect(el(fixture, '#working-on').textContent).toContain('1 added');
     expect(el<HTMLSelectElement>(fixture, '#f-subject').value).toBe('physics');
     expect(el<HTMLSelectElement>(fixture, '#f-topic').value).toBe('Magnetism');
   });
 
   it('counts each question added in a row and then closes with Done', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     for (const round of [1, 2]) {
       await fillForm(fixture);
@@ -236,7 +236,7 @@ describe('Admin question bank: adding several in a row', () => {
       http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Magnetism`).flush([]);
       await settle(fixture);
     }
-    expect(el(fixture, '#working-on').textContent).toContain('2 added so far');
+    expect(el(fixture, '#working-on').textContent).toContain('2 added');
     clickButton(fixture, 'Done');
     await settle(fixture);
     expect(all(fixture, '#question-form').length).toBe(0);
@@ -245,7 +245,7 @@ describe('Admin question bank: adding several in a row', () => {
 
   it('keeps what was typed and stays open when the server finds a mistake', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     clickButton(fixture, 'Save and add another');
@@ -261,7 +261,7 @@ describe('Admin question bank: adding several in a row', () => {
 
   it('"Save and close" ends the run and closes the form', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     clickButton(fixture, 'Save and close');
@@ -277,7 +277,10 @@ describe('Admin question bank: adding several in a row', () => {
 describe('Admin question bank: upload from Excel', () => {
   it('shows the upload card, and a successful import says how many and reloads the list', async () => {
     const { fixture, http } = await open([]);
-    expect(text(fixture)).toContain('Upload many questions');
+    expect(all(fixture, 'app-question-upload').length).toBe(0); // it lives in the Upload tab
+    clickButton(fixture, 'Upload');
+    await settle(fixture);
+    expect(text(fixture)).toContain('Download template');
     const upload = fixture.debugElement.query((d) => d.name === 'app-question-upload').componentInstance;
     upload.imported.emit(3);
     await settle(fixture);
@@ -300,16 +303,16 @@ function emitPicture(fixture: Parameters<typeof type>[0], slot: string, picture:
 describe('Admin question bank: pictures', () => {
   it('shows a picker for the question and for each option, with an empty-text hint', async () => {
     const { fixture } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     const ids = all(fixture, 'app-picture-picker input[type=file]').map((i) => i.id);
     expect(ids).toEqual(['pic-question', 'pic-A', 'pic-B', 'pic-C', 'pic-D']);
-    expect(text(fixture)).toContain('Leave the text empty if the option is only a picture.');
+    expect(all(fixture, '[data-tip]').map((e) => e.getAttribute('data-tip')).join(' ')).toContain('Leave the text empty if the option is only a picture.');
   });
 
   it('sends the ids of new pictures when saving, and nothing for empty slots', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     emitPicture(fixture, 'question', PIC);
@@ -327,7 +330,7 @@ describe('Admin question bank: pictures', () => {
 
   it('sends no images field at all when there are no pictures', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     clickButton(fixture, 'Save and close');
@@ -362,7 +365,7 @@ describe('Admin question bank: pictures', () => {
 
   it('throws away a picture that was uploaded and then cancelled', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     emitPicture(fixture, 'question', PIC);
     await settle(fixture);
@@ -400,7 +403,7 @@ describe('Admin question bank: pictures', () => {
 
   it('shows the server\'s picture problem and keeps the form open', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     emitPicture(fixture, 'A', PIC);
@@ -433,7 +436,7 @@ describe('Admin question bank: finding questions with pictures', () => {
     await settle(fixture);
     http.expectOne(`${API}/api/admin/questions?pictures=yes`).flush([]);
     await settle(fixture);
-    expect(text(fixture)).toContain('No questions yet.');
+    expect(text(fixture)).toContain('No questions yet');
     pick(fixture, '#f-pictures', 'no');
     await settle(fixture);
     http.expectOne(`${API}/api/admin/questions?pictures=no`).flush([Q1]);
@@ -464,7 +467,7 @@ const FILL = {
 describe('Admin question bank: fill-in questions', () => {
   it('starts as multiple choice, and switching to fill-in swaps the options for an answer and an explanation', async () => {
     const { fixture } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('mcq');
     expect(all(fixture, '#q-opt-0').length).toBe(1);
@@ -476,12 +479,12 @@ describe('Admin question bank: fill-in questions', () => {
     expect(all(fixture, 'app-picture-picker input').map((i) => i.id)).toEqual(['pic-question']);
     expect(all(fixture, '#q-answer-text').length).toBe(1);
     expect(all(fixture, '#q-explanation').length).toBe(1);
-    expect(text(fixture)).toContain('separate them with |');
+    expect(all(fixture, '[data-tip]').map((e) => e.getAttribute('data-tip')).join(' ')).toContain('separate them with |');
   });
 
   it('shows a number box and a tolerance when the answer is a number', async () => {
     const { fixture } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     type(fixture, '#q-kind', 'fill_in');
     await settle(fixture);
@@ -512,7 +515,7 @@ describe('Admin question bank: fill-in questions', () => {
 
   it('sends a text fill-in question with its accepted answers and no options', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillInForm(fixture, 'text');
     clickButton(fixture, 'Save and close');
@@ -524,7 +527,7 @@ describe('Admin question bank: fill-in questions', () => {
 
   it('sends a number fill-in question with its tolerance', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillInForm(fixture, 'number');
     clickButton(fixture, 'Save and close');
@@ -533,7 +536,7 @@ describe('Admin question bank: fill-in questions', () => {
 
   it('a multiple-choice question is still sent with options and the correct number, and no answer', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillForm(fixture);
     clickButton(fixture, 'Save and close');
@@ -546,7 +549,7 @@ describe('Admin question bank: fill-in questions', () => {
 
   it('shows the answer and explanation errors next to their boxes', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillInForm(fixture, 'number');
     clickButton(fixture, 'Save and close');
@@ -604,7 +607,7 @@ describe('Admin question bank: fill-in questions', () => {
 
   it('keeps the type and answer kind for the next question after Save and add another', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     await fillInForm(fixture, 'number');
     clickButton(fixture, 'Save and add another');
@@ -620,7 +623,7 @@ describe('Admin question bank: fill-in questions', () => {
 
   it('switching to fill-in drops any option pictures already chosen', async () => {
     const { fixture, http } = await open([]);
-    clickButton(fixture, 'Add a question');
+    clickButton(fixture, 'Add question');
     await settle(fixture);
     emitPicture(fixture, 'B', { id: 'pb', url: 'https://s3.example/pb' });
     await settle(fixture);
@@ -636,7 +639,7 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('shows no bulk buttons until something is ticked', async () => {
       const { fixture } = await open([Q1, Q2, Q3]);
-      expect(text(fixture)).toContain('Select all 3 shown');
+      expect(text(fixture)).toContain('Select all 3');
       expect(text(fixture)).not.toContain('Publish selected');
     });
 
@@ -802,6 +805,11 @@ describe('Admin question bank: fill-in questions', () => {
   });
 
   describe('reading passages', () => {
+    async function openPassages(fixture: Parameters<typeof clickButton>[0]) {
+      clickButton(fixture, 'Passages');
+      await settle(fixture);
+    }
+
     const A = { ...Q1, id: 'a', text: 'First about the monsoon', passage: 'p1' };
     const B = { ...Q1, id: 'b', text: 'Plain question' };
     const C = { ...Q1, id: 'c', text: 'Second about the monsoon', passage: 'p1' };
@@ -817,6 +825,7 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('lists the passages with how many questions use each', async () => {
       const { fixture } = await open([A], [STORY]);
+      await openPassages(fixture);
       const card = el(fixture, '[data-passage="p1"]').textContent;
       expect(card).toContain('Monsoon');
       expect(card).toContain('2 questions');
@@ -824,7 +833,7 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('offers the passages in the form and sends the chosen one', async () => {
       const { fixture, http } = await open([], [STORY]);
-      clickButton(fixture, 'Add a question');
+      clickButton(fixture, 'Add question');
       await settle(fixture);
       expect(all(fixture, '#q-passage option').map((o) => o.textContent?.trim())).toEqual(['No passage', 'Monsoon']);
       await fillForm(fixture);
@@ -841,7 +850,7 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('sends no passage field when none was chosen', async () => {
       const { fixture, http } = await open([], [STORY]);
-      clickButton(fixture, 'Add a question');
+      clickButton(fixture, 'Add question');
       await settle(fixture);
       await fillForm(fixture);
       clickButton(fixture, 'Save and close');
@@ -881,7 +890,8 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('adds a passage and refreshes the page', async () => {
       const { fixture, http } = await open([], []);
-      clickButton(fixture, 'Add a passage');
+      await openPassages(fixture);
+      clickButton(fixture, 'Add passage');
       await settle(fixture);
       type(fixture, '#p-title', 'Monsoon');
       type(fixture, '#p-text', 'Some text.');
@@ -902,7 +912,8 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('shows the problems next to the passage fields', async () => {
       const { fixture, http } = await open([], []);
-      clickButton(fixture, 'Add a passage');
+      await openPassages(fixture);
+      clickButton(fixture, 'Add passage');
       await settle(fixture);
       el<HTMLButtonElement>(fixture, '#save-passage').click();
       http.expectOne(`${API}/api/admin/passages`).flush(
@@ -916,6 +927,7 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('edits a passage with its text filled in', async () => {
       const { fixture, http } = await open([], [STORY]);
+      await openPassages(fixture);
       const card = el(fixture, '[data-passage="p1"]');
       Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit')!.click();
       await settle(fixture);
@@ -935,6 +947,7 @@ describe('Admin question bank: fill-in questions', () => {
 
     it('asks before deleting a passage and says why when it is in use', async () => {
       const { fixture, http } = await open([A], [STORY]);
+      await openPassages(fixture);
       const card = el(fixture, '[data-passage="p1"]');
       const button = (name: string) => Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.trim() === name)!;
       button('Delete').click();
@@ -947,6 +960,35 @@ describe('Admin question bank: fill-in questions', () => {
       await settle(fixture);
       expect(text(fixture)).toContain('2 questions use this passage.');
       expect(el(fixture, '[data-passage="p1"]')).toBeTruthy();
+    });
+  });
+
+  describe('tabs', () => {
+    it('has Questions, Passages and Upload tabs, starting on Questions', async () => {
+      const { fixture } = await open();
+      const tabs = all(fixture, '[role=tab]');
+      expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Questions', 'Passages', 'Upload']);
+      expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+      expect(all(fixture, '[data-question]').length).toBe(1);
+      expect(all(fixture, '#passages-card').length).toBe(0);
+      expect(all(fixture, '#question-upload').length).toBe(0);
+    });
+
+    it('shows only the chosen tab and goes back to Questions after an import', async () => {
+      const { fixture, http } = await open();
+      clickButton(fixture, 'Passages');
+      await settle(fixture);
+      expect(all(fixture, '#passages-card').length).toBe(1);
+      expect(all(fixture, '[data-question]').length).toBe(0);
+      clickButton(fixture, 'Upload');
+      await settle(fixture);
+      expect(all(fixture, '#question-upload').length).toBe(1);
+      fixture.debugElement.query((d) => d.name === 'app-question-upload').componentInstance.imported.emit(2);
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+      await settle(fixture);
+      expect(all(fixture, '[role=tab]')[0].getAttribute('aria-selected')).toBe('true');
+      expect(all(fixture, '[data-question]').length).toBe(1);
     });
   });
 });

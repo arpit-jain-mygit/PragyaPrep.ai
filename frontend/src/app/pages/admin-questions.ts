@@ -2,6 +2,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { ApiError, PICTURE_SLOTS, Paper, Passage, Picture, Question } from '../core/models';
+import { Icon } from '../ui/icon';
+import { InfoTip } from '../ui/info-tip';
 import { AdminPassages } from './admin-passages';
 import { PicturePicker } from './picture-picker';
 import { QuestionUpload } from './question-upload';
@@ -73,35 +75,38 @@ function draftFrom(question: Question): Draft {
 /** The institute's question bank: choose a subject and topic, write the question, its four options and why each is right or wrong. */
 @Component({
   selector: 'app-admin-questions',
-  imports: [FormsModule, PicturePicker, QuestionUpload, AdminPassages],
+  imports: [FormsModule, PicturePicker, QuestionUpload, AdminPassages, Icon, InfoTip],
   template: `
-    <h1>Question bank</h1>
-    <p class="muted">Pick a subject and topic, write the question and its four options, mark the correct one, and explain why each option is right or wrong. Only published questions will be used in tests later.</p>
+    <div class="page-head">
+      <h1>
+        Question bank
+        <app-info text="Pick a subject and topic, write the question and its options, and say why each option is right or wrong. Only published questions will be used in tests." />
+      </h1>
+      @if (!form()) {
+        <button class="btn" type="button" (click)="startAdd()"><app-icon name="plus" /> Add question</button>
+      }
+    </div>
 
     @if (notice(); as text) { <div class="alert ok" role="status">{{ text }}</div> }
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
-    @if (!form()) {
-      <div class="row" style="margin-bottom: 1rem">
-        <button class="btn" type="button" (click)="startAdd()">Add a question</button>
-      </div>
-    } @else {
-      <div class="card" id="question-form">
-        <h2>{{ editingId() ? 'Edit question' : 'Add a question' }}</h2>
+    @if (form()) {
+      <div class="form-panel" id="question-form">
+        <h2>{{ editingId() ? 'Edit question' : 'Add question' }}</h2>
         @if (!editingId() && draft.paper && draft.topic) {
-          <p class="hint" id="working-on">
-            Adding to {{ paperName(draft.paper) }} · {{ draft.topic }}. After you save, the subject and topic stay selected for your next question.
-            @if (addedCount()) { <strong>{{ addedCount() }} added so far.</strong> }
+          <p class="soft" id="working-on">
+            {{ paperName(draft.paper) }} · {{ draft.topic }}
+            @if (addedCount()) { · <strong>{{ addedCount() }} added</strong> }
           </p>
         }
-        <div class="field">
-          <label for="q-kind">Type of question</label>
-          <select id="q-kind" name="kind" [(ngModel)]="draft.kind" (ngModelChange)="kindChanged()">
-            <option value="mcq">Multiple choice (four options)</option>
-            <option value="fill_in">Fill in the answer (the student types it)</option>
-          </select>
-        </div>
-        <div class="grid-2">
+        <div class="grid-3">
+          <div class="field">
+            <label for="q-kind">Type</label>
+            <select id="q-kind" name="kind" [(ngModel)]="draft.kind" (ngModelChange)="kindChanged()">
+              <option value="mcq">Multiple choice</option>
+              <option value="fill_in">Fill in</option>
+            </select>
+          </div>
           <div class="field">
             <label for="q-subject">Subject</label>
             <select id="q-subject" name="paper" [(ngModel)]="draft.paper" (ngModelChange)="paperChanged(); clearError('paper')" [attr.aria-invalid]="fieldErrors()['paper'] ? 'true' : null">
@@ -123,94 +128,15 @@ function draftFrom(question: Question): Draft {
             @if (fieldErrors()['topic']) { <div class="error-text">{{ fieldErrors()['topic'] }}</div> }
           </div>
         </div>
-
-        <div class="field">
-          <label for="q-passage">Reading passage (optional)</label>
-          <select id="q-passage" name="passage" [(ngModel)]="draft.passage" (ngModelChange)="clearError('passage')" [attr.aria-invalid]="fieldErrors()['passage'] ? 'true' : null">
-            <option value="">No passage</option>
-            @for (passage of passages(); track passage.id) { <option [value]="passage.id">{{ passage.title }}</option> }
-          </select>
-          <div class="hint">For questions that refer to a text. Add passages in the Reading passages card below the form.</div>
-          @if (fieldErrors()['passage']) { <div class="error-text">{{ fieldErrors()['passage'] }}</div> }
-        </div>
-        @if (passageOf(draft.passage); as chosen) {
-          <details class="passage-view" id="chosen-passage"><summary>Show the passage</summary><p class="passage-text">{{ chosen.text }}</p></details>
-        }
-
-        <div class="field">
-          <label for="q-text">Question</label>
-          <textarea id="q-text" name="text" rows="3" [(ngModel)]="draft.text" (input)="clearError('text')" [attr.aria-invalid]="fieldErrors()['text'] ? 'true' : null"></textarea>
-          @if (fieldErrors()['text']) { <div class="error-text">{{ fieldErrors()['text'] }}</div> }
-        </div>
-        <app-picture-picker inputId="pic-question" label="Picture for the question (optional, PNG or JPG, up to 1 MB)" [picture]="draft.pictures['question']" (changed)="setPicture('question', $event)" />
-
-        @if (draft.kind === 'mcq') {
-          <h3>Options</h3>
-          <p class="hint">Mark the correct option, and for every option say why it is correct or why it is wrong.</p>
-          @for (option of draft.options; track $index) {
-            <fieldset class="option">
-              <legend>Option {{ letters[$index] }}</legend>
-              <div class="field">
-                <label [attr.for]="'q-opt-' + $index">Option {{ letters[$index] }} text</label>
-                <input [id]="'q-opt-' + $index" [name]="'opt' + $index" type="text" [(ngModel)]="option.text" (input)="clearError('options')" />
-                <div class="hint">Leave the text empty if the option is only a picture.</div>
-              </div>
-              <app-picture-picker [inputId]="'pic-' + letters[$index]" [label]="'Picture for option ' + letters[$index] + ' (optional)'" [picture]="draft.pictures[letters[$index]]" (changed)="setPicture(letters[$index], $event)" />
-              <div class="field">
-                <label [attr.for]="'q-why-' + $index">Why option {{ letters[$index] }} is correct or wrong</label>
-                <textarea [id]="'q-why-' + $index" [name]="'why' + $index" rows="2" [(ngModel)]="option.why" (input)="clearError('options')"></textarea>
-              </div>
-              <label class="inline">
-                <input type="radio" name="correct" [id]="'q-correct-' + $index" [value]="$index" [(ngModel)]="draft.correct" (ngModelChange)="clearError('correct')" />
-                This is the correct answer
-              </label>
-            </fieldset>
-          }
-          @if (fieldErrors()['options']) { <div class="error-text">{{ fieldErrors()['options'] }}</div> }
-          @if (fieldErrors()['images']) { <div class="error-text">{{ fieldErrors()['images'] }}</div> }
-          @if (fieldErrors()['correct']) { <div class="error-text">{{ fieldErrors()['correct'] }}</div> }
-
-        } @else {
-          <h3>Answer</h3>
-          <p class="hint">The student sees one box under the question and types the answer.</p>
-          <div class="grid-2">
-            <div class="field">
-              <label for="q-answer-type">The answer is</label>
-              <select id="q-answer-type" name="answerType" [(ngModel)]="draft.answerType" (ngModelChange)="clearError('answer')">
-                <option value="text">Text</option>
-                <option value="number">A number</option>
-              </select>
-            </div>
-            @if (draft.answerType === 'text') {
-              <div class="field">
-                <label for="q-answer-text">Correct answer</label>
-                <input id="q-answer-text" name="answerText" type="text" [(ngModel)]="draft.answerText" (input)="clearError('answer')" [attr.aria-invalid]="fieldErrors()['answer'] ? 'true' : null" />
-                <div class="hint">For other accepted answers, separate them with |, for example Mumbai | Bombay. Capitals and extra spaces don't matter.</div>
-              </div>
-            } @else {
-              <div class="field">
-                <label for="q-answer-number">Correct number</label>
-                <input id="q-answer-number" name="answerNumber" type="text" inputmode="decimal" [(ngModel)]="draft.answerNumber" (input)="clearError('answer')" [attr.aria-invalid]="fieldErrors()['answer'] ? 'true' : null" />
-              </div>
-            }
-          </div>
-          @if (draft.answerType === 'number') {
-            <div class="field">
-              <label for="q-tolerance">Tolerance (optional)</label>
-              <input id="q-tolerance" name="tolerance" type="text" inputmode="decimal" [(ngModel)]="draft.tolerance" (input)="clearError('answer')" />
-              <div class="hint">How far off a student's number may be and still count, for example 0.01. Empty means exact.</div>
-            </div>
-          }
-          @if (fieldErrors()['answer']) { <div class="error-text">{{ fieldErrors()['answer'] }}</div> }
+        <div class="grid-3">
           <div class="field">
-            <label for="q-explanation">Explanation</label>
-            <textarea id="q-explanation" name="explanation" rows="3" [(ngModel)]="draft.explanation" (input)="clearError('explanation')" [attr.aria-invalid]="fieldErrors()['explanation'] ? 'true' : null"></textarea>
-            <div class="hint">Why this is the right answer.</div>
-            @if (fieldErrors()['explanation']) { <div class="error-text">{{ fieldErrors()['explanation'] }}</div> }
+            <label for="q-passage">Passage <app-info text="Optional. For questions that refer to a text. Add passages in the Passages tab." /></label>
+            <select id="q-passage" name="passage" [(ngModel)]="draft.passage" (ngModelChange)="clearError('passage')" [attr.aria-invalid]="fieldErrors()['passage'] ? 'true' : null">
+              <option value="">No passage</option>
+              @for (passage of passages(); track passage.id) { <option [value]="passage.id">{{ passage.title }}</option> }
+            </select>
+            @if (fieldErrors()['passage']) { <div class="error-text">{{ fieldErrors()['passage'] }}</div> }
           </div>
-        }
-
-        <div class="grid-2" style="margin-top: 0.75rem">
           <div class="field">
             <label for="q-difficulty">Difficulty</label>
             <select id="q-difficulty" name="difficulty" [(ngModel)]="draft.difficulty">
@@ -222,17 +148,89 @@ function draftFrom(question: Question): Draft {
           <div class="field">
             <label for="q-status">Status</label>
             <select id="q-status" name="status" [(ngModel)]="draft.status">
-              <option value="draft">Draft (not ready)</option>
-              <option value="published">Published (ready to use)</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
             </select>
           </div>
         </div>
+        @if (passageOf(draft.passage); as chosen) {
+          <details class="passage-view" id="chosen-passage"><summary>Show the passage</summary><p class="passage-text">{{ chosen.text }}</p></details>
+        }
+
+        <div class="field">
+          <label for="q-text">Question</label>
+          <textarea id="q-text" name="text" rows="3" [(ngModel)]="draft.text" (input)="clearError('text')" [attr.aria-invalid]="fieldErrors()['text'] ? 'true' : null"></textarea>
+          @if (fieldErrors()['text']) { <div class="error-text">{{ fieldErrors()['text'] }}</div> }
+        </div>
+        <app-picture-picker inputId="pic-question" label="Question picture" [picture]="draft.pictures['question']" (changed)="setPicture('question', $event)" />
+
+        @if (draft.kind === 'mcq') {
+          <h3>Options <app-info text="Mark the correct option, and for every option say why it is correct or wrong." /></h3>
+          @for (option of draft.options; track $index) {
+            <fieldset class="option">
+              <legend>Option {{ letters[$index] }}</legend>
+              <div class="grid-2">
+                <div class="field">
+                  <label [attr.for]="'q-opt-' + $index">Text <app-info text="Leave the text empty if the option is only a picture." /></label>
+                  <input [id]="'q-opt-' + $index" [name]="'opt' + $index" type="text" [(ngModel)]="option.text" (input)="clearError('options')" />
+                </div>
+                <div class="field">
+                  <label [attr.for]="'q-why-' + $index">Why right or wrong</label>
+                  <textarea [id]="'q-why-' + $index" [name]="'why' + $index" rows="2" [(ngModel)]="option.why" (input)="clearError('options')"></textarea>
+                </div>
+              </div>
+              <app-picture-picker [inputId]="'pic-' + letters[$index]" [label]="'Option ' + letters[$index] + ' picture'" [picture]="draft.pictures[letters[$index]]" (changed)="setPicture(letters[$index], $event)" />
+              <label class="inline">
+                <input type="radio" name="correct" [id]="'q-correct-' + $index" [value]="$index" [(ngModel)]="draft.correct" (ngModelChange)="clearError('correct')" />
+                Correct answer
+              </label>
+            </fieldset>
+          }
+          @if (fieldErrors()['options']) { <div class="error-text">{{ fieldErrors()['options'] }}</div> }
+          @if (fieldErrors()['images']) { <div class="error-text">{{ fieldErrors()['images'] }}</div> }
+          @if (fieldErrors()['correct']) { <div class="error-text">{{ fieldErrors()['correct'] }}</div> }
+
+        } @else {
+          <h3>Answer <app-info text="The student sees one box under the question and types the answer." /></h3>
+          <div class="grid-2">
+            <div class="field">
+              <label for="q-answer-type">The answer is</label>
+              <select id="q-answer-type" name="answerType" [(ngModel)]="draft.answerType" (ngModelChange)="clearError('answer')">
+                <option value="text">Text</option>
+                <option value="number">A number</option>
+              </select>
+            </div>
+            @if (draft.answerType === 'text') {
+              <div class="field">
+                <label for="q-answer-text">Correct answer <app-info text="For other accepted answers, separate them with |, for example Mumbai | Bombay. Capitals and extra spaces don't matter." /></label>
+                <input id="q-answer-text" name="answerText" type="text" [(ngModel)]="draft.answerText" (input)="clearError('answer')" [attr.aria-invalid]="fieldErrors()['answer'] ? 'true' : null" />
+              </div>
+            } @else {
+              <div class="field">
+                <label for="q-answer-number">Correct number</label>
+                <input id="q-answer-number" name="answerNumber" type="text" inputmode="decimal" [(ngModel)]="draft.answerNumber" (input)="clearError('answer')" [attr.aria-invalid]="fieldErrors()['answer'] ? 'true' : null" />
+              </div>
+            }
+          </div>
+          @if (draft.answerType === 'number') {
+            <div class="field">
+              <label for="q-tolerance">Tolerance <app-info text="Optional. How far off a student's number may be and still count, for example 0.01. Empty means exact." /></label>
+              <input id="q-tolerance" name="tolerance" type="text" inputmode="decimal" [(ngModel)]="draft.tolerance" (input)="clearError('answer')" />
+            </div>
+          }
+          @if (fieldErrors()['answer']) { <div class="error-text">{{ fieldErrors()['answer'] }}</div> }
+          <div class="field">
+            <label for="q-explanation">Explanation <app-info text="Why this is the right answer." /></label>
+            <textarea id="q-explanation" name="explanation" rows="3" [(ngModel)]="draft.explanation" (input)="clearError('explanation')" [attr.aria-invalid]="fieldErrors()['explanation'] ? 'true' : null"></textarea>
+            @if (fieldErrors()['explanation']) { <div class="error-text">{{ fieldErrors()['explanation'] }}</div> }
+          </div>
+        }
 
         <div class="actions">
           @if (editingId()) {
-            <button class="btn" type="button" [disabled]="saving()" (click)="save(false)">Save changes</button>
+            <button class="btn" type="button" [disabled]="saving()" (click)="save(false)"><app-icon name="check" /> Save changes</button>
           } @else {
-            <button class="btn" type="button" [disabled]="saving()" (click)="save(true)">Save and add another</button>
+            <button class="btn" type="button" [disabled]="saving()" (click)="save(true)"><app-icon name="plus" /> Save and add another</button>
             <button class="btn secondary" type="button" [disabled]="saving()" (click)="save(false)">Save and close</button>
           }
           <button class="btn secondary" type="button" (click)="cancel()">{{ addedCount() ? 'Done' : 'Cancel' }}</button>
@@ -240,39 +238,45 @@ function draftFrom(question: Question): Draft {
       </div>
     }
 
-    <app-question-upload (imported)="uploaded($event)" />
+    <div class="tabs" role="tablist" aria-label="Question bank sections">
+      <button class="tab with-icon" role="tab" type="button" [attr.aria-selected]="tab() === 'questions'" (click)="tab.set('questions')"><app-icon name="list" [size]="16" /> Questions</button>
+      <button class="tab with-icon" role="tab" type="button" [attr.aria-selected]="tab() === 'passages'" (click)="tab.set('passages')"><app-icon name="file" [size]="16" /> Passages</button>
+      <button class="tab with-icon" role="tab" type="button" [attr.aria-selected]="tab() === 'upload'" (click)="tab.set('upload')"><app-icon name="upload" [size]="16" /> Upload</button>
+    </div>
 
-    <app-admin-passages [passages]="passages()" (changed)="passagesChanged()" />
+    @if (tab() === 'upload') {
+      <app-question-upload (imported)="uploaded($event)" />
+    }
+    @if (tab() === 'passages') {
+      <app-admin-passages [passages]="passages()" (changed)="passagesChanged()" />
+    }
 
-    <div class="card">
-      <h2>Questions</h2>
-      <div class="grid-2">
+    @if (tab() === 'questions') {
+      <div class="toolbar">
         <div class="field">
-          <label for="f-subject">Subject</label>
+          <label class="sr-only" for="f-subject">Subject</label>
           <select id="f-subject" name="fpaper" [(ngModel)]="filter.paper" (ngModelChange)="filter.topic = ''; load()">
             <option value="">All subjects</option>
             @for (paper of papers(); track paper.id) { <option [value]="paper.id">{{ paper.name }}</option> }
           </select>
         </div>
         <div class="field">
-          <label for="f-topic">Topic</label>
+          <label class="sr-only" for="f-topic">Topic</label>
           <select id="f-topic" name="ftopic" [(ngModel)]="filter.topic" (ngModelChange)="load()" [disabled]="!filter.paper">
             <option value="">All topics</option>
             @for (topic of topicsOf(filter.paper); track topic) { <option [value]="topic">{{ topic }}</option> }
           </select>
         </div>
-      </div>
-      <div class="grid-2">
         <div class="field">
-          <label for="f-status">Status</label>
+          <label class="sr-only" for="f-status">Status</label>
           <select id="f-status" name="fstatus" [(ngModel)]="filter.status" (ngModelChange)="load()">
-            <option value="">All</option>
+            <option value="">All statuses</option>
             <option value="draft">Draft</option>
             <option value="published">Published</option>
           </select>
         </div>
         <div class="field">
-          <label for="f-kind">Type</label>
+          <label class="sr-only" for="f-kind">Type</label>
           <select id="f-kind" name="fkind" [(ngModel)]="filter.kind" (ngModelChange)="load()">
             <option value="">All types</option>
             <option value="mcq">Multiple choice</option>
@@ -280,17 +284,17 @@ function draftFrom(question: Question): Draft {
           </select>
         </div>
         <div class="field">
-          <label for="f-passage">Passage</label>
+          <label class="sr-only" for="f-passage">Passage</label>
           <select id="f-passage" name="fpassage" [(ngModel)]="filter.passage" (ngModelChange)="load()">
-            <option value="">All questions</option>
+            <option value="">Any passage</option>
             <option value="none">Without a passage</option>
             @for (passage of passages(); track passage.id) { <option [value]="passage.id">{{ passage.title }}</option> }
           </select>
         </div>
         <div class="field">
-          <label for="f-pictures">Pictures</label>
+          <label class="sr-only" for="f-pictures">Pictures</label>
           <select id="f-pictures" name="fpictures" [(ngModel)]="filter.pictures" (ngModelChange)="load()">
-            <option value="">All questions</option>
+            <option value="">Any pictures</option>
             <option value="yes">With pictures</option>
             <option value="no">Without pictures</option>
           </select>
@@ -304,29 +308,29 @@ function draftFrom(question: Question): Draft {
           <div class="row bulk">
             <label class="check">
               <input type="checkbox" id="select-all" [checked]="allSelected()" (change)="toggleAll($any($event.target).checked)" />
-              Select all {{ questions().length }} shown
+              Select all {{ questions().length }}
             </label>
             @if (selectedCount()) {
               <span class="muted" id="selected-count">{{ selectedCount() }} selected</span>
-              <button class="btn small" type="button" [disabled]="saving()" (click)="setStatus('published')">Publish selected</button>
+              <button class="btn small" type="button" [disabled]="saving()" (click)="setStatus('published')"><app-icon name="check" [size]="16" /> Publish selected</button>
               <button class="btn secondary small" type="button" [disabled]="saving()" (click)="setStatus('draft')">Move to draft</button>
-              <button class="btn secondary small" type="button" [disabled]="saving()" (click)="askDeleteMany()">Delete selected</button>
-              <button class="btn secondary small" type="button" (click)="selected.set([]); deleteAsk.set(false)">Clear</button>
+              <button class="icon-btn danger" type="button" title="Delete selected" [disabled]="saving()" (click)="askDeleteMany()"><app-icon name="trash" /><span class="sr-only">Delete selected</span></button>
+              <button class="icon-btn" type="button" title="Clear" (click)="selected.set([]); deleteAsk.set(false)"><app-icon name="x" /><span class="sr-only">Clear</span></button>
             }
           </div>
           @if (deleteAsk() && selectedCount()) {
             <div class="danger-box" id="bulk-delete-box">
               <p>
                 <strong>Delete {{ selectedCount() }} {{ selectedCount() === 1 ? 'question' : 'questions' }} for good?</strong>
-                Their pictures are deleted too. This can't be undone.
+                Pictures go too. No undo.
               </p>
               <div class="field">
                 <label for="bulk-confirm">Type DELETE to confirm</label>
                 <input id="bulk-confirm" name="bulkconfirm" autocomplete="off" [ngModel]="deleteWord()" (ngModelChange)="deleteWord.set($event)" />
               </div>
               <div class="row">
-                <button class="btn danger small" id="bulk-delete-go" type="button" [disabled]="saving() || deleteWord() !== 'DELETE'" (click)="deleteMany()">Delete {{ selectedCount() }}</button>
-                <button class="btn secondary small" type="button" (click)="deleteAsk.set(false)">Keep them</button>
+                <button class="btn danger small" id="bulk-delete-go" type="button" [disabled]="saving() || deleteWord() !== 'DELETE'" (click)="deleteMany()"><app-icon name="trash" [size]="16" /> Delete {{ selectedCount() }}</button>
+                <button class="icon-btn" type="button" title="Keep them" (click)="deleteAsk.set(false)"><app-icon name="x" /><span class="sr-only">Keep them</span></button>
               </div>
             </div>
           }
@@ -341,13 +345,22 @@ function draftFrom(question: Question): Draft {
             }
           }
           <div class="question" [class.in-passage]="!!question.passage" [attr.data-question]="question.id">
-            <div class="row">
+            <div class="row q-head">
               <input type="checkbox" class="pick" [attr.aria-label]="'Select question: ' + question.text"
                 [checked]="selected().includes(question.id)" (change)="toggle(question.id, $any($event.target).checked)" />
-              <span class="chip" [class]="'chip ' + (question.status === 'published' ? 'open' : 'hidden')">{{ question.status }}</span>
-              <span class="muted">{{ paperName(question.paper) }} · {{ question.topic }} · {{ question.difficulty }}</span>
+              <span class="status" [class.ok]="question.status === 'published'">{{ question.status }}</span>
+              <span class="soft">{{ paperName(question.paper) }} · {{ question.topic }} · {{ question.difficulty }}</span>
               @if (question.kind === 'fill_in') { <span class="chip pictures">fill in</span> }
-              @if (hasPictures(question)) { <span class="chip pictures">pictures</span> }
+              @if (hasPictures(question)) { <span class="chip pictures"><app-icon name="image" [size]="12" /> pictures</span> }
+              <div class="icon-actions q-actions">
+                <button class="icon-btn" type="button" title="Edit" (click)="startEdit(question)"><app-icon name="edit" /><span class="sr-only">Edit</span></button>
+                @if (confirming() === question.id) {
+                  <button class="btn danger small" type="button" [disabled]="saving()" (click)="remove(question)">Yes, delete</button>
+                  <button class="icon-btn" type="button" title="Keep" (click)="confirming.set(null)"><app-icon name="x" /><span class="sr-only">Keep</span></button>
+                } @else {
+                  <button class="icon-btn danger" type="button" title="Delete" (click)="confirming.set(question.id)"><app-icon name="trash" /><span class="sr-only">Delete</span></button>
+                }
+              </div>
             </div>
             <p><strong>{{ question.text }}</strong></p>
             @if (question.images?.['question']; as picture) {
@@ -373,21 +386,12 @@ function draftFrom(question: Question): Draft {
               }
             </ol>
             }
-            <div class="row">
-              <button class="btn secondary small" type="button" (click)="startEdit(question)">Edit</button>
-              @if (confirming() === question.id) {
-                <button class="btn danger small" type="button" [disabled]="saving()" (click)="remove(question)">Yes, delete</button>
-                <button class="btn secondary small" type="button" (click)="confirming.set(null)">Keep</button>
-              } @else {
-                <button class="btn secondary small" type="button" (click)="confirming.set(question.id)">Delete</button>
-              }
-            </div>
           </div>
         } @empty {
-          <p class="empty">No questions yet. Add the first one above.</p>
+          <div class="empty-state"><app-icon name="help" [size]="32" /><p>No questions yet</p></div>
         }
       }
-    </div>
+    }
   `,
 })
 export class AdminQuestions implements OnInit {
@@ -395,6 +399,7 @@ export class AdminQuestions implements OnInit {
   readonly letters = LETTERS;
 
   readonly papers = signal<Paper[]>([]);
+  readonly tab = signal<'questions' | 'passages' | 'upload'>('questions');
   readonly questions = signal<Question[]>([]);
   readonly passages = signal<Passage[]>([]);
   /** The questions with those of one passage kept together, so the passage is shown once above them. */
@@ -565,6 +570,7 @@ export class AdminQuestions implements OnInit {
   /** Questions were imported from a file: say how many and show the fresh list. */
   async uploaded(count: number): Promise<void> {
     this.reset();
+    this.tab.set('questions');
     this.notice.set(`Imported ${count} ${count === 1 ? 'question' : 'questions'}.`);
     this.filter = { paper: '', topic: '', status: '', pictures: '', kind: '', passage: '' };
     await this.load();

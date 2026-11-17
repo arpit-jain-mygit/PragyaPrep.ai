@@ -2,6 +2,8 @@ import { Component, inject, output, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { ApiError, QuestionImport } from '../core/models';
 import { UploadService } from '../core/upload.service';
+import { Icon } from '../ui/icon';
+import { InfoTip } from '../ui/info-tip';
 
 const MAX_PICTURE_BYTES = 1024 * 1024;
 
@@ -15,32 +17,31 @@ interface Staged {
 /** Upload many questions from an Excel file: download the template, choose the filled-in file, see a preview, then import. */
 @Component({
   selector: 'app-question-upload',
+  imports: [Icon, InfoTip],
   template: `
-    <div class="card" id="question-upload">
-      <h2>Upload many questions</h2>
-      <p class="muted">Download the Excel template, fill in one row per question, and upload it here. You see a preview first, and nothing is saved until you confirm.</p>
+    <div class="form-panel" id="question-upload">
 
       @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
       <div class="row">
-        <button class="btn secondary" type="button" [disabled]="busy()" (click)="download()">Download template</button>
+        <button class="btn secondary" type="button" [disabled]="busy()" (click)="download()"><app-icon name="download" /> Download template</button>
+        <app-info text="Fill in one row per question and upload it here. You see a preview first, and nothing is saved until you confirm." />
       </div>
 
       @if (!result()) {
         <div class="field" style="margin-top: 0.75rem">
-          <label for="upload-pictures">Step 1 (only if your questions have pictures): choose all the pictures</label>
+          <label for="upload-pictures">Pictures <app-info text="Only if your questions have pictures: choose them all here first (PNG or JPG, up to 1 MB each). In the Excel file, type each picture's file name, for example circuit1.png, in the Question image or Image A to D column." /></label>
           <input id="upload-pictures" name="uploadPictures" type="file" multiple accept=".png,.jpg,.jpeg,image/png,image/jpeg" (change)="picturesPicked($event)" [disabled]="busy()" />
-          <div class="hint">PNG or JPG, up to 1 MB each. In the Excel file, type each picture's file name (for example circuit1.png) in the Question image or Image A to D column.</div>
           @if (staged().length) {
             <ul class="staged" id="staged-pictures">
               @for (item of staged(); track $index) {
                 <li [attr.data-staged]="item.name">
                   {{ item.name }}
                   @if (item.state === 'uploading') { <span class="muted">uploading…</span> }
-                  @if (item.state === 'done') { <span class="chip open">ready</span> }
+                  @if (item.state === 'done') { <span class="status ok">ready</span> }
                   @if (item.state === 'error') { <span class="error-text">{{ item.error }}</span> }
                   @if (item.state !== 'uploading') {
-                    <button class="btn secondary small" type="button" (click)="unstage(item)">Remove</button>
+                    <button class="icon-btn danger" type="button" title="Remove" (click)="unstage(item)"><app-icon name="x" /><span class="sr-only">Remove</span></button>
                   }
                 </li>
               }
@@ -48,7 +49,7 @@ interface Staged {
           }
         </div>
         <div class="field">
-          <label for="upload-file">{{ staged().length ? 'Step 2: ' : '' }}Filled-in Excel file (.xlsx)</label>
+          <label for="upload-file">Excel file (.xlsx)</label>
           <input id="upload-file" name="uploadFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="picked($event)" [disabled]="busy()" />
           @if (busy()) { <div class="hint">Checking the file…</div> }
         </div>
@@ -81,16 +82,16 @@ interface Staged {
                 </tbody>
               </table>
             </div>
-            <p class="hint">Rows with problems are not imported. Fix them in your file and upload it again; questions already imported are skipped the second time.</p>
+            <p class="soft">Rows with problems are skipped. Fix them and upload again; imported questions are skipped the second time.</p>
           }
 
           @if (r.duplicates.length) {
-            <p class="hint">Skipped as duplicates: rows {{ rowsOf(r.duplicates) }}.</p>
+            <p class="soft">Skipped as duplicates: rows {{ rowsOf(r.duplicates) }}.</p>
           }
 
           <div class="actions">
             <button class="btn" type="button" [disabled]="busy() || !r.ready.length" (click)="confirm()">
-              {{ busy() ? 'Importing…' : 'Import ' + r.ready.length + (r.ready.length === 1 ? ' question' : ' questions') }}
+              <app-icon name="upload" /> {{ busy() ? 'Importing…' : 'Import ' + r.ready.length + (r.ready.length === 1 ? ' question' : ' questions') }}
             </button>
             <button class="btn secondary" type="button" [disabled]="busy()" (click)="reset()">Choose another file</button>
           </div>

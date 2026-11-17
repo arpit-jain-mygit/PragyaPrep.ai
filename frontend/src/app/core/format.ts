@@ -18,6 +18,18 @@ export function describeAccess(access: Access): string {
   }
 }
 
+/** The shortest description of access, for tables: "Unlimited", "365 days" or "Until 30 Jun 2027". */
+export function shortAccess(access: Access): string {
+  switch (access.type) {
+    case 'days':
+      return `${access.days} day${access.days === 1 ? '' : 's'}`;
+    case 'until_date':
+      return `Until ${formatDate(access.until)}`;
+    default:
+      return 'Unlimited';
+  }
+}
+
 /** "2027-01-15" or a full timestamp becomes "15 Jan 2027". Anything unreadable is shown as it is. */
 export function formatDate(value: string): string {
   if (!value) return '';

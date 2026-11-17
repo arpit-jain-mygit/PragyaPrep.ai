@@ -38,7 +38,7 @@ describe('Admin course files page', () => {
     expect(content).toContain('Notes');
     expect(content).toContain('PDF');
     expect(content).toContain('2 KB');
-    expect(all(fixture, '.chip.open').length).toBe(1);
+    expect(all(fixture, '.status.ok').length).toBe(1);
   });
 
   it('says so when there are no files', async () => {

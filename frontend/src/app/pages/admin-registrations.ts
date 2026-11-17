@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { GENDER_LABELS, formatDate, formatDateTime } from '../core/format';
 import { AdminCourse, ApiError, CourseAccess, DecisionAction, Registration, RegistrationEdit } from '../core/models';
+import { Icon } from '../ui/icon';
+import { InfoTip } from '../ui/info-tip';
 
 interface Draft {
   email: string; first_name: string; last_name: string; birth_date: string; gender: string; mobile: string;
@@ -26,10 +28,11 @@ interface Notice {
 /** The admin's review queue: look at each registration, correct its details, then approve, reject, suspend or reactivate it. */
 @Component({
   selector: 'app-admin-registrations',
-  imports: [FormsModule],
+  imports: [FormsModule, Icon, InfoTip],
   template: `
-    <h1>Registrations</h1>
-    <p class="muted">Review who has registered, and decide who may log in.</p>
+    <div class="page-head">
+      <h1>Registrations <app-info text="Review who has registered, and decide who may log in." /></h1>
+    </div>
 
     <div class="tabs" role="tablist" aria-label="Registration status">
       @for (tab of tabs; track tab) {
@@ -45,7 +48,7 @@ interface Notice {
     @if (loading()) {
       <p class="muted">Loading…</p>
     } @else if (items().length === 0 && !loadError()) {
-      <div class="empty">No {{ active() === 'all' ? '' : active() }} registrations.</div>
+      <div class="empty-state"><app-icon name="users" [size]="32" /><p>No {{ active() === 'all' ? '' : active() }} registrations.</p></div>
     }
 
     @for (person of items(); track person.email) {
@@ -56,7 +59,7 @@ interface Notice {
             <div class="muted small">{{ person.email }}</div>
             <div class="small">{{ person.course_name }} &middot; registered {{ when(person.created_at) }}</div>
           </div>
-          <span class="chip" [class]="'chip ' + person.status">{{ person.status }}</span>
+          <span class="status" [class.ok]="person.status === 'approved'" [class.warn]="person.status === 'pending'" [class.bad]="person.status === 'rejected'">{{ person.status }}</span>
         </div>
 
         @if (isOpen(person.email)) {
@@ -75,7 +78,7 @@ interface Notice {
           </dl>
           @if (person.status === 'approved') {
             <div class="access" [attr.data-access]="person.email">
-              <h3>Course access</h3>
+              <h3>Course access <app-info text="Access lasts as long as the course says. Giving it again starts the length again." /></h3>
               @if (accessNotice(); as n) {
                 @if (n.email === person.email) { <div class="alert" [class]="'alert ' + n.kind" role="status">{{ n.text }}</div> }
               }
@@ -84,10 +87,10 @@ interface Notice {
                   <div class="row spread access-row">
                     <div>
                       <strong>{{ item.course_name }}</strong>
-                      <span class="chip" [class]="'chip ' + (item.active ? 'open' : 'hidden')">{{ item.active ? 'active' : 'ended' }}</span>
+                      <span class="status" [class.ok]="item.active">{{ item.active ? 'active' : 'ended' }}</span>
                       <div class="muted small">{{ item.expires_at ? (item.active ? 'Ends ' : 'Ended ') + date(item.expires_at) : 'No end date' }} &middot; given by {{ item.granted_by }}</div>
                     </div>
-                    <button class="btn danger small" type="button" [disabled]="busy() === person.email" (click)="takeAway(person, item)">Remove</button>
+                    <button class="icon-btn danger" type="button" title="Remove" [disabled]="busy() === person.email" (click)="takeAway(person, item)"><app-icon name="trash" /><span class="sr-only">Remove</span></button>
                   </div>
                 } @empty {
                   <p class="muted small">No courses yet.</p>
@@ -103,7 +106,6 @@ interface Notice {
                 </select>
                 <button class="btn small" type="button" [disabled]="!giveCourse || busy() === person.email" (click)="give(person)">Give or renew access</button>
               </div>
-              <p class="hint">Access lasts as long as the course says. Giving it again starts the length again.</p>
             </div>
           }
         }
@@ -191,8 +193,8 @@ interface Notice {
               @if (fieldErrors()['course_id']) { <div class="error-text">{{ fieldErrors()['course_id'] }}</div> }
             </div>
             <div class="actions">
-              <button class="btn small" type="submit" [disabled]="busy() === person.email">{{ emailChanged(person) ? 'Save and change email' : 'Save' }}</button>
-              <button class="btn secondary small" type="button" (click)="editing.set(null)">Cancel</button>
+              <button class="btn small" type="submit" [disabled]="busy() === person.email"><app-icon name="check" [size]="16" /> {{ emailChanged(person) ? 'Save and change email' : 'Save' }}</button>
+              <button class="icon-btn" type="button" title="Cancel" (click)="editing.set(null)"><app-icon name="x" /><span class="sr-only">Cancel</span></button>
             </div>
           </form>
         } @else if (rejecting() === person.email) {
@@ -201,24 +203,24 @@ interface Notice {
             <textarea [id]="'reason-' + person.email" name="reason" [(ngModel)]="reason" maxlength="300"></textarea>
           </div>
           <div class="actions">
-            <button class="btn danger small" type="button" [disabled]="busy() === person.email" (click)="confirmReject(person)">Reject registration</button>
-            <button class="btn secondary small" type="button" (click)="rejecting.set(null)">Cancel</button>
+            <button class="btn danger small" type="button" [disabled]="busy() === person.email" (click)="confirmReject(person)"><app-icon name="x" [size]="16" /> Reject registration</button>
+            <button class="icon-btn" type="button" title="Cancel" (click)="rejecting.set(null)"><app-icon name="x" /><span class="sr-only">Cancel</span></button>
           </div>
         } @else {
           <div class="actions">
-            <button class="btn secondary small" type="button" (click)="toggle(person.email)">{{ isOpen(person.email) ? 'Hide details' : 'Show details' }}</button>
-            <button class="btn secondary small" type="button" [disabled]="busy() === person.email" (click)="startEdit(person)">Edit</button>
+            <button class="icon-btn" type="button" [attr.title]="isOpen(person.email) ? 'Hide details' : 'Show details'" (click)="toggle(person.email)"><app-icon [name]="isOpen(person.email) ? 'chevron-up' : 'chevron'" /><span class="sr-only">{{ isOpen(person.email) ? 'Hide details' : 'Show details' }}</span></button>
+            <button class="icon-btn" type="button" title="Edit" [disabled]="busy() === person.email" (click)="startEdit(person)"><app-icon name="edit" /><span class="sr-only">Edit</span></button>
             @if (person.status === 'pending' || person.status === 'rejected') {
-              <button class="btn small" type="button" [disabled]="busy() === person.email" (click)="act('approve', person)">Approve</button>
+              <button class="btn small" type="button" [disabled]="busy() === person.email" (click)="act('approve', person)"><app-icon name="check" [size]="16" /> Approve</button>
             }
             @if (person.status === 'pending') {
-              <button class="btn danger small" type="button" [disabled]="busy() === person.email" (click)="startReject(person.email)">Reject</button>
+              <button class="icon-btn danger" type="button" title="Reject" [disabled]="busy() === person.email" (click)="startReject(person.email)"><app-icon name="x" /><span class="sr-only">Reject</span></button>
             }
             @if (person.status === 'approved') {
-              <button class="btn danger small" type="button" [disabled]="busy() === person.email" (click)="act('suspend', person)">Suspend</button>
+              <button class="icon-btn danger" type="button" title="Suspend" [disabled]="busy() === person.email" (click)="act('suspend', person)"><app-icon name="ban" /><span class="sr-only">Suspend</span></button>
             }
             @if (person.status === 'suspended') {
-              <button class="btn small" type="button" [disabled]="busy() === person.email" (click)="act('reactivate', person)">Reactivate</button>
+              <button class="btn small" type="button" [disabled]="busy() === person.email" (click)="act('reactivate', person)"><app-icon name="rotate" [size]="16" /> Reactivate</button>
             }
           </div>
         }

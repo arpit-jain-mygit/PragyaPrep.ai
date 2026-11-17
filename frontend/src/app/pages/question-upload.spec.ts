@@ -185,7 +185,7 @@ describe('Question upload: pictures', () => {
     await settle(fixture);
 
     expect(send).toHaveBeenCalledTimes(2);
-    expect(all(fixture, '[data-staged] .chip').map((c) => c.textContent?.trim())).toEqual(['ready', 'ready']);
+    expect(all(fixture, '[data-staged] .status').map((c) => c.textContent?.trim())).toEqual(['ready', 'ready']);
   });
 
   it('refuses a wrong type or an oversized picture without asking the server, and still does the others', async () => {

@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { logoSrc } from '../core/format';
+import { Icon } from '../ui/icon';
 import { SessionService } from '../core/session.service';
 import { TenantService } from '../core/tenant.service';
 
@@ -10,7 +11,7 @@ import { TenantService } from '../core/tenant.service';
  */
 @Component({
   selector: 'app-tenant-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
   template: `
     @if (tenants.loading()) {
       <p class="center muted" style="margin-top: 3rem">Loading…</p>
@@ -32,22 +33,22 @@ import { TenantService } from '../core/tenant.service';
           <nav class="nav" aria-label="Main">
             @if (!member()) {
               @if (info.slug !== 'platform') {
-                <a [routerLink]="['/', info.slug, 'register']" routerLinkActive="active">Register</a>
+                <a [routerLink]="['/', info.slug, 'register']" routerLinkActive="active"><app-icon name="plus" /><span class="nav-label">Register</span></a>
               }
-              <a [routerLink]="['/', info.slug, 'login']" routerLinkActive="active">Log in</a>
+              <a [routerLink]="['/', info.slug, 'login']" routerLinkActive="active"><app-icon name="logout" /><span class="nav-label">Log in</span></a>
             } @else {
               @if (isPlatformAdmin()) {
-                <a routerLink="/platform-admin" routerLinkActive="active">Institutes</a>
+                <a routerLink="/platform-admin" routerLinkActive="active"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
               } @else if (isAdmin()) {
-                <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active">Registrations</a>
-                <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active">Courses</a>
-                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active">Question bank</a>
+                <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">Courses</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
               } @else {
-                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active">Home</a>
-                <a [routerLink]="['/', info.slug, 'courses']" routerLinkActive="active">My courses</a>
+                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
+                <a [routerLink]="['/', info.slug, 'courses']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">My courses</span></a>
               }
               <span class="who">{{ member()!.first_name }}</span>
-              <button class="linklike" type="button" (click)="signOut()">Sign out</button>
+              <button class="icon-btn" type="button" title="Sign out" (click)="signOut()"><app-icon name="logout" /><span class="sr-only">Sign out</span></button>
             }
           </nav>
         </div>

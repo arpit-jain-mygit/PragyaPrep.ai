@@ -5,6 +5,8 @@ import { ApiService } from '../core/api.service';
 import { formatDate, formatSize } from '../core/format';
 import { AdminCourse, ApiError, CourseFile } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { Icon } from '../ui/icon';
+import { InfoTip } from '../ui/info-tip';
 import { UploadService } from '../core/upload.service';
 
 interface Notice {
@@ -15,27 +17,29 @@ interface Notice {
 /** One course's files: add a PDF or an MP4, see what is there, and delete what is not wanted. */
 @Component({
   selector: 'app-admin-course-files',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Icon, InfoTip],
   template: `
-    <p class="small"><a [routerLink]="['/', tenants.slug(), 'admin', 'courses']">&larr; All courses</a></p>
-    <h1>Files{{ course() ? ': ' + course()!.name : '' }}</h1>
-    <p class="muted">PDFs and MP4 videos that students with access to this course can open.</p>
+    <div class="page-head">
+      <h1>
+        Files{{ course() ? ': ' + course()!.name : '' }}
+        <app-info text="PDFs and MP4 videos that students with access to this course can open." />
+      </h1>
+      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'admin', 'courses']"><app-icon name="arrow-left" [size]="16" /> Courses</a>
+    </div>
 
     @if (notice(); as n) { <div class="alert" [class]="'alert ' + n.kind" role="status">{{ n.text }}</div> }
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
     @if (course()) {
-      <div class="card">
-        <h2>Add a file</h2>
+      <div class="form-panel">
         <form (ngSubmit)="upload()" novalidate>
           <div class="field">
-            <label for="file">File (PDF or MP4)</label>
+            <label for="file">File <app-info text="PDF or MP4." /></label>
             <input id="file" name="file" type="file" accept=".pdf,.mp4,application/pdf,video/mp4" (change)="picked($event)" [disabled]="busy()" />
           </div>
           <div class="field">
-            <label for="title">Title</label>
+            <label for="title">Title <app-info text="What students see. It starts as the file's name." /></label>
             <input id="title" name="title" type="text" [(ngModel)]="title" [disabled]="busy()" />
-            <div class="hint">What students see. It starts as the file's name.</div>
           </div>
           @if (busy()) {
             <div class="field" role="status">
@@ -47,7 +51,7 @@ interface Notice {
               }
             </div>
           }
-          <button class="btn" type="submit" [disabled]="busy() || !file">{{ busy() ? 'Please wait…' : 'Upload' }}</button>
+          <button class="btn" type="submit" [disabled]="busy() || !file"><app-icon name="upload" /> {{ busy() ? 'Please wait…' : 'Upload' }}</button>
         </form>
       </div>
     }
@@ -55,8 +59,8 @@ interface Notice {
     @if (loading()) {
       <p class="muted">Loading…</p>
     } @else if (course()) {
-      <div class="table-wrap" style="margin-top: 1.25rem">
-        <table>
+      <div class="table-wrap">
+        <table class="compact">
           <thead>
             <tr><th>Title</th><th>Type</th><th>Size</th><th>Status</th><th>Added</th><th><span class="sr-only">Actions</span></th></tr>
           </thead>
@@ -67,28 +71,28 @@ interface Notice {
                 <td>{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}</td>
                 <td>{{ size(item.size) }}</td>
                 <td>
-                  <span class="chip" [class]="'chip ' + (item.status === 'ready' ? 'open' : 'pending')">{{ item.status === 'ready' ? 'ready' : 'not finished' }}</span>
+                  <span class="status" [class.ok]="item.status === 'ready'" [class.warn]="item.status !== 'ready'">{{ item.status === 'ready' ? 'ready' : 'not finished' }}</span>
                 </td>
                 <td>{{ date(item.created_at) }}</td>
-                <td>
+                <td class="actions-cell">
                   @if (confirming() === item.id) {
-                    <div class="row">
+                    <div class="icon-actions">
                       <button class="btn danger small" type="button" [disabled]="busy()" (click)="remove(item)">Yes, delete</button>
-                      <button class="btn secondary small" type="button" (click)="confirming.set(null)">Keep</button>
+                      <button class="icon-btn" type="button" title="Keep" (click)="confirming.set(null)"><app-icon name="x" /><span class="sr-only">Keep</span></button>
                     </div>
                   } @else {
-                    <button class="btn secondary small" type="button" [disabled]="busy()" (click)="confirming.set(item.id)">Delete</button>
+                    <button class="icon-btn danger" type="button" title="Delete" [disabled]="busy()" (click)="confirming.set(item.id)"><app-icon name="trash" /><span class="sr-only">Delete</span></button>
                   }
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="empty">No files yet. Add the first one above.</td></tr>
+              <tr><td colspan="6"><div class="empty-state"><app-icon name="file" [size]="32" /><p>No files yet.</p></div></td></tr>
             }
           </tbody>
         </table>
       </div>
       @if (hasUnfinished()) {
-        <p class="hint">A file marked "not finished" never arrived, and students can't see it. Delete it and upload it again.</p>
+        <p class="soft"><app-icon name="info" [size]="14" /> A "not finished" file never arrived and students can't see it. Delete it and upload it again.</p>
       }
     }
   `,

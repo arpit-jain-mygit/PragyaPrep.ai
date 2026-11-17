@@ -7,10 +7,10 @@ import { Paper } from '../core/models';
   template: `
     <div class="paper-checklist">
       <div class="row">
-        <strong>Subjects for this course</strong>
-        <span class="muted" [attr.id]="idPrefix() + '-count'">{{ selected().length }} of {{ papers().length }} selected</span>
-        <button class="btn secondary small" type="button" (click)="all()">Select all</button>
-        <button class="btn secondary small" type="button" (click)="none()">Clear</button>
+        <strong>Subjects</strong>
+        <span class="soft" [attr.id]="idPrefix() + '-count'">{{ selected().length }} of {{ papers().length }} selected</span>
+        <button class="text-btn" type="button" (click)="all()">Select all</button>
+        <button class="text-btn" type="button" (click)="none()">Clear</button>
       </div>
       <div class="paper-box">
         @for (group of groups(); track group.section) {

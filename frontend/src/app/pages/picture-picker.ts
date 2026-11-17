@@ -2,12 +2,14 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { Picture, ApiError } from '../core/models';
 import { UploadService } from '../core/upload.service';
+import { Icon } from '../ui/icon';
 
 const MAX_BYTES = 1024 * 1024;
 
 /** One optional picture for a question or an option: choose a PNG or JPG, see it, replace it or take it off. */
 @Component({
   selector: 'app-picture-picker',
+  imports: [Icon],
   template: `
     <div class="picture" [attr.data-picture]="inputId()">
       <label [attr.for]="inputId()">{{ label() }}</label>
@@ -17,7 +19,7 @@ const MAX_BYTES = 1024 * 1024;
       <div class="row">
         <input [id]="inputId()" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" (change)="picked($event)" [disabled]="busy()" />
         @if (picture() && !busy()) {
-          <button class="btn secondary small" type="button" (click)="remove()">Remove picture</button>
+          <button class="icon-btn danger" type="button" title="Remove picture" (click)="remove()"><app-icon name="trash" /><span class="sr-only">Remove picture</span></button>
         }
       </div>
       @if (busy()) { <div class="hint">Uploading… {{ progress() }}%</div> }
