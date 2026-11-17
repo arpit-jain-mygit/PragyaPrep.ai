@@ -35,7 +35,10 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | F3 | **Frontend: tenant admin payments** (payments queue, QR code and settings) | **Moved to Phase 2** | Goes with M5. Content upload and access are done in F2a |
 | M6 | **Deploy to dev and test end to end:** the whole journey from registration to watching a video, through the API and the screens | **Tested live** | Run on 17 Nov 2026 at https://d1szng4oy9m4an.cloudfront.net with a throwaway institute `zz-e2e`, in a real browser. Platform admin added the institute (welcome email sent). Its admin added a course. A student registered through the form and was told "waiting for approval" at login. The admin approved (email sent), uploaded a real PDF and MP4, and gave the student the course. The student saw the course, played the video from S3 and opened the PDF link. Suspending the student cut them off at once, and suspending the institute locked out everyone. No problems found, no Lambda errors, and the institute's rows and files were removed afterwards. Not covered: typing a real emailed login code (done in M2) and a phone-sized screen |
 | M7 | **Frontend hosting:** the Angular app on S3 behind CloudFront (HTTPS, deep links work on refresh, the bucket is private), a one-command `deploy-web.sh`, and the site's address added to the allowed origins for the API and S3 uploads | **Tested live** | Address: https://d1szng4oy9m4an.cloudfront.net. Checked with curl (deep links, security headers, a year's caching for hashed files and none for `index.html`, the bucket refuses direct reads, CORS from the site) and in a real browser (login page with the institute's colour and logo, admin screens, a real PDF upload and delete from that address). No Lambda errors |
-| Q1 | **Question bank (admin side):** the admin picks a paper and topic from the fixed list of 37 CUET-style papers, writes a multiple-choice question with four options, marks the correct one, and explains why each option is right or wrong. Difficulty and draft/published. List with filters, edit, delete. Private to each institute. Students don't see questions yet | **Tested live** | 32 backend and 14 frontend tests (451 and 214 in all). Added later: **Save and add another** keeps the paper, topic, difficulty and status, so the admin can enter many questions for one combination. Real browser on the sandbox: both mistakes (a repeated option, no correct answer) were shown at once, then the question saved and listed with the correct option marked. On dev (backend and website deployed): the paper list came back, a `ZZ TEST` question was added, a bad topic was refused with every error, the question was filtered, published and deleted, a call with no login got 401, and AaptPrep's bank is empty again. No Lambda errors. The page itself was not opened against dev |
+| Q1 | **Question bank (admin side):** the admin picks a paper and topic from the fixed list of 37 CUET-style papers, writes a multiple-choice question with four options, marks the correct one, and explains why each option is right or wrong. Difficulty and draft/published. List with filters, edit, delete. Private to each institute. Students don't see questions yet | **Tested live** | 32 backend and 14 frontend tests (451 and 214 in all). Added later: **Upload from Excel** (see Q2) and **Save and add another** keeps the paper, topic, difficulty and status, so the admin can enter many questions for one combination. Real browser on the sandbox: both mistakes (a repeated option, no correct answer) were shown at once, then the question saved and listed with the correct option marked. On dev (backend and website deployed): the paper list came back, a `ZZ TEST` question was added, a bad topic was refused with every error, the question was filtered, published and deleted, a call with no login got 401, and AaptPrep's bank is empty again. No Lambda errors. The page itself was not opened against dev |
+| Q2 | **Upload questions from Excel:** the admin downloads an `.xlsx` template (dropdowns for paper, topic, correct answer, difficulty and status, an instructions sheet and the paper list), fills one row per question, uploads it, sees a preview (ready, problems with row and column, duplicates), then confirms. Only `.xlsx`, up to 500 rows. Pictures are added in Q4 | **Tested live** | 25 backend and 9 frontend tests (476 and 223 in all). Real browser on the sandbox: a 5-row file previewed as 3 ready, 1 bad topic, 1 duplicate; confirming imported 3 including Hindi text. On dev (the real Lambda): the template downloaded, the preview and import worked, uploading again skipped all as duplicates, a text file and a call with no login were refused, and the test questions were deleted. No Lambda errors. The template was not opened in Excel itself |
+| Q3 | **Pictures on questions:** the admin can attach one PNG or JPG (up to 1 MB) to a question and one to each option. An option may be picture-only (the reason is still required). Pictures show in the form and the list, and can be replaced or removed. Deleting a question, or replacing or removing a picture, deletes the file from storage. Students don't see questions yet | **Tested live** | 37 backend and 19 frontend tests (513 and 242 in all). On dev with real S3, from the real website: a real PNG went onto the question and onto option B (which had no text), a fake `.png` was refused and removed from S3, the question saved and showed both pictures, removing the question's picture deleted its file, deleting the question deleted the other, and afterwards there were no files and no question or picture rows left. No Lambda errors |
+| Q4 | **Pictures in the Excel upload:** the template gets optional columns Question image and Image A to D. The admin first chooses all the pictures in a picture step on the upload card, then types each picture's file name in the sheet. The preview says how many pictures will be attached and flags a missing picture, or one used twice, by row and column. A picture-only option may leave its text empty | **Tested live** | 14 new backend tests and 7 new frontend tests (527 and 249 in all). On dev from the real website: two real PNGs and a fake `.png` were chosen (the fake one was refused), an Excel file named them, the preview showed 2 ready (2 pictures) and one row with problems (a picture used twice and one not uploaded), the import attached both pictures and they loaded in the list. I then deleted the questions: no files, no rows and no Lambda errors left |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -125,7 +128,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `451 passed`.
+You should see `527 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -324,6 +327,48 @@ Log in as an institute admin and open **Question bank** in the top bar (`/<insti
 
 Delete your test questions afterwards. Students can't see this page or these questions.
 
+### Q2 (upload questions from Excel): what to try
+On the Question bank page, use the **Upload many questions** card.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Click **Download template** | `question-bank-template.xlsx`: sheets Instructions, Questions (empty, with dropdowns) and Papers and topics |
+| 2 | Fill a few rows (one question per row), make one row wrong (for example a topic from another paper) and repeat one question | |
+| 3 | Choose the file | A preview: "N ready · 1 with problems · 1 already in the bank (skipped)". The problem is listed with its row and column. Nothing is saved yet |
+| 4 | Click **Import N questions** | "Imported N questions." They appear in the list as drafts unless the Status column said published |
+| 5 | Upload the same file again | Everything is skipped as already in the bank. Nothing doubles |
+| 6 | Try a `.csv`, or a file with changed column headings | A clear message, nothing saved |
+
+Delete your test questions afterwards.
+
+### Q3 (pictures on questions): what to try
+In **Question bank**, click **Add a question** (or **Edit**).
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Under the question, choose a PNG or JPG | A progress note, then the picture appears with a **Remove picture** button |
+| 2 | Under an option, choose a picture and leave that option's text empty | The picture appears. The hint says text may be empty if the option is only a picture |
+| 3 | Fill the rest (the reason is still required for every option), mark the correct one, save | The list shows the picture under the question and under that option |
+| 4 | Try a `.gif`, or a picture over 1 MB | "A picture must be a PNG or JPG." or "A picture can be up to 1 MB." Nothing is uploaded |
+| 5 | Rename a text file to `fake.png` and choose it | "That isn't a real PNG or JPG picture, so it was removed." |
+| 6 | **Edit**, replace or remove a picture, save | The list shows the change, and the old file is deleted from storage |
+| 7 | Start adding a question, upload a picture, then **Cancel** | The uploaded picture is deleted from storage |
+
+Delete your test questions afterwards. Deleting a question deletes its pictures too.
+
+### Q4 (pictures in the Excel upload): what to try
+On the Question bank page, in the **Upload many questions** card.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | **Download template** | The Questions sheet now ends with five optional columns: Question image, Image A, Image B, Image C, Image D |
+| 2 | Under "Step 1", choose several PNG or JPG pictures at once | Each shows "ready" (a wrong type or a fake picture shows why it was refused). **Remove** discards one |
+| 3 | In the sheet, type a picture's file name (for example `circuit1.png`) in a question's picture column. For a picture-only option, leave its Option text empty and name the picture in its Image column | |
+| 4 | Choose the Excel file | The preview says "N ready (M pictures)". A missing picture, or a picture used on two questions, is listed by row and column |
+| 5 | **Import** | The questions appear with their pictures. Pictures you uploaded but didn't use are thrown away |
+
+Delete your test questions afterwards.
+
 ### M7 (hosting): what to try
 The dev website is at **https://d1szng4oy9m4an.cloudfront.net**. Open it on any device. There is no start page content yet, so use an institute's address:
 
@@ -386,7 +431,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 451 passed, 0 failed. Frontend: 214 passed, 0 failed. Total: 665.**
+**Backend, run on my machine: 527 passed, 0 failed. Frontend: 249 passed, 0 failed. Total: 776.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -405,7 +450,9 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_content` | M4 files, access, student links, and that a corrected email keeps access | 42 |
 | `test_logo` | P3 logos (who may, types and size, checking contents, replace, remove, the public address) | 30 |
 | `test_questions` | Q1 question bank (the 37 papers, checks with all mistakes at once, filters, edit, delete, who may, privacy between institutes) | 32 |
-| | **Total** | **451** |
+| `test_question_import` | Q2 and Q4 Excel upload (template, preview, import, problems by row and column, duplicates, unreadable files, 500-row limit, privacy, pictures named in the sheet) | 39 |
+| `test_question_images` | Q3 pictures (who may, types and size, real contents, attach to question and options, replace, remove, delete clean-up, privacy) | 37 |
+| | **Total** | **527** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -418,8 +465,10 @@ My own test rows and files are always removed after each live test. Login codes 
 | `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
 | `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
 | `shell.spec` | Page frame, logo in the top bar, student home, start page, not found | 20 |
-| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row | 14 |
-| | **Total** | **214** |
+| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures | 24 |
+| `question-upload.spec` | Excel upload card: template download, preview, problems, confirm, wrong file type, picture step | 15 |
+| `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
+| | **Total** | **249** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

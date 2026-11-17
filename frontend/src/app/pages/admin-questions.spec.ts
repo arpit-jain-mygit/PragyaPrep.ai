@@ -10,6 +10,7 @@ const PAPERS = [
 ];
 
 const Q1 = {
+  images: {},
   id: 'q1', paper: 'physics', topic: 'Optics', text: 'Which colour bends the most?',
   options: [
     { text: 'Red', why: 'Longest wavelength.' }, { text: 'Violet', why: 'Shortest wavelength.' },
@@ -266,5 +267,148 @@ describe('Admin question bank: adding several in a row', () => {
     await settle(fixture);
     expect(all(fixture, '#question-form').length).toBe(0);
     expect(text(fixture)).toContain('Added the question.');
+  });
+});
+
+describe('Admin question bank: upload from Excel', () => {
+  it('shows the upload card, and a successful import says how many and reloads the list', async () => {
+    const { fixture, http } = await open([]);
+    expect(text(fixture)).toContain('Upload many questions');
+    const upload = fixture.debugElement.query((d) => d.name === 'app-question-upload').componentInstance;
+    upload.imported.emit(3);
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Imported 3 questions.');
+    expect(all(fixture, '[data-question]').length).toBe(1);
+  });
+});
+
+const PIC = { id: 'p1', url: 'https://s3.example/p1' };
+const PIC2 = { id: 'p2', url: 'https://s3.example/p2' };
+
+function emitPicture(fixture: Parameters<typeof type>[0], slot: string, picture: { id: string; url: string } | null) {
+  const picker = fixture.debugElement.queryAll((d) => d.name === 'app-picture-picker')
+    .find((d) => d.nativeElement.querySelector(`#pic-${slot}`))!;
+  picker.componentInstance.changed.emit(picture);
+}
+
+describe('Admin question bank: pictures', () => {
+  it('shows a picker for the question and for each option, with an empty-text hint', async () => {
+    const { fixture } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    const ids = all(fixture, 'app-picture-picker input[type=file]').map((i) => i.id);
+    expect(ids).toEqual(['pic-question', 'pic-A', 'pic-B', 'pic-C', 'pic-D']);
+    expect(text(fixture)).toContain('Leave the text empty if the option is only a picture.');
+  });
+
+  it('sends the ids of new pictures when saving, and nothing for empty slots', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillForm(fixture);
+    emitPicture(fixture, 'question', PIC);
+    emitPicture(fixture, 'B', PIC2);
+    await settle(fixture);
+    expect(all(fixture, 'img').length).toBe(2);
+    clickButton(fixture, 'Save and close');
+    const request = http.expectOne(`${API}/api/admin/questions`);
+    expect(request.request.body.images).toEqual({ question: 'p1', B: 'p2' });
+    expect(request.request.body.pictures).toBeUndefined();
+    request.flush({ ...Q1, id: 'q2' });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions`).flush([]);
+  });
+
+  it('sends no images field at all when there are no pictures', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillForm(fixture);
+    clickButton(fixture, 'Save and close');
+    expect('images' in http.expectOne(`${API}/api/admin/questions`).request.body).toBe(false);
+  });
+
+  it('sends only the changes when editing: a replaced picture, and null for a removed one', async () => {
+    const withPictures = { ...Q1, images: { question: { id: 'old', url: 'https://s3.example/old' }, C: { id: 'oldc', url: 'https://s3.example/oldc' } } };
+    const { fixture, http } = await open([withPictures]);
+    clickButton(fixture, 'Edit');
+    await settle(fixture);
+    expect(all(fixture, '#question-form img').length).toBe(2);
+    emitPicture(fixture, 'question', PIC);
+    emitPicture(fixture, 'C', null);
+    await settle(fixture);
+    clickButton(fixture, 'Save changes');
+    const request = http.expectOne(`${API}/api/admin/questions/q1`);
+    expect(request.request.body.images).toEqual({ question: 'p1', C: null });
+    request.flush({ ...Q1, id: 'q1' });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+  });
+
+  it('sends no images when the pictures were not touched while editing', async () => {
+    const withPictures = { ...Q1, images: { question: { id: 'old', url: 'https://s3.example/old' } } };
+    const { fixture, http } = await open([withPictures]);
+    clickButton(fixture, 'Edit');
+    await settle(fixture);
+    clickButton(fixture, 'Save changes');
+    expect('images' in http.expectOne(`${API}/api/admin/questions/q1`).request.body).toBe(false);
+  });
+
+  it('throws away a picture that was uploaded and then cancelled', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    emitPicture(fixture, 'question', PIC);
+    await settle(fixture);
+    clickButton(fixture, 'Cancel');
+    const request = http.expectOne(`${API}/api/admin/question-images/p1`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
+  });
+
+  it('throws away a new picture that is replaced by another, but never touches a saved one', async () => {
+    const saved = { ...Q1, images: { question: { id: 'old', url: 'https://s3.example/old' } } };
+    const { fixture, http } = await open([saved]);
+    clickButton(fixture, 'Edit');
+    await settle(fixture);
+    emitPicture(fixture, 'question', PIC);   // replaces the saved one: the saved one is NOT deleted from here
+    http.expectNone(`${API}/api/admin/question-images/old`);
+    emitPicture(fixture, 'question', PIC2);  // replaces the new one: that one is thrown away
+    http.expectOne(`${API}/api/admin/question-images/p1`).flush(null);
+    clickButton(fixture, 'Cancel');
+    http.expectOne(`${API}/api/admin/question-images/p2`).flush(null);
+    http.expectNone(`${API}/api/admin/question-images/old`);
+  });
+
+  it('shows pictures in the list, and a picture-only option', async () => {
+    const q = {
+      ...Q1,
+      images: { question: { id: 'a', url: 'https://s3.example/a' }, B: { id: 'b', url: 'https://s3.example/b' } },
+      options: [{ text: 'Red', why: 'x' }, { text: '', why: 'The second diagram.' }, { text: 'Green', why: 'z' }, { text: 'Yellow', why: 'w' }],
+    };
+    const { fixture } = await open([q]);
+    const images = all<HTMLImageElement>(fixture, '[data-question] img').map((i) => i.getAttribute('src'));
+    expect(images).toEqual(['https://s3.example/a', 'https://s3.example/b']);
+    expect(text(fixture)).toContain('The second diagram.');
+  });
+
+  it('shows the server\'s picture problem and keeps the form open', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillForm(fixture);
+    emitPicture(fixture, 'A', PIC);
+    await settle(fixture);
+    clickButton(fixture, 'Save and close');
+    http.expectOne(`${API}/api/admin/questions`).flush(
+      { detail: 'Please correct the marked fields.', errors: { images: "A picture isn't ready or is already used. Upload it again." } },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    await settle(fixture);
+    expect(text(fixture)).toContain("A picture isn't ready or is already used.");
+    expect(all(fixture, '#question-form').length).toBe(1);
+    expect(all(fixture, '#question-form img').length).toBe(1);
   });
 });

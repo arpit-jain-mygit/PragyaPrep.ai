@@ -434,3 +434,51 @@ class TenantRepo:
 
     def delete_question(self, question_id: str) -> None:
         self.table.delete_item(Key=self._question_key(question_id))
+
+    # ---- Question pictures: uploaded first, then attached to a question ----
+
+    def _image_key(self, image_id: str) -> dict:
+        return {"PK": f"{self._prefix}QIMAGE#{image_id}", "SK": "META"}
+
+    def create_image(self, image: dict) -> None:
+        # Listed by file name, so an Excel upload can find "circuit1.png" among the pictures uploaded for it.
+        _put_new(
+            self.table,
+            {
+                **self._image_key(image["id"]),
+                **image,
+                "GSI1PK": f"{self._prefix}QIMAGES",
+                "GSI1SK": f"{image.get('name', '')}#{image['id']}",
+            },
+        )
+
+    def find_loose_image(self, name: str) -> dict | None:
+        """The newest picture with this file name that is uploaded, checked, and not yet on any question."""
+        response = self.table.query(
+            IndexName="GSI1",
+            KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}QIMAGES") & Key("GSI1SK").begins_with(f"{name}#"),
+        )
+        found = [
+            _plain(item)
+            for item in response["Items"]
+            if item.get("name") == name and item.get("status") == "ready" and not item.get("question_id")
+        ]
+        return max(found, key=lambda image: (image.get("created_at", ""), image["id"])) if found else None
+
+    def get_image(self, image_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._image_key(image_id)).get("Item"))
+
+    def mark_image_ready(self, image_id: str, size: int) -> None:
+        _update(self.table, self._image_key(image_id), {"status": "ready", "size": size})
+
+    def attach_image(self, image_id: str, question_id: str) -> None:
+        """Tie a picture to a question. A picture that was never attached has an expiry time, which this removes."""
+        self.table.update_item(
+            Key=self._image_key(image_id),
+            UpdateExpression="SET #q = :q REMOVE #ttl",
+            ExpressionAttributeNames={"#q": "question_id", "#ttl": "ttl"},
+            ExpressionAttributeValues={":q": question_id},
+        )
+
+    def delete_image(self, image_id: str) -> None:
+        self.table.delete_item(Key=self._image_key(image_id))

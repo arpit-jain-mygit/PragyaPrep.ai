@@ -278,6 +278,23 @@ class QuestionIn(BaseModel):
     correct: Any = None
     difficulty: str | None = None
     status: str | None = None
+    # Picture ids by position (question, A, B, C, D). None removes a picture.
+    images: dict[str, str | None] | None = None
+
+
+class QuestionPictureOut(BaseModel):
+    id: str
+    url: str
+
+
+class QuestionImageStartIn(BaseModel):
+    filename: str
+    size: Any
+
+
+class QuestionImageStartOut(BaseModel):
+    id: str
+    upload: UploadFormOut
 
 
 class QuestionOut(BaseModel):
@@ -290,6 +307,7 @@ class QuestionOut(BaseModel):
     difficulty: str
     status: str
     created_at: str = ""
+    images: dict[str, QuestionPictureOut] = {}
     edited_by: str | None = None
     edited_at: str | None = None
 

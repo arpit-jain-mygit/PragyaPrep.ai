@@ -220,6 +220,14 @@ export interface QuestionOption {
   why: string;
 }
 
+/** A picture on a question or an option. The link is short-lived, so it is fetched fresh with the question. */
+export interface Picture {
+  id: string;
+  url: string;
+}
+
+export const PICTURE_SLOTS = ['question', 'A', 'B', 'C', 'D'] as const;
+
 export interface Question {
   id: string;
   paper: string;
@@ -230,9 +238,22 @@ export interface Question {
   difficulty: 'easy' | 'medium' | 'hard';
   status: 'draft' | 'published';
   created_at: string;
+  images: Record<string, Picture>;
   edited_by?: string | null;
   edited_at?: string | null;
 }
 
 /** What the admin sends. For an edit, only what changed. */
-export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at'>>;
+export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images'>> & {
+  /** Picture ids by position. null takes a picture off. */
+  images?: Record<string, string | null>;
+};
+
+/** What the server says about an uploaded Excel file of questions. Nothing is saved until the admin confirms. */
+export interface QuestionImport {
+  confirmed: boolean;
+  ready: { row: number; paper: string; topic: string; text: string; pictures: number }[];
+  problems: { row: number; errors: Record<string, string> }[];
+  duplicates: { row: number; text: string }[];
+  imported: number;
+}

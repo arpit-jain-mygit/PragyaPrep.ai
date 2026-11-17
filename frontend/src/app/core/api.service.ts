@@ -21,7 +21,9 @@ import {
   Member,
   MyCourse,
   Paper,
+  Picture,
   Question,
+  QuestionImport,
   QuestionInput,
   Registration,
   RegistrationEdit,
@@ -190,8 +192,32 @@ export class ApiService {
     return this.patch(`/api/admin/questions/${encodeURIComponent(id)}`, body);
   }
 
+  startQuestionPicture(body: { filename: string; size: number }): Promise<{ id: string; upload: UploadForm }> {
+    return this.post('/api/admin/question-images', body);
+  }
+
+  finishQuestionPicture(id: string): Promise<Picture> {
+    return this.post(`/api/admin/question-images/${encodeURIComponent(id)}/complete`);
+  }
+
+  discardQuestionPicture(id: string): Promise<void> {
+    return this.delete(`/api/admin/question-images/${encodeURIComponent(id)}`);
+  }
+
   deleteQuestion(id: string): Promise<void> {
     return this.delete(`/api/admin/questions/${encodeURIComponent(id)}`);
+  }
+
+  /** The Excel template for uploading many questions. Returns the file, ready to save. */
+  questionTemplate(): Promise<Blob> {
+    return this.call(firstValueFrom(this.http.get(this.base + '/api/admin/questions/template', { responseType: 'blob' })));
+  }
+
+  /** Send a filled-in Excel file. Without confirm, the server only checks it and says what would happen. */
+  importQuestions(file: File, confirm: boolean): Promise<QuestionImport> {
+    const url = `${this.base}/api/admin/questions/import?confirm=${confirm}`;
+    const headers = { 'Content-Type': 'application/octet-stream' };
+    return this.call(firstValueFrom(this.http.post<QuestionImport>(url, file, { headers })));
   }
 
   // ---- Student ----

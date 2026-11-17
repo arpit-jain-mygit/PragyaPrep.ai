@@ -248,7 +248,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Sec
 
 ## 13. Testing approach
 
-**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 451 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 214 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
+**Chosen:** Pytest with `moto` to fake DynamoDB and S3 locally. The backend has 527 tests (tenant isolation, emailed codes, registration and review, courses, files and access, logos, platform admin) and the frontend has 249 (Vitest with jsdom). Each step is also tried in a real browser, and against dev with real S3, where the fakes can't show real behaviour. The test tables are in `PHASE1-STATUS.md`.
 
 **Alternatives considered:** DynamoDB Local in Docker, or testing only against real AWS.
 
@@ -873,6 +873,17 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 - **One format:** plain text, four options, one correct. Hindi and the other language papers work because the text is Unicode. Several correct answers, numerical answers, images and formulas can come later.
 - **Every option needs a reason.** This is the point of the bank: students will later learn from why each wrong option is wrong.
 - **Adding in a row (added the same day):** after **Save and add another** the form stays open with the paper, topic, difficulty and status kept and the question and options cleared, the list below filters to that paper and topic, and a counter shows how many were added. This is front-end only. The API is unchanged and the paper and topic are still sent with every question, so each question stays checked on its own.
+- **Excel upload (added the same day):** one `.xlsx` file, one row per question, columns Paper, Topic, Question, Option A to D, Why A to D, Correct, Difficulty, Status. The template has dropdowns and an instructions sheet, and lists every paper and its topics. The browser sends the file as the raw request body (no multipart library). The server checks every row with the same rules as the form, so nothing gets in that the form would refuse. It runs in two steps with the same file: a preview (`POST /api/admin/questions/import`), then the same call with `?confirm=true`. The server keeps nothing between the two steps. Rows with problems are never saved; good rows are. A question already in the bank (same paper, topic and wording, ignoring capitals and spaces) is skipped, so a file can safely be uploaded twice. Limits: 500 rows, 2 MB, `.xlsx` only, and the column headings must match the template (extra columns after them are ignored).
+- **Pictures (step Q3, added the same day):** a question can have one picture on the question and one on each of the four options (positions `question`, `A`, `B`, `C`, `D`). PNG or JPG only (SVG and GIF are left out: SVG can carry scripts), up to 1 MB each, the same rules as logos. The reasons stay text only.
+  - **Upload first, attach on save.** The browser asks for a signed form (`POST /api/admin/question-images`), sends the file straight to S3, and calls complete, where the server reads the first bytes and keeps only a real PNG or JPG. The question is then saved with the picture ids (`images: {position: id}`). Only a picture that is ready and not on another question can be attached. This order lets a picture be added before the question exists, so the "option needs text or a picture" rule can be checked in one go.
+  - **An option needs text or a picture.** Its reason is always required. Two picture-only options aren't called "the same".
+  - **Storage:** `<institute>/question-images/<id>.<ext>`, with a row per picture. The question keeps the id, the storage path and the type, so showing a list needs no extra lookups. The admin gets a one-hour signed link for each picture, never the storage path.
+  - **Clean-up:** replacing or removing a picture, or deleting the question, deletes the file and its row. If the form is cancelled, the browser asks the server to discard the pictures it had uploaded. A picture that was uploaded but never attached expires from the database after 24 hours.
+- **Pictures in the Excel upload (step Q4, added the same day):** the template gets five optional columns, Question image and Image A to D, each holding a picture's file name. The admin first chooses all the pictures at once (a picture step on the upload card); each goes straight to storage like a single picture in Q3, and the server remembers its file name. When the Excel file is read, each name is matched (ignoring capitals, spaces and folders) to the newest picture with that name that is uploaded, checked and not yet on a question, in this institute only.
+  - **Why this and not a ZIP or pictures pasted into cells:** a ZIP would hit the API's 6 MB request limit and needs a zip reader; pictures pasted into cells float, resize and lose their names. Choosing pictures first reuses the Q3 upload path and has no size ceiling beyond 1 MB each.
+  - **The preview checks pictures too:** a name that wasn't uploaded, and a picture named on two questions in the file (a picture can be on one question only), are problems in their own column. A question that is already in the bank is skipped before pictures are looked at, so uploading a file twice still does no harm.
+  - **Clean-up:** after a confirmed import the browser discards the pictures it staged that weren't used. Pictures that were used are on their questions. If the browser is closed first, unused pictures stay in storage until the database row expires after 24 hours, and then can no longer be named.
+- **Why Excel and not CSV:** Excel opens a CSV with the wrong encoding, which garbles Hindi and other scripts, commas and line breaks in question text break CSV, and an `.xlsx` template can have dropdowns. CSV can be added later without changing anything else.
 - **Rules:** question up to 2,000 characters, option up to 500, reason up to 1,000. The four options must differ. All mistakes are returned together, field by field, like the registration form.
 - **Storage:** one row per question under the institute's own key prefix (`T#<institute>#QUESTION#<id>`), listed newest first through the existing index. The admin's list is filtered in the code, which is fine for thousands of questions.
 - **Who:** institute admins only. A student, or another institute's admin, gets 403 or "not found".
@@ -881,8 +892,11 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 ### 27.2 Trade-offs
 
 - **The topic split is mine,** not the board's syllabus. A topic can be renamed later, but questions keep the old name, so a rename would need a small script.
+- **The dropdowns in the template depend on Excel's own features.** The server checks everything anyway, so a spreadsheet program that ignores the dropdowns still can't get a bad row in.
+- **Import is not all-or-nothing.** The good rows are saved and the bad ones are reported. This is on purpose: the admin fixes only the bad rows and uploads again.
 - **Filtering happens in memory.** Fine for now. A bank with tens of thousands of questions would need an index per paper.
-- **No bulk import, images or AI help yet.**
+- **A picture left behind** if the browser closes mid-form or mid-upload (no cancel call): the database row expires after 24 hours but the file stays in storage. It is small and private. A clean-up script can find files with no row if it ever matters.
+- **No pictures in the Excel upload yet, no pictures in reasons, no formulas, no AI help.**
 
 ### 27.3 Revisit when
 

@@ -1,7 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
-import { ApiError, Paper, Question } from '../core/models';
+import { ApiError, PICTURE_SLOTS, Paper, Picture, Question } from '../core/models';
+import { PicturePicker } from './picture-picker';
+import { QuestionUpload } from './question-upload';
 
 interface Draft {
   paper: string;
@@ -11,6 +13,8 @@ interface Draft {
   correct: number | null;
   difficulty: 'easy' | 'medium' | 'hard';
   status: 'draft' | 'published';
+  /** The picture in each position (question, A to D), or null. */
+  pictures: Record<string, Picture | null>;
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -24,6 +28,7 @@ function emptyDraft(): Draft {
     correct: null,
     difficulty: 'medium',
     status: 'draft',
+    pictures: { question: null, A: null, B: null, C: null, D: null },
   };
 }
 
@@ -36,13 +41,14 @@ function draftFrom(question: Question): Draft {
     correct: question.correct,
     difficulty: question.difficulty,
     status: question.status,
+    pictures: Object.fromEntries(PICTURE_SLOTS.map((slot) => [slot, question.images?.[slot] ?? null])),
   };
 }
 
 /** The institute's question bank: choose a paper and topic, write the question, its four options and why each is right or wrong. */
 @Component({
   selector: 'app-admin-questions',
-  imports: [FormsModule],
+  imports: [FormsModule, PicturePicker, QuestionUpload],
   template: `
     <h1>Question bank</h1>
     <p class="muted">Pick a paper and topic, write the question and its four options, mark the correct one, and explain why each option is right or wrong. Only published questions will be used in tests later.</p>
@@ -91,6 +97,7 @@ function draftFrom(question: Question): Draft {
           <textarea id="q-text" name="text" rows="3" [(ngModel)]="draft.text" (input)="clearError('text')" [attr.aria-invalid]="fieldErrors()['text'] ? 'true' : null"></textarea>
           @if (fieldErrors()['text']) { <div class="error-text">{{ fieldErrors()['text'] }}</div> }
         </div>
+        <app-picture-picker inputId="pic-question" label="Picture for the question (optional, PNG or JPG, up to 1 MB)" [picture]="draft.pictures['question']" (changed)="setPicture('question', $event)" />
 
         <h3>Options</h3>
         <p class="hint">Mark the correct option, and for every option say why it is correct or why it is wrong.</p>
@@ -100,7 +107,9 @@ function draftFrom(question: Question): Draft {
             <div class="field">
               <label [attr.for]="'q-opt-' + $index">Option {{ letters[$index] }} text</label>
               <input [id]="'q-opt-' + $index" [name]="'opt' + $index" type="text" [(ngModel)]="option.text" (input)="clearError('options')" />
+              <div class="hint">Leave the text empty if the option is only a picture.</div>
             </div>
+            <app-picture-picker [inputId]="'pic-' + letters[$index]" [label]="'Picture for option ' + letters[$index] + ' (optional)'" [picture]="draft.pictures[letters[$index]]" (changed)="setPicture(letters[$index], $event)" />
             <div class="field">
               <label [attr.for]="'q-why-' + $index">Why option {{ letters[$index] }} is correct or wrong</label>
               <textarea [id]="'q-why-' + $index" [name]="'why' + $index" rows="2" [(ngModel)]="option.why" (input)="clearError('options')"></textarea>
@@ -112,6 +121,7 @@ function draftFrom(question: Question): Draft {
           </fieldset>
         }
         @if (fieldErrors()['options']) { <div class="error-text">{{ fieldErrors()['options'] }}</div> }
+        @if (fieldErrors()['images']) { <div class="error-text">{{ fieldErrors()['images'] }}</div> }
         @if (fieldErrors()['correct']) { <div class="error-text">{{ fieldErrors()['correct'] }}</div> }
 
         <div class="grid-2" style="margin-top: 0.75rem">
@@ -143,6 +153,8 @@ function draftFrom(question: Question): Draft {
         </div>
       </div>
     }
+
+    <app-question-upload (imported)="uploaded($event)" />
 
     <div class="card">
       <h2>Questions</h2>
@@ -181,10 +193,16 @@ function draftFrom(question: Question): Draft {
               <span class="muted">{{ paperName(question.paper) }} · {{ question.topic }} · {{ question.difficulty }}</span>
             </div>
             <p><strong>{{ question.text }}</strong></p>
+            @if (question.images?.['question']; as picture) {
+              <img class="qimg" [src]="picture.url" alt="Picture for the question" />
+            }
             <ol class="options" type="A">
               @for (option of question.options; track $index) {
                 <li [class.correct]="$index === question.correct">
                   {{ option.text }}
+                  @if (question.images?.[letters[$index]]; as picture) {
+                    <div><img class="qimg" [src]="picture.url" [alt]="'Picture for option ' + letters[$index]" /></div>
+                  }
                   @if ($index === question.correct) { <span class="chip open">correct</span> }
                   <div class="hint">{{ option.why }}</div>
                 </li>
@@ -225,6 +243,8 @@ export class AdminQuestions implements OnInit {
   readonly addedCount = signal(0);
 
   draft: Draft = emptyDraft();
+  /** The pictures the question already had when it was opened for editing, by position. */
+  private original: Record<string, string> = {};
   filter = { paper: '', topic: '', status: '' };
 
   /** Papers grouped by section, for the dropdown. */
@@ -266,8 +286,43 @@ export class AdminQuestions implements OnInit {
     }
   }
 
+  /** Questions were imported from a file: say how many and show the fresh list. */
+  async uploaded(count: number): Promise<void> {
+    this.reset();
+    this.notice.set(`Imported ${count} ${count === 1 ? 'question' : 'questions'}.`);
+    this.filter = { paper: '', topic: '', status: '' };
+    await this.load();
+  }
+
   paperChanged(): void {
     if (!this.topicsOf(this.draft.paper).includes(this.draft.topic)) this.draft.topic = '';
+  }
+
+  /** A picture was chosen, replaced or taken off. A new picture that is replaced or taken off is thrown away at once. */
+  setPicture(slot: string, picture: Picture | null): void {
+    const before = this.draft.pictures[slot];
+    if (before && before.id !== this.original[slot] && before.id !== picture?.id) void this.api.discardQuestionPicture(before.id).catch(() => undefined);
+    this.draft.pictures = { ...this.draft.pictures, [slot]: picture };
+    this.clearError('images');
+  }
+
+  /** Pictures uploaded in a form that was never saved are removed from storage, so nothing is left behind. */
+  private dropUnsavedPictures(): void {
+    if (!this.form()) return;
+    for (const [slot, picture] of Object.entries(this.draft.pictures)) {
+      if (picture && picture.id !== this.original[slot]) void this.api.discardQuestionPicture(picture.id).catch(() => undefined);
+    }
+  }
+
+  /** Only what changed: a new picture's id, or null where a picture was taken off. */
+  private pictureChanges(): Record<string, string | null> {
+    const changes: Record<string, string | null> = {};
+    for (const slot of PICTURE_SLOTS) {
+      const now = this.draft.pictures[slot]?.id ?? null;
+      const before = this.original[slot] ?? null;
+      if (now !== before) changes[slot] = now;
+    }
+    return changes;
   }
 
   clearError(field: string): void {
@@ -277,21 +332,26 @@ export class AdminQuestions implements OnInit {
   }
 
   startAdd(): void {
+    this.dropUnsavedPictures();
     this.reset();
     this.draft = emptyDraft();
+    this.original = {};
     this.addedCount.set(0);
     this.editingId.set(null);
     this.form.set(true);
   }
 
   startEdit(question: Question): void {
+    this.dropUnsavedPictures();
     this.reset();
     this.draft = draftFrom(question);
+    this.original = Object.fromEntries(Object.entries(question.images ?? {}).map(([slot, picture]) => [slot, picture.id]));
     this.editingId.set(question.id);
     this.form.set(true);
   }
 
   cancel(): void {
+    this.dropUnsavedPictures();
     this.reset();
     this.form.set(false);
   }
@@ -307,7 +367,9 @@ export class AdminQuestions implements OnInit {
     if (this.saving()) return;
     this.saving.set(true);
     this.reset();
-    const body = { ...this.draft, correct: this.draft.correct as number };
+    const { pictures: _pictures, ...fields } = this.draft;
+    const images = this.pictureChanges();
+    const body = { ...fields, correct: this.draft.correct as number, ...(Object.keys(images).length ? { images } : {}) };
     const editing = this.editingId();
     try {
       if (editing) await this.api.updateQuestion(editing, body);

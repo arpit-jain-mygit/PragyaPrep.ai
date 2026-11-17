@@ -99,8 +99,10 @@ The login page shows these messages straight away. When an email isn't registere
 - The admin chooses a **paper** and a **topic** from a fixed list shared by all institutes: 37 CUET-style papers (13 languages, 23 domain papers such as Physics or Accountancy, and General Aptitude), each with its own topics.
 - A question has the question text, **four options**, the **correct option**, and a **reason for every option** saying why it is right or wrong. It also has a difficulty (easy, medium, hard) and a status (draft or published).
 - The admin chooses a paper and topic once and keeps adding questions for that combination: **Save and add another** keeps the paper, topic, difficulty and status, clears the rest and counts the questions added. **Save and close** ends the run.
+- **Pictures:** a question can have one picture (PNG or JPG, up to 1 MB), and each option can have one too. An option may be a picture alone, with its text left empty. Every option still needs its written reason. Pictures can be replaced or removed, and they are deleted from storage when the question is deleted. They can also come with an Excel upload (see below).
+- **Upload from Excel:** the admin downloads an `.xlsx` template (dropdowns for paper, topic, correct answer, difficulty and status), fills one row per question with the four options and a reason for each, and uploads it. A preview shows how many are ready, which rows have problems (by row and column) and which are already in the bank. Nothing is saved until the admin confirms. Up to 500 questions per file, `.xlsx` only. Imported questions are drafts unless the Status column says published. **Pictures in the upload:** the admin first chooses all the pictures at once, then types each picture's file name in the optional columns Question image and Image A to D. The preview checks that every named picture was uploaded and that a picture is used on one question only. Uploading the same file twice does no harm.
 - The admin can list questions, filter by paper, topic and status, edit and delete them.
-- Not yet: importing questions from a file, images or formulas, several correct answers, per-institute papers or topics.
+- Not yet: pictures in the reasons, formulas, several correct answers, per-institute papers or topics.
 
 ## Platform admin
 - Created only by a script, never from the screens.
