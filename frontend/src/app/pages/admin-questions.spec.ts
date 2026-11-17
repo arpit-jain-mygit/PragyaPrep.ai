@@ -40,7 +40,7 @@ function pick(fixture: Parameters<typeof type>[0], selector: string, value: stri
 }
 
 async function fillForm(fixture: Parameters<typeof type>[0]) {
-  pick(fixture, '#q-paper', 'physics');
+  pick(fixture, '#q-subject', 'physics');
   await settle(fixture);
   pick(fixture, '#q-topic', 'Magnetism');
   type(fixture, '#q-text', 'What is the SI unit of magnetic field?');
@@ -74,11 +74,11 @@ describe('Admin question bank page', () => {
     const { fixture } = await open();
     clickButton(fixture, 'Add a question');
     await settle(fixture);
-    const groups = all(fixture, '#q-paper optgroup').map((g) => g.getAttribute('label'));
+    const groups = all(fixture, '#q-subject optgroup').map((g) => g.getAttribute('label'));
     expect(groups).toEqual(['II: Domain', 'I: Language']);
     expect(el<HTMLSelectElement>(fixture, '#q-topic').disabled).toBe(true);
 
-    pick(fixture, '#q-paper', 'physics');
+    pick(fixture, '#q-subject', 'physics');
     await settle(fixture);
     const topics = all(fixture, '#q-topic option').map((o) => o.textContent?.trim());
     expect(topics).toEqual(['Choose a topic', 'Optics', 'Magnetism']);
@@ -113,12 +113,12 @@ describe('Admin question bank page', () => {
     await fillForm(fixture);
     clickButton(fixture, 'Save and close');
     http.expectOne(`${API}/api/admin/questions`).flush(
-      { detail: 'Please correct the marked fields.', errors: { options: 'Two options are the same.', topic: 'Choose a topic that belongs to this paper.' } },
+      { detail: 'Please correct the marked fields.', errors: { options: 'Two options are the same.', topic: 'Choose a topic that belongs to this subject.' } },
       { status: 422, statusText: 'Unprocessable' },
     );
     await settle(fixture);
     expect(text(fixture)).toContain('Two options are the same.');
-    expect(text(fixture)).toContain('Choose a topic that belongs to this paper.');
+    expect(text(fixture)).toContain('Choose a topic that belongs to this subject.');
     expect(el<HTMLTextAreaElement>(fixture, '#q-text').value).toContain('SI unit');
   });
 
@@ -168,7 +168,7 @@ describe('Admin question bank page', () => {
 
   it('filters by paper, then topic, and asks the server', async () => {
     const { fixture, http } = await open();
-    pick(fixture, '#f-paper', 'physics');
+    pick(fixture, '#f-subject', 'physics');
     await settle(fixture);
     http.expectOne(`${API}/api/admin/questions?paper=physics`).flush([Q1]);
     await settle(fixture);
@@ -211,7 +211,7 @@ describe('Admin question bank: adding several in a row', () => {
     await settle(fixture);
 
     expect(all(fixture, '#question-form').length).toBe(1);
-    expect(el<HTMLSelectElement>(fixture, '#q-paper').value).toBe('physics');
+    expect(el<HTMLSelectElement>(fixture, '#q-subject').value).toBe('physics');
     expect(el<HTMLSelectElement>(fixture, '#q-topic').value).toBe('Magnetism');
     expect(el<HTMLSelectElement>(fixture, '#q-difficulty').value).toBe('hard');
     expect(el<HTMLSelectElement>(fixture, '#q-status').value).toBe('published');
@@ -220,7 +220,7 @@ describe('Admin question bank: adding several in a row', () => {
     expect(el<HTMLInputElement>(fixture, '#q-correct-0').checked).toBe(false);
     expect(text(fixture)).toContain('Added question 1 in Physics · Magnetism. Add the next one.');
     expect(el(fixture, '#working-on').textContent).toContain('1 added so far');
-    expect(el<HTMLSelectElement>(fixture, '#f-paper').value).toBe('physics');
+    expect(el<HTMLSelectElement>(fixture, '#f-subject').value).toBe('physics');
     expect(el<HTMLSelectElement>(fixture, '#f-topic').value).toBe('Magnetism');
   });
 
@@ -445,7 +445,7 @@ describe('Admin question bank: finding questions with pictures', () => {
 
   it('combines the pictures filter with paper and topic', async () => {
     const { fixture, http } = await open();
-    pick(fixture, '#f-paper', 'physics');
+    pick(fixture, '#f-subject', 'physics');
     await settle(fixture);
     http.expectOne(`${API}/api/admin/questions?paper=physics`).flush([Q1]);
     await settle(fixture);
@@ -495,7 +495,7 @@ describe('Admin question bank: fill-in questions', () => {
   async function fillInForm(fixture: Parameters<typeof type>[0], kind: 'text' | 'number') {
     type(fixture, '#q-kind', 'fill_in');
     await settle(fixture);
-    type(fixture, '#q-paper', 'physics');
+    type(fixture, '#q-subject', 'physics');
     await settle(fixture);
     type(fixture, '#q-topic', 'Optics');
     type(fixture, '#q-text', 'Speed of light?');

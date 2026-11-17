@@ -103,12 +103,12 @@ def test_a_missing_question_is_refused_with_a_message_next_to_the_field(client, 
 def test_a_topic_from_another_paper_is_refused(client, admin):
     response = client.post(URL, json=question(topic="Ratios"), headers=admin)
     assert response.status_code == 422
-    assert response.json()["errors"] == {"topic": "Choose a topic that belongs to this paper."}
+    assert response.json()["errors"] == {"topic": "Choose a topic that belongs to this subject."}
 
 
 def test_an_unknown_paper_is_refused(client, admin):
     errors = client.post(URL, json=question(paper="magic"), headers=admin).json()["errors"]
-    assert errors["paper"] == "Choose a paper from the list."
+    assert errors["paper"] == "Choose a subject from the list."
 
 
 @pytest.mark.parametrize("count", [0, 2, 3, 5])

@@ -55,13 +55,13 @@ def clean(data: dict, picture_slots: frozenset | set = frozenset()) -> dict:
 
     paper = BY_ID.get(data.get("paper"))
     if paper is None:
-        errors["paper"] = "Choose a paper from the list."
+        errors["paper"] = "Choose a subject from the list."
     else:
         out["paper"] = paper["id"]
         if data.get("topic") in paper["topics"]:
             out["topic"] = data["topic"]
         else:
-            errors["topic"] = "Choose a topic that belongs to this paper."
+            errors["topic"] = "Choose a topic that belongs to this subject."
 
     attempt("text", lambda: _text(data.get("text"), "The question", 2000))
 

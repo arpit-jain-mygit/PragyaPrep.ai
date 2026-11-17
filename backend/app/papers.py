@@ -1,8 +1,8 @@
-"""The papers (subjects) and their topics that every institute's question bank uses.
+"""The subjects (called "papers" in the code) and their topics that every institute's question bank uses.
 
-This list is the same for all institutes and is not editable in Phase 1. It follows the CUET-style paper list
-(37 papers in three sections), plus six papers for management and law entrance exams (IPMAT, CAT, CLAT) in a fourth
-section. Each question belongs to one paper and one topic of that paper.
+This list is the same for all institutes and is not editable in Phase 1. It follows the CUET-style subject list
+(37 subjects in three sections), plus six subjects for management and law entrance exams (IPMAT, CAT, CLAT) in a fourth
+section. Each question belongs to one subject and one topic of that subject.
 """
 import re
 
@@ -81,7 +81,7 @@ _GENERAL_TOPICS = [
     "General knowledge", "Current affairs", "Mental ability", "Numerical ability", "Quantitative reasoning",
     "Logical reasoning"]
 
-# Papers for the management and law entrance exams. Topics follow the usual published sections.
+# Subjects for the management and law entrance exams. Topics follow the usual published sections.
 _ENTRANCE = [
     ("quantitative-ability", "Quantitative Ability", [
         "Arithmetic", "Algebra", "Geometry and mensuration", "Number system", "Modern mathematics",
@@ -116,8 +116,8 @@ PAPERS: list[dict] = (
 BY_ID = {paper["id"]: paper for paper in PAPERS}
 
 
-# The papers usually used by each course, found by a word in the course name (so "CAT 2027" matches CAT).
-# The admin can always change them. CUET uses the original 37 papers.
+# The subjects usually used by each course, found by a word in the course name (so "CAT 2027" matches CAT).
+# The admin can always change them. CUET uses the original 37 subjects.
 _ENTRANCE_IDS = {pid for pid, _, _ in _ENTRANCE}
 SUGGESTED = {
     "cuet": [paper["id"] for paper in PAPERS if paper["id"] not in _ENTRANCE_IDS],
@@ -128,7 +128,7 @@ SUGGESTED = {
 
 
 def suggested_for(course_name: str) -> list[str]:
-    """The usual papers for a course, from its name. Empty when the name isn't one we know."""
+    """The usual subjects for a course, from its name. Empty when the name isn't one we know."""
     words = set(re.findall(r"[a-z0-9]+", str(course_name).lower()))
     for key, ids in SUGGESTED.items():
         if key in words:

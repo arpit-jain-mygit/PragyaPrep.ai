@@ -203,14 +203,14 @@ describe('Admin courses page', () => {
     expect(text(fixture)).toContain("You don't have access to this.");
   });
 
-  describe('papers on a course', () => {
-    it('shows the papers of each course: names when there are few, a count when many, or none yet', async () => {
+  describe('subjects on a course', () => {
+    it('shows the subjects of each course: names when there are few, a count when many, or none yet', async () => {
       const many = { ...CAT, id: 'c3', name: 'CUET', papers: ['english', 'physics', 'quantitative-ability', 'logical-reasoning', 'english2'] };
       const { fixture } = await open([CAT, CLAT, many]);
       const rows = all(fixture, 'tbody tr').map((r) => r.textContent?.replace(/\s+/g, ' ').trim());
       expect(rows[0]).toContain('Quantitative Ability, Logical Reasoning');
-      expect(rows[1]).toContain('No papers yet');
-      expect(rows[2]).toContain('5 papers');
+      expect(rows[1]).toContain('No subjects yet');
+      expect(rows[2]).toContain('5 subjects');
     });
 
     it('ticks the course\'s papers when editing and sends the changed list', async () => {
@@ -229,7 +229,7 @@ describe('Admin courses page', () => {
       expect(request.request.body.papers).toEqual(['quantitative-ability', 'english']);
     });
 
-    it('groups the papers by section and has Select all and Clear', async () => {
+    it('groups the subjects by section and has Select all and Clear', async () => {
       const { fixture } = await open();
       clickButton(fixture, 'Edit');
       await settle(fixture);
@@ -245,7 +245,7 @@ describe('Admin courses page', () => {
       expect(editor.textContent).toContain('0 of 4 selected');
     });
 
-    it('ticks the usual papers when a known course name is typed, and sends them', async () => {
+    it('ticks the usual subjects when a known course name is typed, and sends them', async () => {
       const { fixture, http } = await open([]);
       type(fixture, '#new-name', 'CAT 2027');
         el<HTMLInputElement>(fixture, '#new-name').dispatchEvent(new Event('change'));
@@ -259,7 +259,7 @@ describe('Admin courses page', () => {
       expect(http.expectOne(`${API}/api/admin/courses`).request.body.papers).toEqual(['quantitative-ability', 'logical-reasoning']);
     });
 
-    it('does not override papers the admin has already ticked', async () => {
+    it('does not override subjects the admin has already ticked', async () => {
       const { fixture, http } = await open([]);
       el<HTMLInputElement>(fixture, '#new-papers-english').click();
       await settle(fixture);

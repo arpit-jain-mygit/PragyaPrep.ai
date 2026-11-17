@@ -31,7 +31,7 @@ def _errors(error: questions.QuestionErrors):
 
 @router.get("/api/admin/papers", response_model=list[PaperOut], dependencies=[Depends(require_roles(TENANT_ADMIN))])
 def papers():
-    """The papers and topics a question can belong to. The same for every institute."""
+    """The subjects and topics a question can belong to. The same for every institute."""
     return PAPERS
 
 

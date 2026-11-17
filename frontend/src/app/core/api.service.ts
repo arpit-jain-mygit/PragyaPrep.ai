@@ -137,7 +137,7 @@ export class ApiService {
     return this.post('/api/admin/courses', body);
   }
 
-  /** The usual papers for a course name (CUET, IPMAT, CAT, CLAT), to tick in the form. */
+  /** The usual subjects for a course name (CUET, IPMAT, CAT, CLAT), to tick in the form. */
   async suggestedPapers(name: string): Promise<string[]> {
     const reply = await this.get<{ papers: string[] }>(`/api/admin/course-papers/suggested?name=${encodeURIComponent(name)}`);
     return reply.papers;

@@ -229,7 +229,7 @@ COLS = qi.COLUMNS + qi.OPTIONAL_COLUMNS
 
 def fill_row(**overrides) -> dict:
     row = {
-        "Paper": "Geography / Geology", "Topic": "Map work", "Question": "What is the capital of Maharashtra?",
+        "Subject": "Geography / Geology", "Topic": "Map work", "Question": "What is the capital of Maharashtra?",
         "Type": "fill_in", "Answer": "Mumbai|Bombay", "Answer type": "text", "Explanation": "Mumbai is the capital.",
         "Difficulty": "easy", "Status": "published",
     }

@@ -36,7 +36,7 @@ function accessFrom(draft: Draft): Access {
   return { type: 'unlimited' };
 }
 
-/** The institute's courses: what appears in the registration dropdown, with each one's access length and papers. */
+/** The institute's courses: what appears in the registration dropdown, with each one's access length and subjects. */
 @Component({
   selector: 'app-admin-courses',
   imports: [FormsModule, RouterLink, PaperChecklist],
@@ -53,7 +53,7 @@ function accessFrom(draft: Draft): Access {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Course</th><th>Access</th><th>Papers</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
+            <tr><th>Course</th><th>Access</th><th>Subjects</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             @for (course of courses(); track course.id) {
@@ -148,7 +148,7 @@ function accessFrom(draft: Draft): Access {
             }
           </div>
           <app-paper-checklist [papers]="papers()" idPrefix="new-papers" [(selected)]="newCourse.papers" />
-          <p class="hint">Typing a known course name (CUET, IPMAT, CAT or CLAT) ticks its usual papers. Change them as you like.</p>
+          <p class="hint">Typing a known course name (CUET, IPMAT, CAT or CLAT) ticks its usual subjects. Change them as you like.</p>
           <button class="btn" type="submit" [disabled]="saving() || !newCourse.name.trim()">Add course</button>
         </form>
       </div>
@@ -188,22 +188,22 @@ export class AdminCourses implements OnInit {
     }
   }
 
-  /** What the Papers column shows: the names when there are only a few, otherwise the count. */
+  /** What the Subjects column shows: the names when there are only a few, otherwise the count. */
   papersShown(course: AdminCourse): string {
     const ids = course.papers ?? [];
-    if (!ids.length) return 'No papers yet';
-    if (ids.length > 4) return `${ids.length} papers`;
+    if (!ids.length) return 'No subjects yet';
+    if (ids.length > 4) return `${ids.length} subjects`;
     return ids.map((id) => this.papers().find((paper) => paper.id === id)?.name ?? id).join(', ');
   }
 
-  /** When a course name is typed, tick the usual papers for it, unless the admin has already ticked some. */
+  /** When a course name is typed, tick the usual subjects for it, unless the admin has already ticked some. */
   async suggest(): Promise<void> {
     if (this.newCourse.papers.length) return;
     try {
       const ids = await this.api.suggestedPapers(this.newCourse.name);
       if (!this.newCourse.papers.length) this.newCourse.papers = ids;
     } catch {
-      // A missing suggestion is not a problem: the admin can tick papers by hand.
+      // A missing suggestion is not a problem: the admin can tick subjects by hand.
     }
   }
 

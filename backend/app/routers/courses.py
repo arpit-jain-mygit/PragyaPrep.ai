@@ -26,7 +26,7 @@ def all_courses(scoped: TenantRepo = Depends(get_tenant_repo)):
 
 @router.get("/api/admin/course-papers/suggested", dependencies=[Depends(require_roles(TENANT_ADMIN))])
 def suggested_papers(name: str = ""):
-    """The usual papers for a course name (CUET, IPMAT, CAT, CLAT), to tick in the form before saving."""
+    """The usual subjects for a course name (CUET, IPMAT, CAT, CLAT), to tick in the form before saving."""
     return {"papers": paper_list.suggested_for(name)}
 
 

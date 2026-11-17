@@ -19,7 +19,7 @@ MAX_ROWS = 500
 MAX_BYTES = 2 * 1024 * 1024
 SHEET = "Questions"
 COLUMNS = [
-    "Paper", "Topic", "Question",
+    "Subject", "Topic", "Question",
     "Option A", "Option B", "Option C", "Option D",
     "Why A", "Why B", "Why C", "Why D",
     "Correct", "Difficulty", "Status",
@@ -39,7 +39,7 @@ XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def build_template() -> bytes:
-    """The blank workbook the admin fills in: a Questions sheet with dropdowns, an Instructions sheet, and the paper list."""
+    """The blank workbook the admin fills in: a Questions sheet with dropdowns, an Instructions sheet, and the subject list."""
     book = Workbook()
     sheet = book.active
     sheet.title = SHEET
@@ -49,7 +49,7 @@ def build_template() -> bytes:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="2563EB")
         cell.alignment = Alignment(vertical="center", wrap_text=True)
-        width = 42 if name in ("Question", "Why A", "Why B", "Why C", "Why D", "Explanation") else 22 if name.startswith("Option") or name in ("Paper", "Topic", PASSAGE_COLUMN) or name in PICTURE_COLUMNS.values() else 13
+        width = 42 if name in ("Question", "Why A", "Why B", "Why C", "Why D", "Explanation") else 22 if name.startswith("Option") or name in ("Subject", "Topic", PASSAGE_COLUMN) or name in PICTURE_COLUMNS.values() else 13
         sheet.column_dimensions[get_column_letter(index)].width = width
     sheet.freeze_panes = "A2"
 
@@ -64,8 +64,8 @@ def build_template() -> bytes:
     passages.column_dimensions["B"].width = 110
     passages.freeze_panes = "A2"
 
-    # The list of papers and their topics, one paper per column, on its own sheet. Dropdowns read from it.
-    lists = book.create_sheet("Papers and topics")
+    # The list of subjects and their topics, one subject per column, on its own sheet. Dropdowns read from it.
+    lists = book.create_sheet("Subjects and topics")
     for column, paper in enumerate(PAPERS, start=1):
         lists.cell(row=1, column=column, value=paper["name"]).font = Font(bold=True)
         lists.column_dimensions[get_column_letter(column)].width = 30
@@ -79,14 +79,14 @@ def build_template() -> bytes:
         check.add(f"{column}2:{column}{rows}")
         sheet.add_data_validation(check)
 
-    dropdown(f"='Papers and topics'!$A$1:${last}$1", "A", "Choose a paper from the list.")
-    # Topic: the topics listed under whichever paper is chosen in column A of the same row.
-    match = f"MATCH($A2,'Papers and topics'!$A$1:${last}$1,0)-1"
+    dropdown(f"='Subjects and topics'!$A$1:${last}$1", "A", "Choose a subject from the list.")
+    # Topic: the topics listed under whichever subject is chosen in column A of the same row.
+    match = f"MATCH($A2,'Subjects and topics'!$A$1:${last}$1,0)-1"
     topics = (
-        f"=OFFSET('Papers and topics'!$A$2,0,{match},"
-        f"COUNTA(OFFSET('Papers and topics'!$A$2,0,{match},60,1)),1)"
+        f"=OFFSET('Subjects and topics'!$A$2,0,{match},"
+        f"COUNTA(OFFSET('Subjects and topics'!$A$2,0,{match},60,1)),1)"
     )
-    dropdown(topics, "B", "Choose a topic that belongs to the paper in column A.")
+    dropdown(topics, "B", "Choose a topic that belongs to the subject in column A.")
     dropdown('"A,B,C,D"', "L", "Type A, B, C or D.")
     dropdown('"easy,medium,hard"', "M", "Choose easy, medium or hard.")
     dropdown('"draft,published"', "N", "Choose draft or published.")
@@ -107,18 +107,18 @@ def build_template() -> bytes:
     lines = [
         ("How to add many questions at once", True),
         ("1. Fill in the Questions sheet, one question per row. Don't change the column headings, and don't rename the sheet.", False),
-        ("2. Paper and Topic: choose from the dropdowns. A topic must belong to its paper (see the sheet 'Papers and topics').", False),
+        ("2. Subject and Topic: choose from the dropdowns. A topic must belong to its subject (see the sheet 'Subjects and topics').", False),
         ("3. Give four different options (A to D) and a reason for every option: why it is correct, or why it is wrong.", False),
         ("4. Correct: type A, B, C or D.", False),
         ("5. Difficulty: easy, medium or hard (blank means medium). Status: draft or published (blank means draft).", False),
         ("6. Up to 500 questions per file. Save as .xlsx and upload it on the Question bank page. You will see a preview first, and nothing is saved until you confirm.", False),
-        ("7. A question that is already in the bank (same paper, topic and wording) is skipped, so uploading a file twice does no harm.", False),
+        ("7. A question that is already in the bank (same subject, topic and wording) is skipped, so uploading a file twice does no harm.", False),
         ("8. Pictures (optional): first choose your PNG or JPG pictures (up to 1 MB each) in the picture step on the upload card. Then type each picture's file name, for example circuit1.png, in 'Question image' or 'Image A' to 'Image D'. A picture can be on one question only. An option that is only a picture may leave its option text empty, but still needs its reason.", False),
         ("9. Fill-in questions (one box the student types the answer into): set Type to fill_in, leave the four options, their reasons and Correct empty, and fill in Answer, Answer type and Explanation. Answer type 'text': type the answer, and add other accepted spellings after a | sign, for example Mumbai|Bombay (capitals and extra spaces don't matter). Answer type 'number': type the number; the optional Tolerance says how far off a student's number may be, for example 0.01. Leave Type empty for multiple choice. A fill-in question can have a Question image but no option pictures.", False),
         ("10. Reading passages (optional): put each passage once on the Passages sheet, with a Title and its Text (up to 5,000 characters). Then type the same Title in the 'Passage' column of every question about it. All those questions share the passage, so a typo is fixed in one place. A passage already saved in your bank can be named by its title without repeating it here. If a title exists with different text, that row is refused so nothing is overwritten.", False),
         ("", False),
         ("Example row", True),
-        ("Paper: Physics | Topic: Optics | Question: Which colour bends the most in a prism? | Option A: Red | Option B: Violet | Option C: Green | Option D: Yellow | "
+        ("Subject: Physics | Topic: Optics | Question: Which colour bends the most in a prism? | Option A: Red | Option B: Violet | Option C: Green | Option D: Yellow | "
          "Why A: Red has the longest wavelength, so it bends the least. | Why B: Violet has the shortest wavelength, so it bends the most. | "
          "Why C: Green bends more than red but less than violet. | Why D: Yellow sits in the middle of the spectrum. | Correct: B | Difficulty: easy | Status: draft", False),
     ]
@@ -161,6 +161,8 @@ def _rows(content: bytes) -> tuple[list[tuple[int, dict]], dict[str, dict]]:
 
     rows = book[SHEET].iter_rows(values_only=True)
     header = [_cell(value) for value in next(rows, ())]
+    if header[:1] == ["Paper"]:
+        header[0] = "Subject"  # files made from the older template called this column Paper
     if header[: len(COLUMNS)] != COLUMNS:
         raise ValidationError("The column headings have changed. Download a fresh template and copy your questions into it.")
 
@@ -208,9 +210,9 @@ def _to_question(row: dict) -> tuple[dict, dict[str, str]]:
     for paper in PAPERS:
         papers[paper["name"].lower()] = paper["id"]
         papers[paper["id"]] = paper["id"]
-    paper_id = _pick(row["Paper"], papers)
+    paper_id = _pick(row["Subject"], papers)
     if paper_id is None:
-        problems["Paper"] = "Choose a paper from the list." if row["Paper"] else "Paper is required."
+        problems["Subject"] = "Choose a subject from the list." if row["Subject"] else "Subject is required."
     else:
         data["paper"] = paper_id
         topics = {topic.lower(): topic for topic in BY_ID[paper_id]["topics"]}
@@ -263,6 +265,8 @@ def _column_for(field: str, message: str) -> str:
         if "text or a number" in lowered:
             return "Answer type"
         return "Answer"
+    if field == "paper":
+        return "Subject"
     if field == "passage":
         return "Passage"
     if field == "difficulty":
@@ -325,7 +329,7 @@ def read(content: bytes, existing: list[dict], find_picture=lambda name: None, s
         named = {slot: _picture_name(row[column]) for slot, column in PICTURE_COLUMNS.items() if row[column]}
         try:
             cleaned = questions.clean(
-                {**data, **({"paper": None} if "Paper" in bad else {}), **({"topic": None} if "Topic" in bad else {})},
+                {**data, **({"paper": None} if "Subject" in bad else {}), **({"topic": None} if "Topic" in bad else {})},
                 set(named),
             )
         except questions.QuestionErrors as error:

@@ -25,7 +25,7 @@ def admin(school, sign_in):
 
 def good_row(**overrides) -> dict:
     row = {
-        "Paper": "Physics", "Topic": "Optics", "Question": "Which colour bends the most?",
+        "Subject": "Physics", "Topic": "Optics", "Question": "Which colour bends the most?",
         "Option A": "Red", "Option B": "Violet", "Option C": "Green", "Option D": "Yellow",
         "Why A": "Longest wavelength.", "Why B": "Shortest wavelength.", "Why C": "In between.", "Why D": "Also in between.",
         "Correct": "B", "Difficulty": "easy", "Status": "published",
@@ -59,7 +59,7 @@ def test_the_template_has_the_columns_dropdowns_and_instructions(client, admin):
     book = load_workbook(BytesIO(response.content))
     assert book.sheetnames[0] == "Instructions"
     assert [cell.value for cell in book["Questions"][1]] == qi.COLUMNS + qi.OPTIONAL_COLUMNS
-    assert len(book["Papers and topics"][1]) == 43
+    assert len(book["Subjects and topics"][1]) == 43
     assert len(book["Questions"].data_validations.dataValidation) == 8
 
 
@@ -103,14 +103,14 @@ def test_difficulty_and_status_default_when_blank(client, admin):
 
 
 def test_paper_topic_and_letters_are_matched_ignoring_capitals_and_spaces(client, admin):
-    row = good_row(Paper="  physics ", Topic="OPTICS", Correct=" b ", Difficulty="EASY")
+    row = good_row(Subject="  physics ", Topic="OPTICS", Correct=" b ", Difficulty="EASY")
     assert post(client, admin, workbook([row]), confirm=True).json()["imported"] == 1
 
 
 def test_every_problem_names_its_row_and_column(client, admin):
     rows = [
         good_row(),
-        good_row(Paper="Magic"),
+        good_row(Subject="Magic"),
         good_row(Topic="Ratios", Question="Q3"),
         good_row(Question="", **{"Why C": ""}),
         good_row(Correct="E", Question="Q5"),
@@ -120,7 +120,7 @@ def test_every_problem_names_its_row_and_column(client, admin):
     result = post(client, admin, workbook(rows)).json()
     by_row = {p["row"]: p["errors"] for p in result["problems"]}
     assert [r["row"] for r in result["ready"]] == [2]
-    assert by_row[3] == {"Paper": "Choose a paper from the list."}
+    assert by_row[3] == {"Subject": "Choose a subject from the list."}
     assert by_row[4] == {"Topic": "Not a topic of Physics."}
     assert set(by_row[5]) == {"Question", "Why C"}
     assert by_row[6] == {"Correct": "Choose which option is correct."}
@@ -129,13 +129,13 @@ def test_every_problem_names_its_row_and_column(client, admin):
 
 
 def test_blank_papers_and_topics_are_asked_for(client, admin):
-    by_row = {p["row"]: p["errors"] for p in post(client, admin, workbook([good_row(Paper=""), good_row(Topic="", Question="Q2")])).json()["problems"]}
-    assert by_row[2] == {"Paper": "Paper is required."}
+    by_row = {p["row"]: p["errors"] for p in post(client, admin, workbook([good_row(Subject=""), good_row(Topic="", Question="Q2")])).json()["problems"]}
+    assert by_row[2] == {"Subject": "Subject is required."}
     assert by_row[3] == {"Topic": "Topic is required."}
 
 
 def test_confirming_saves_the_good_rows_and_skips_the_bad_ones(client, admin):
-    rows = [good_row(), good_row(Paper="Magic", Question="Bad"), good_row(Question="Fine too")]
+    rows = [good_row(), good_row(Subject="Magic", Question="Bad"), good_row(Question="Fine too")]
     result = post(client, admin, workbook(rows), confirm=True).json()
     assert result["imported"] == 2 and len(result["problems"]) == 1
     assert sorted(q["text"] for q in client.get(URL, headers=admin).json()) == ["Fine too", "Which colour bends the most?"]
@@ -160,12 +160,12 @@ def test_the_same_wording_in_another_topic_is_not_a_duplicate(client, admin):
 
 
 def test_blank_rows_are_ignored_and_numbers_stay_with_the_sheet(client, admin):
-    result = post(client, admin, workbook([good_row(), {}, good_row(Paper="Magic")])).json()
+    result = post(client, admin, workbook([good_row(), {}, good_row(Subject="Magic")])).json()
     assert [r["row"] for r in result["ready"]] == [2] and result["problems"][0]["row"] == 4
 
 
 def test_hindi_text_and_numbers_in_cells_survive(client, admin):
-    row = good_row(Paper="Hindi", Topic="Grammar", Question="सही वर्तनी चुनिए।", **{"Option A": 1, "Option B": 2.0, "Option C": 3, "Option D": 4})
+    row = good_row(Subject="Hindi", Topic="Grammar", Question="सही वर्तनी चुनिए।", **{"Option A": 1, "Option B": 2.0, "Option C": 3, "Option D": 4})
     assert post(client, admin, workbook([row]), confirm=True).json()["imported"] == 1
     saved = client.get(URL, headers=admin).json()[0]
     assert saved["text"] == "सही वर्तनी चुनिए।" and [o["text"] for o in saved["options"]] == ["1", "2", "3", "4"]
@@ -190,7 +190,7 @@ def test_a_workbook_without_the_questions_sheet_is_refused(client, admin):
 
 
 def test_changed_column_headings_are_refused(client, admin):
-    columns = ["Subject"] + qi.COLUMNS[1:]
+    columns = ["Wrong heading"] + qi.COLUMNS[1:]
     response = post(client, admin, workbook([], columns=columns))
     assert response.status_code == 422 and "column headings" in response.json()["detail"]
 
@@ -346,3 +346,21 @@ def test_a_sheet_without_the_picture_columns_still_works(client, admin):
 def test_a_blank_picture_cell_means_no_picture(client, admin):
     assert post(client, admin, pic_book([good_row(**{"Question image": None, "Image A": ""})]), confirm=True).json()["imported"] == 1
     assert client.get(URL, headers=admin).json()[0]["images"] == {}
+
+
+# ---- Files made before "Paper" was renamed "Subject" ----
+
+def test_a_file_with_the_old_paper_heading_still_imports(client, admin):
+    old = ["Paper"] + qi.COLUMNS[1:]
+    rows = [{**good_row(), "Paper": "Physics"}]
+    content = workbook(rows, columns=old)
+    result = post(client, admin, content, confirm=True).json()
+    assert result["imported"] == 1 and result["problems"] == []
+
+
+def test_the_template_calls_the_column_and_sheet_subject(client, admin):
+    book = load_workbook(BytesIO(client.get(f"{URL}/template", headers=admin).content))
+    assert book["Questions"]["A1"].value == "Subject"
+    assert "Subjects and topics" in book.sheetnames and "Papers and topics" not in book.sheetnames
+    guide = "".join(str(c.value) for row in book["Instructions"].iter_rows() for c in row)
+    assert "Subject and Topic" in guide and "Paper" not in guide

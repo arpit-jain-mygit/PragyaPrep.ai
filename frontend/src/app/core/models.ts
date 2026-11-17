@@ -24,7 +24,7 @@ export type Access =
   | { type: 'until_date'; until: string };
 
 export interface AdminCourse extends Course {
-  /** The papers (subjects) this course covers, as ids from the fixed paper list. */
+  /** The subjects this course covers, as ids from the fixed subject list. */
   papers: string[];
   access: Access;
   active: boolean;

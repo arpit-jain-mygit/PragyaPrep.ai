@@ -87,7 +87,7 @@ def test_bad_papers_are_refused(client, admin, bad):
     made = add(client, admin, "CAT")
     assert client.post(COURSES, json={"name": "New", "fee": 1, "papers": bad}, headers=admin).status_code == 422
     response = client.patch(f"{COURSES}/{made['id']}", json={"papers": bad}, headers=admin)
-    assert response.status_code == 422 and "papers" in response.json()["detail"].lower()
+    assert response.status_code == 422 and "subjects" in response.json()["detail"].lower()
     assert client.get(COURSES, headers=admin).json()[0]["papers"] == paper_list.suggested_for("CAT")
 
 

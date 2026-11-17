@@ -55,18 +55,18 @@ def clean_access(access: dict | None) -> dict:
 
 
 def clean_papers(raw) -> list[str]:
-    """The papers (subjects) a course covers: ids from the fixed paper list, each once, in the list's own order."""
+    """The subjects a course covers: ids from the fixed subject list, each once, in the list's own order."""
     if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
-        raise ValidationError("Choose the papers from the list.")
+        raise ValidationError("Choose the subjects from the list.")
     unknown = [item for item in raw if item not in paper_list.BY_ID]
     if unknown:
-        raise ValidationError("Choose the papers from the list.")
+        raise ValidationError("Choose the subjects from the list.")
     chosen = set(raw)
     return [paper["id"] for paper in paper_list.PAPERS if paper["id"] in chosen]
 
 
 def create_course(scoped: TenantRepo, name: str, fee: int = 0, access: dict | None = None, papers=None) -> dict:
-    """papers: the ids the admin chose. Left out (None), the usual papers for the course name are used, if we know it."""
+    """papers: the subject ids the admin chose. Left out (None), the usual subjects for the course name are used, if we know it."""
     course = {
         "id": uuid4().hex,
         "name": clean_name(name),

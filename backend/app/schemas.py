@@ -67,7 +67,7 @@ class CourseIn(BaseModel):
     # Not used in Phase 1 (payments are Phase 2). The Courses page no longer sets it; it defaults to 0.
     fee: int = 0
     access: AccessIn = AccessIn()
-    # Paper ids. Left out, the usual papers for the course name are used (CUET, IPMAT, CAT, CLAT).
+    # Subject ids. Left out, the usual subjects for the course name are used (CUET, IPMAT, CAT, CLAT).
     papers: Any = None
 
 

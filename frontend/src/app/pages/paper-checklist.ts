@@ -1,13 +1,13 @@
 import { Component, computed, input, model } from '@angular/core';
 import { Paper } from '../core/models';
 
-/** A tick list of papers (subjects), grouped by section, with Select all and Clear. */
+/** A tick list of subjects, grouped by section, with Select all and Clear. */
 @Component({
   selector: 'app-paper-checklist',
   template: `
     <div class="paper-checklist">
       <div class="row">
-        <strong>Papers for this course</strong>
+        <strong>Subjects for this course</strong>
         <span class="muted" [attr.id]="idPrefix() + '-count'">{{ selected().length }} of {{ papers().length }} selected</span>
         <button class="btn secondary small" type="button" (click)="all()">Select all</button>
         <button class="btn secondary small" type="button" (click)="none()">Clear</button>

@@ -70,13 +70,13 @@ function draftFrom(question: Question): Draft {
   };
 }
 
-/** The institute's question bank: choose a paper and topic, write the question, its four options and why each is right or wrong. */
+/** The institute's question bank: choose a subject and topic, write the question, its four options and why each is right or wrong. */
 @Component({
   selector: 'app-admin-questions',
   imports: [FormsModule, PicturePicker, QuestionUpload, AdminPassages],
   template: `
     <h1>Question bank</h1>
-    <p class="muted">Pick a paper and topic, write the question and its four options, mark the correct one, and explain why each option is right or wrong. Only published questions will be used in tests later.</p>
+    <p class="muted">Pick a subject and topic, write the question and its four options, mark the correct one, and explain why each option is right or wrong. Only published questions will be used in tests later.</p>
 
     @if (notice(); as text) { <div class="alert ok" role="status">{{ text }}</div> }
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
@@ -90,7 +90,7 @@ function draftFrom(question: Question): Draft {
         <h2>{{ editingId() ? 'Edit question' : 'Add a question' }}</h2>
         @if (!editingId() && draft.paper && draft.topic) {
           <p class="hint" id="working-on">
-            Adding to {{ paperName(draft.paper) }} · {{ draft.topic }}. After you save, the paper and topic stay selected for your next question.
+            Adding to {{ paperName(draft.paper) }} · {{ draft.topic }}. After you save, the subject and topic stay selected for your next question.
             @if (addedCount()) { <strong>{{ addedCount() }} added so far.</strong> }
           </p>
         }
@@ -103,9 +103,9 @@ function draftFrom(question: Question): Draft {
         </div>
         <div class="grid-2">
           <div class="field">
-            <label for="q-paper">Paper</label>
-            <select id="q-paper" name="paper" [(ngModel)]="draft.paper" (ngModelChange)="paperChanged(); clearError('paper')" [attr.aria-invalid]="fieldErrors()['paper'] ? 'true' : null">
-              <option value="">Choose a paper</option>
+            <label for="q-subject">Subject</label>
+            <select id="q-subject" name="paper" [(ngModel)]="draft.paper" (ngModelChange)="paperChanged(); clearError('paper')" [attr.aria-invalid]="fieldErrors()['paper'] ? 'true' : null">
+              <option value="">Choose a subject</option>
               @for (group of groups(); track group.section) {
                 <optgroup [label]="group.section">
                   @for (paper of group.papers; track paper.id) { <option [value]="paper.id">{{ paper.name }}</option> }
@@ -248,9 +248,9 @@ function draftFrom(question: Question): Draft {
       <h2>Questions</h2>
       <div class="grid-2">
         <div class="field">
-          <label for="f-paper">Paper</label>
-          <select id="f-paper" name="fpaper" [(ngModel)]="filter.paper" (ngModelChange)="filter.topic = ''; load()">
-            <option value="">All papers</option>
+          <label for="f-subject">Subject</label>
+          <select id="f-subject" name="fpaper" [(ngModel)]="filter.paper" (ngModelChange)="filter.topic = ''; load()">
+            <option value="">All subjects</option>
             @for (paper of papers(); track paper.id) { <option [value]="paper.id">{{ paper.name }}</option> }
           </select>
         </div>
@@ -431,7 +431,7 @@ export class AdminQuestions implements OnInit {
   private originalPassage = '';
   filter = { paper: '', topic: '', status: '', pictures: '', kind: '', passage: '' };
 
-  /** Papers grouped by section, for the dropdown. */
+  /** Subjects grouped by section, for the dropdown. */
   readonly groups = computed(() => {
     const sections = new Map<string, Paper[]>();
     for (const paper of this.papers()) sections.set(paper.section, [...(sections.get(paper.section) ?? []), paper]);
@@ -640,7 +640,7 @@ export class AdminQuestions implements OnInit {
     this.fieldErrors.set({});
   }
 
-  /** Save the question. With addAnother, the form stays open with the same paper, topic, difficulty and status. */
+  /** Save the question. With addAnother, the form stays open with the same subject, topic, difficulty and status. */
   async save(addAnother: boolean): Promise<void> {
     if (this.saving()) return;
     this.saving.set(true);
@@ -671,7 +671,7 @@ export class AdminQuestions implements OnInit {
         this.notice.set(`Added question ${total} in ${this.paperName(body.paper)} · ${body.topic}. Add the next one.`);
         this.draft = { ...emptyDraft(), kind: body.kind, answerType: d.answerType, paper: body.paper, topic: body.topic, difficulty: body.difficulty, status: body.status, passage: d.passage };
         this.originalPassage = '';
-        // Show the list for the same paper and topic, so the admin sees what is already there.
+        // Show the list for the same subject and topic, so the admin sees what is already there.
         this.filter = { ...this.filter, paper: body.paper, topic: body.topic };
         this.scrollToForm();
       } else {
