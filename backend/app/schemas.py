@@ -291,6 +291,8 @@ class QuestionIn(BaseModel):
     explanation: str | None = None
     # The reading passage this question belongs to (its id). An empty string removes it.
     passage: Any = None
+    # The passage's text, pasted on the question. Questions with the same text share one passage. Empty removes it.
+    passage_text: Any = None
 
 
 class PassageIn(BaseModel):
@@ -348,6 +350,8 @@ class QuestionOut(BaseModel):
     created_at: str = ""
     images: dict[str, QuestionPictureOut] = {}
     passage: str | None = None
+    # The text of the passage, so the screen can show it once above the questions that share it.
+    passage_text: str | None = None
     edited_by: str | None = None
     edited_at: str | None = None
 

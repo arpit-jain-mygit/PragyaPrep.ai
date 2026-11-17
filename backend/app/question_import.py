@@ -49,20 +49,9 @@ def build_template() -> bytes:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="2563EB")
         cell.alignment = Alignment(vertical="center", wrap_text=True)
-        width = 42 if name in ("Question", "Why A", "Why B", "Why C", "Why D", "Explanation") else 22 if name.startswith("Option") or name in ("Subject", "Topic", PASSAGE_COLUMN) or name in PICTURE_COLUMNS.values() else 13
+        width = 42 if name in ("Question", "Why A", "Why B", "Why C", "Why D", "Explanation") else 22 if name.startswith("Option") or name in ("Subject", "Topic") or name in PICTURE_COLUMNS.values() else 13
         sheet.column_dimensions[get_column_letter(index)].width = width
     sheet.freeze_panes = "A2"
-
-    # Reading passages: one row each. Questions point to a passage by its title in the Passage column.
-    passages = book.create_sheet(PASSAGE_SHEET)
-    passages.append(PASSAGE_HEADER)
-    for index in (1, 2):
-        cell = passages.cell(row=1, column=index)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="2563EB")
-    passages.column_dimensions["A"].width = 32
-    passages.column_dimensions["B"].width = 110
-    passages.freeze_panes = "A2"
 
     # The list of subjects and their topics, one subject per column, on its own sheet. Dropdowns read from it.
     lists = book.create_sheet("Subjects and topics")
@@ -93,14 +82,6 @@ def build_template() -> bytes:
     first = len(COLUMNS) + len(PICTURE_COLUMNS) + 1  # the Type column
     dropdown('"mcq,fill_in"', get_column_letter(first), "Choose mcq (multiple choice) or fill_in.")
     dropdown('"text,number"', get_column_letter(first + 2), "Choose text or number.")
-    # Passage: pick a title from the Passages sheet. A title already in the bank may be typed too, so it only warns.
-    passage_column = get_column_letter(len(COLUMNS) + len(OPTIONAL_COLUMNS))
-    pick = DataValidation(
-        type="list", formula1=f"='{PASSAGE_SHEET}'!$A$2:$A${MAX_PASSAGES + 1}", allow_blank=True,
-        showErrorMessage=True, errorStyle="warning", errorTitle="Passage", error="That title isn't on the Passages sheet. Keep it only if the passage is already in your bank.",
-    )
-    pick.add(f"{passage_column}2:{passage_column}{rows}")
-    sheet.add_data_validation(pick)
 
     guide = book.create_sheet("Instructions", 0)
     guide.column_dimensions["A"].width = 110
@@ -115,7 +96,7 @@ def build_template() -> bytes:
         ("7. A question that is already in the bank (same subject, topic and wording) is skipped, so uploading a file twice does no harm.", False),
         ("8. Pictures (optional): first choose your PNG or JPG pictures (up to 1 MB each) in the picture step on the upload card. Then type each picture's file name, for example circuit1.png, in 'Question image' or 'Image A' to 'Image D'. A picture can be on one question only. An option that is only a picture may leave its option text empty, but still needs its reason.", False),
         ("9. Fill-in questions (one box the student types the answer into): set Type to fill_in, leave the four options, their reasons and Correct empty, and fill in Answer, Answer type and Explanation. Answer type 'text': type the answer, and add other accepted spellings after a | sign, for example Mumbai|Bombay (capitals and extra spaces don't matter). Answer type 'number': type the number; the optional Tolerance says how far off a student's number may be, for example 0.01. Leave Type empty for multiple choice. A fill-in question can have a Question image but no option pictures.", False),
-        ("10. Reading passages (optional): put each passage once on the Passages sheet, with a Title and its Text (up to 5,000 characters). Then type the same Title in the 'Passage' column of every question about it. All those questions share the passage, so a typo is fixed in one place. A passage already saved in your bank can be named by its title without repeating it here. If a title exists with different text, that row is refused so nothing is overwritten.", False),
+        ("10. Reading passages (optional): paste the passage text (up to 5,000 characters) in the 'Passage' column of every question about it, repeating it on each row. Questions with the same text are shown together, with the passage once above them. Leave it empty for questions without a passage.", False),
         ("", False),
         ("Example row", True),
         ("Subject: Physics | Topic: Optics | Question: Which colour bends the most in a prism? | Option A: Red | Option B: Violet | Option C: Green | Option D: Yellow | "
@@ -180,6 +161,7 @@ def _rows(content: bytes) -> tuple[list[tuple[int, dict]], dict[str, dict]]:
     if len(found) > MAX_ROWS:
         raise ValidationError(f"The file has {len(found)} questions. Upload at most {MAX_ROWS} at a time.")
 
+    # An older file may still have a Passages sheet (Title, Text) and name passages by title. That still works.
     # The Passages sheet is optional. A repeated title keeps the first row; the second is reported when it is used.
     sheet_passages: dict[str, dict] = {}
     if PASSAGE_SHEET in book.sheetnames:
@@ -288,13 +270,19 @@ def _picture_name(value: str) -> str:
     return value.strip().replace("\\", "/").rsplit("/", 1)[-1].strip().lower()
 
 
-def _passage_for(title: str, sheet: dict[str, dict], bank: dict[str, dict]) -> tuple[dict | None, str | None]:
-    """Which passage a question row points to: ({"id": ...} for one already saved, or {"title", "text"} for a new one
-    from the Passages sheet), or a problem message."""
-    key = " ".join(title.lower().split())
-    in_file, saved = sheet.get(key), bank.get(key)
-    if in_file is None and saved is None:
-        return None, f"'{title}' isn't on the Passages sheet or in your bank."
+def _snippet(text: str) -> str:
+    flat = " ".join(text.split())
+    return flat if len(flat) <= 40 else flat[:40].rstrip() + "…"
+
+
+def _passage_for(value: str, sheet: dict[str, dict], bank_titles: dict[str, dict], bank_texts: dict[str, dict]) -> tuple[dict | None, str | None]:
+    """Which passage a question row points to, or a problem message.
+
+    The Passage cell holds the passage's text. For older files it may instead be the title of a passage on the
+    Passages sheet or already saved in the bank, and that still works. Returns {"id", "title"} for one already saved,
+    {"text", "title"} for text still to be saved, or {"title", "text", "via": "sheet"} for one from the Passages sheet."""
+    key = " ".join(value.lower().split())
+    in_file, saved = sheet.get(key), bank_titles.get(key)
     if in_file is not None:
         if in_file["repeated"]:
             return None, f"The Passages sheet has the title '{in_file['title']}' more than once."
@@ -306,8 +294,16 @@ def _passage_for(title: str, sheet: dict[str, dict], bank: dict[str, dict]) -> t
             if not passage_rules.same_text(saved["text"], in_file["text"]):
                 return None, f"A passage called '{saved['title']}' is already saved with different text. Change the title, or edit the saved one."
             return {"id": saved["id"], "title": saved["title"]}, None
-        return {"title": in_file["title"], "text": in_file["text"]}, None
-    return {"id": saved["id"], "title": saved["title"]}, None
+        return {"title": in_file["title"], "text": in_file["text"], "via": "sheet"}, None
+    if saved is not None:
+        return {"id": saved["id"], "title": saved["title"]}, None
+    problem = passage_rules.check_text(value)
+    if problem:
+        return None, problem
+    same = bank_texts.get(key)
+    if same is not None:
+        return {"id": same["id"], "title": same["title"]}, None
+    return {"text": value, "title": _snippet(value), "via": "text"}, None
 
 
 def read(content: bytes, existing: list[dict], find_picture=lambda name: None, saved_passages: list[dict] = ()) -> dict:
@@ -323,6 +319,7 @@ def read(content: bytes, existing: list[dict], find_picture=lambda name: None, s
     taken: dict[str, int] = {}  # picture id -> the row that uses it
     found, sheet_passages = _rows(content)
     bank = {" ".join(item["title"].lower().split()): item for item in saved_passages}
+    bank_texts = {" ".join(item["text"].lower().split()): item for item in saved_passages}
 
     for number, row in found:
         data, bad = _to_question(row)
@@ -364,7 +361,7 @@ def read(content: bytes, existing: list[dict], find_picture=lambda name: None, s
 
         passage = None
         if row[PASSAGE_COLUMN]:
-            passage, message = _passage_for(row[PASSAGE_COLUMN], sheet_passages, bank)
+            passage, message = _passage_for(row[PASSAGE_COLUMN], sheet_passages, bank, bank_texts)
             if message:
                 bad.setdefault(PASSAGE_COLUMN, message)
 

@@ -19,16 +19,14 @@ const Q1 = {
   correct: 1, difficulty: 'easy', status: 'published', created_at: '2027-01-01T00:00:00+00:00',
 };
 
-const STORY = { id: 'p1', title: 'Monsoon', text: 'The monsoon arrives in June.\n\nFarmers sow rice.', questions: 2 };
+const TEXT = 'The monsoon arrives in June.\n\nFarmers sow rice.';
 
-async function open(questions: object[] = [Q1], passages: object[] = []) {
+async function open(questions: object[] = [Q1]) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('tenant_admin'));
   const fixture = TestBed.createComponent(AdminQuestions);
   fixture.detectChanges();
   env.http.expectOne(`${API}/api/admin/papers`).flush(PAPERS);
-  await settle(fixture);
-  env.http.expectOne(`${API}/api/admin/passages`).flush(passages);
   await settle(fixture);
   env.http.expectOne(`${API}/api/admin/questions`).flush(questions);
   await settle(fixture);
@@ -805,82 +803,91 @@ describe('Admin question bank: fill-in questions', () => {
   });
 
   describe('reading passages', () => {
-    async function openPassages(fixture: Parameters<typeof clickButton>[0]) {
-      clickButton(fixture, 'Passages');
-      await settle(fixture);
-    }
-
-    const A = { ...Q1, id: 'a', text: 'First about the monsoon', passage: 'p1' };
+    const A = { ...Q1, id: 'a', text: 'First about the monsoon', passage: 'p1', passage_text: TEXT };
     const B = { ...Q1, id: 'b', text: 'Plain question' };
-    const C = { ...Q1, id: 'c', text: 'Second about the monsoon', passage: 'p1' };
+    const C = { ...Q1, id: 'c', text: 'Second about the monsoon', passage: 'p1', passage_text: TEXT };
 
     it('shows a shared passage once above its questions and keeps them together', async () => {
-      const { fixture } = await open([A, B, C], [STORY]);
-      const order = all(fixture, '.question').map((card) => card.getAttribute('data-question'));
-      expect(order).toEqual(['a', 'c', 'b']);
+      const { fixture } = await open([A, B, C]);
+      expect(all(fixture, '.question').map((card) => card.getAttribute('data-question'))).toEqual(['a', 'c', 'b']);
       expect(all(fixture, '[data-passage-head]').length).toBe(1);
-      expect(el(fixture, '[data-passage-head]').textContent).toContain('Reading passage: Monsoon');
       expect(el(fixture, '[data-passage-head]').textContent).toContain('Farmers sow rice.');
     });
 
-    it('lists the passages with how many questions use each', async () => {
-      const { fixture } = await open([A], [STORY]);
-      await openPassages(fixture);
-      const card = el(fixture, '[data-passage="p1"]').textContent;
-      expect(card).toContain('Monsoon');
-      expect(card).toContain('2 questions');
-    });
-
-    it('offers the passages in the form and sends the chosen one', async () => {
-      const { fixture, http } = await open([], [STORY]);
+    it('has a passage box in the form and sends the pasted text', async () => {
+      const { fixture, http } = await open([]);
       clickButton(fixture, 'Add question');
       await settle(fixture);
-      expect(all(fixture, '#q-passage option').map((o) => o.textContent?.trim())).toEqual(['No passage', 'Monsoon']);
+      expect(el(fixture, '#q-passage').tagName).toBe('TEXTAREA');
       await fillForm(fixture);
-      pick(fixture, '#q-passage', 'p1');
+      type(fixture, '#q-passage', TEXT);
       await settle(fixture);
-      expect(text(fixture)).toContain('Show the passage');
       clickButton(fixture, 'Save and close');
       const request = http.expectOne(`${API}/api/admin/questions`);
-      expect(request.request.body.passage).toBe('p1');
-      request.flush({ ...Q1, id: 'n', passage: 'p1' });
+      expect(request.request.body.passage_text).toBe(TEXT);
+      request.flush({ ...Q1, id: 'n', passage: 'p1', passage_text: TEXT });
       await settle(fixture);
       http.expectOne(`${API}/api/admin/questions`).flush([]);
     });
 
-    it('sends no passage field when none was chosen', async () => {
-      const { fixture, http } = await open([], [STORY]);
+    it('sends no passage field when the box is empty', async () => {
+      const { fixture, http } = await open([]);
       clickButton(fixture, 'Add question');
       await settle(fixture);
       await fillForm(fixture);
       clickButton(fixture, 'Save and close');
       const request = http.expectOne(`${API}/api/admin/questions`);
-      expect('passage' in request.request.body).toBe(false);
+      expect('passage_text' in request.request.body).toBe(false);
       request.flush({ ...Q1, id: 'n' });
       await settle(fixture);
       http.expectOne(`${API}/api/admin/questions`).flush([]);
     });
 
-    it('lets an edit take a question off its passage', async () => {
-      const { fixture, http } = await open([A], [STORY]);
-      Array.from(el(fixture, '[data-question="a"]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit')!.click();
+    it('keeps the passage filled after Save and add another, so the next question needs no pasting', async () => {
+      const { fixture, http } = await open([]);
+      clickButton(fixture, 'Add question');
       await settle(fixture);
-      expect(el<HTMLSelectElement>(fixture, '#q-passage').value).toBe('p1');
-      pick(fixture, '#q-passage', '');
+      await fillForm(fixture);
+      type(fixture, '#q-passage', TEXT);
       await settle(fixture);
-      clickButton(fixture, 'Save changes');
-      const request = http.expectOne(`${API}/api/admin/questions/a`);
-      expect(request.request.body.passage).toBe('');
-      request.flush({ ...A, passage: null });
+      clickButton(fixture, 'Save and add another');
+      http.expectOne(`${API}/api/admin/questions`).flush({ ...Q1, id: 'n', passage: 'p1', passage_text: TEXT });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([{ ...A, passage: null }]);
+      http.expectOne((r) => r.url.startsWith(`${API}/api/admin/questions`)).flush([]);
+      await settle(fixture);
+      expect(el<HTMLTextAreaElement>(fixture, '#q-passage').value).toBe(TEXT);
+      expect(el<HTMLTextAreaElement>(fixture, '#q-text').value).toBe('');
     });
 
-    it('filters by passage', async () => {
-      const { fixture, http } = await open([A, B], [STORY]);
-      pick(fixture, '#f-passage', 'p1');
+    it('fills the passage box when editing, and sends only a change (an empty box removes the passage)', async () => {
+      const { fixture, http } = await open([A]);
+      Array.from(el(fixture, '[data-question="a"]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit')!.click();
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions?passage=p1`).flush([A]);
+      expect(el<HTMLTextAreaElement>(fixture, '#q-passage').value).toBe(TEXT);
+      type(fixture, '#q-text', 'Reworded?');
+      clickButton(fixture, 'Save changes');
+      let request = http.expectOne(`${API}/api/admin/questions/a`);
+      expect('passage_text' in request.request.body).toBe(false); // the passage was not touched
+      request.flush(A);
+      await settle(fixture);
+      http.expectOne((r) => r.url.startsWith(`${API}/api/admin/questions`)).flush([A]);
+      await settle(fixture);
+
+      Array.from(el(fixture, '[data-question="a"]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit')!.click();
+      await settle(fixture);
+      type(fixture, '#q-passage', '');
+      await settle(fixture);
+      clickButton(fixture, 'Save changes');
+      request = http.expectOne(`${API}/api/admin/questions/a`);
+      expect(request.request.body.passage_text).toBe('');
+      request.flush({ ...A, passage: null, passage_text: null });
+    });
+
+    it('filters by having a passage or not', async () => {
+      const { fixture, http } = await open([A, B]);
+      pick(fixture, '#f-passage', 'any');
+      await settle(fixture);
+      http.expectOne(`${API}/api/admin/questions?passage=any`).flush([A]);
       await settle(fixture);
       expect(all(fixture, '.question').length).toBe(1);
       pick(fixture, '#f-passage', 'none');
@@ -888,98 +895,65 @@ describe('Admin question bank: fill-in questions', () => {
       http.expectOne(`${API}/api/admin/questions?passage=none`).flush([B]);
     });
 
-    it('adds a passage and refreshes the page', async () => {
-      const { fixture, http } = await open([], []);
-      await openPassages(fixture);
-      clickButton(fixture, 'Add passage');
+    it('edits the passage for the whole group from its header', async () => {
+      const { fixture, http } = await open([A, C]);
+      Array.from(el(fixture, '[data-passage-head]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit passage')!.click();
       await settle(fixture);
-      type(fixture, '#p-title', 'Monsoon');
-      type(fixture, '#p-text', 'Some text.');
+      expect(el<HTMLTextAreaElement>(fixture, '#passage-edit').value).toBe(TEXT);
+      type(fixture, '#passage-edit', 'Fixed text.');
       await settle(fixture);
-      el<HTMLButtonElement>(fixture, '#save-passage').click();
-      const request = http.expectOne(`${API}/api/admin/passages`);
-      expect(request.request.method).toBe('POST');
-      expect(request.request.body).toEqual({ title: 'Monsoon', text: 'Some text.' });
-      request.flush({ ...STORY, questions: 0 });
+      el<HTMLButtonElement>(fixture, '#save-passage-edit').click();
+      const request = http.expectOne(`${API}/api/admin/passages/p1`);
+      expect(request.request.method).toBe('PATCH');
+      expect(request.request.body).toEqual({ text: 'Fixed text.' });
+      request.flush({ id: 'p1', title: 't', text: 'Fixed text.', questions: 2 });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/passages`).flush([{ ...STORY, questions: 0 }]);
+      http.expectOne(`${API}/api/admin/questions`).flush([{ ...A, passage_text: 'Fixed text.' }, { ...C, passage_text: 'Fixed text.' }]);
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([]);
-      await settle(fixture);
-      expect(text(fixture)).toContain('Added the passage.');
-      expect(el(fixture, '[data-passage="p1"]').textContent).toContain('Monsoon');
+      expect(text(fixture)).toContain('Saved the passage.');
+      expect(el(fixture, '[data-passage-head]').textContent).toContain('Fixed text.');
+      expect(all(fixture, '#passage-edit').length).toBe(0);
     });
 
-    it('shows the problems next to the passage fields', async () => {
-      const { fixture, http } = await open([], []);
-      await openPassages(fixture);
-      clickButton(fixture, 'Add passage');
+    it('shows the server\'s message and stays in edit mode when the passage cannot be saved', async () => {
+      const { fixture, http } = await open([A]);
+      Array.from(el(fixture, '[data-passage-head]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit passage')!.click();
       await settle(fixture);
-      el<HTMLButtonElement>(fixture, '#save-passage').click();
-      http.expectOne(`${API}/api/admin/passages`).flush(
-        { detail: 'x', errors: { title: 'The title is required.', text: 'The passage text is required.' } },
+      type(fixture, '#passage-edit', '');
+      await settle(fixture);
+      el<HTMLButtonElement>(fixture, '#save-passage-edit').click();
+      http.expectOne(`${API}/api/admin/passages/p1`).flush(
+        { detail: 'Please correct the marked fields.', errors: { text: 'The passage text is required.' } },
         { status: 422, statusText: 'x' },
       );
       await settle(fixture);
-      expect(text(fixture)).toContain('The title is required.');
       expect(text(fixture)).toContain('The passage text is required.');
+      expect(all(fixture, '#passage-edit').length).toBe(1);
     });
 
-    it('edits a passage with its text filled in', async () => {
-      const { fixture, http } = await open([], [STORY]);
-      await openPassages(fixture);
-      const card = el(fixture, '[data-passage="p1"]');
-      Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit')!.click();
+    it('Cancel closes the passage editor without a request', async () => {
+      const { fixture, http } = await open([A]);
+      Array.from(el(fixture, '[data-passage-head]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Edit passage')!.click();
       await settle(fixture);
-      expect(el<HTMLTextAreaElement>(fixture, '#p-text').value).toContain('Farmers sow rice.');
-      type(fixture, '#p-title', 'Monsoon rains');
+      Array.from(el(fixture, '[data-passage-head]').querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Cancel passage edit')!.click();
       await settle(fixture);
-      el<HTMLButtonElement>(fixture, '#save-passage').click();
-      const request = http.expectOne(`${API}/api/admin/passages/p1`);
-      expect(request.request.method).toBe('PATCH');
-      expect(request.request.body.title).toBe('Monsoon rains');
-      request.flush(STORY);
-      await settle(fixture);
-      http.expectOne(`${API}/api/admin/passages`).flush([STORY]);
-      await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([]);
-    });
-
-    it('asks before deleting a passage and says why when it is in use', async () => {
-      const { fixture, http } = await open([A], [STORY]);
-      await openPassages(fixture);
-      const card = el(fixture, '[data-passage="p1"]');
-      const button = (name: string) => Array.from(card.querySelectorAll('button')).find((b) => b.textContent?.trim() === name)!;
-      button('Delete').click();
-      await settle(fixture);
+      expect(all(fixture, '#passage-edit').length).toBe(0);
       http.expectNone(`${API}/api/admin/passages/p1`);
-      button('Yes, delete').click();
-      const request = http.expectOne(`${API}/api/admin/passages/p1`);
-      expect(request.request.method).toBe('DELETE');
-      request.flush({ detail: '2 questions use this passage. Delete or move them first.' }, { status: 409, statusText: 'x' });
-      await settle(fixture);
-      expect(text(fixture)).toContain('2 questions use this passage.');
-      expect(el(fixture, '[data-passage="p1"]')).toBeTruthy();
     });
   });
 
   describe('tabs', () => {
-    it('has Questions, Passages and Upload tabs, starting on Questions', async () => {
+    it('has Questions and Upload tabs, starting on Questions', async () => {
       const { fixture } = await open();
       const tabs = all(fixture, '[role=tab]');
-      expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Questions', 'Passages', 'Upload']);
+      expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Questions', 'Upload']);
       expect(tabs[0].getAttribute('aria-selected')).toBe('true');
       expect(all(fixture, '[data-question]').length).toBe(1);
-      expect(all(fixture, '#passages-card').length).toBe(0);
       expect(all(fixture, '#question-upload').length).toBe(0);
     });
 
     it('shows only the chosen tab and goes back to Questions after an import', async () => {
       const { fixture, http } = await open();
-      clickButton(fixture, 'Passages');
-      await settle(fixture);
-      expect(all(fixture, '#passages-card').length).toBe(1);
-      expect(all(fixture, '[data-question]').length).toBe(0);
       clickButton(fixture, 'Upload');
       await settle(fixture);
       expect(all(fixture, '#question-upload').length).toBe(1);

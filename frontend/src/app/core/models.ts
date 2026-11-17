@@ -250,8 +250,9 @@ export interface Question {
   status: 'draft' | 'published';
   created_at: string;
   images: Record<string, Picture>;
-  /** The id of the reading passage this question belongs to. */
+  /** The id of the reading passage this question belongs to, and its text. Questions that share one are shown together. */
   passage?: string | null;
+  passage_text?: string | null;
   edited_by?: string | null;
   edited_at?: string | null;
 }
@@ -266,9 +267,9 @@ export interface Passage {
 }
 
 /** What the admin sends. For an edit, only what changed. */
-export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images' | 'answer' | 'correct' | 'passage'>> & {
-  /** A passage id. An empty string takes the question off its passage. */
-  passage?: string;
+export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images' | 'answer' | 'correct' | 'passage' | 'passage_text'>> & {
+  /** The passage's text. Questions with the same text share one passage. An empty string takes the passage off. */
+  passage_text?: string;
   correct?: number | null;
   answer?: { type: 'text'; accepted: string[] } | { type: 'number'; value: string; tolerance: string };
   /** Picture ids by position. null takes a picture off. */

@@ -1,6 +1,9 @@
 """Reading passages. A passage is saved once per institute, and any number of questions can point to it.
 
-The title is how the Excel file names a passage, so titles are unique within an institute (capitals ignored)."""
+The admin just pastes a passage's text into each related question; questions with the same text (capitals and extra
+spaces ignored) end up sharing one passage record, so they are shown together. The title is made automatically from the
+text. Titles are unique within an institute (capitals ignored), and an older Excel file can still name a passage by title.
+A passage that no question uses any more is removed."""
 import re
 from uuid import uuid4
 
@@ -50,8 +53,55 @@ def clean(data: dict) -> dict:
     return out
 
 
+def _norm(value: str) -> str:
+    return " ".join(str(value).lower().split())
+
+
 def same_text(a: str, b: str) -> bool:
-    return " ".join(str(a).split()) == " ".join(str(b).split())
+    return _norm(a) == _norm(b)
+
+
+def find_by_text(scoped: TenantRepo, text: str) -> dict | None:
+    wanted = _norm(text)
+    return next((item for item in scoped.list_passages() if _norm(item["text"]) == wanted), None)
+
+
+def _auto_title(scoped: TenantRepo, text: str) -> str:
+    """A title from the first words of the text, made unique."""
+    flat = " ".join(text.split())
+    base = flat if len(flat) <= 60 else flat[:60].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
+    title, number = base, 1
+    while find_by_title(scoped, title) is not None:
+        number += 1
+        title = f"{base} ({number})"
+    return title[:TITLE_MAX]
+
+
+def ensure_by_text(scoped: TenantRepo, text: str, admin_email: str) -> str:
+    """The id of the passage with this text: the existing one, or a new one with an automatic title."""
+    existing = find_by_text(scoped, text)
+    if existing:
+        return existing["id"]
+    cleaned = _text(text)
+    return create_passage(scoped, {"title": _auto_title(scoped, cleaned), "text": cleaned}, admin_email)["id"]
+
+
+def drop_if_unused(scoped: TenantRepo, passage_id: str | None) -> None:
+    """Remove a passage no question uses any more, so nothing invisible piles up."""
+    if passage_id and scoped.get_passage(passage_id) is not None:
+        if not any(item.get("passage") == passage_id for item in scoped.list_questions()):
+            scoped.delete_passage(passage_id)
+
+
+def check_text(raw) -> str | None:
+    """A problem with passage text typed on a question, or None when it is fine (or empty)."""
+    if raw is None or not str(raw).strip():
+        return None
+    try:
+        _text(raw)
+    except ValidationError as error:
+        return str(error)
+    return None
 
 
 def find_by_title(scoped: TenantRepo, title: str) -> dict | None:

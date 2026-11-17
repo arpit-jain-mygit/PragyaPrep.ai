@@ -49,6 +49,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q12 | **"Papers" renamed "Subjects" everywhere the admin sees it:** the Question bank page (form, filter, list, messages), the Courses page (the tick list, the column, the hints) and the Excel template (the **Subject** column, the **Subjects and topics** sheet, the dropdown messages, the instructions and the preview's problem messages). Files made from the older template, with the column called **Paper**, still upload. Names inside the code and the API (`paper`, `/api/admin/papers`) are unchanged, so nothing stored needed to change | **Tested live** | Backend 693 and frontend 293 tests (986 in all). On dev, the template downloaded from the site has the Subject column and the Subjects and topics sheet, and an Excel file with the old Paper heading still previews as ready |
 | U1 | **Sleek look, sample first:** a small icon set drawn in the code (no library), an ⓘ tip for explanations, a one-line page header with the main action on the right, icon-only row actions with tooltips, status dots, and one-line empty states. Applied to the top navigation (icons plus short labels; labels hide on phones) and the **Courses** page (Add course opens a panel; Files, Edit and Hide/Show are icons; access shown as "Unlimited", "365 days"; subjects as a count when more than two; subject tick list in columns). Registrations, Course files and the Question bank (with tabs Questions, Passages, Upload) follow after the look is approved | **Tested** | 298 frontend tests (5 new for the kit, courses tests updated). Checked in a real browser on the sandbox at desktop and phone width, and deployed to dev. Backend unchanged (693) |
 | U2 | **Sleek look rolled out to the other admin pages:** **Registrations** (status dots; Approve as a button, Details, Edit, Reject and Suspend as icons; explanations behind ⓘ), **Course files** (icon header, compact upload panel, delete as an icon with a confirm), and the **Question bank**, now with three tabs: **Questions** (a compact filter toolbar, icon Edit and Delete, a bulk bar, passages shown once above their questions), **Passages** and **Upload**. The add-question form is tighter: Type, Subject and Topic on one row; Passage, Difficulty and Status on the next; each option's text and reason side by side; hints behind ⓘ. Behaviour and the API are unchanged | **Tested** | 300 frontend tests (2 new for the tabs; many updated for the new labels and tabs). Checked in a real browser on the sandbox (Registrations, Course files, Question bank list and form), and deployed to dev. Backend unchanged (693). The Passages and Upload tabs were covered by tests, not by a screenshot |
+| Q13 | **Passages by pasted text, grouped on screen:** the question form has a **Passage** box; paste the passage into each related question (Save and add another keeps it filled). Questions with the same text (capitals and spaces ignored) share one saved passage and are shown together with the passage once above them; the group header has an edit icon that fixes the text for every question in the group. In Excel the **Passage** column holds the text, repeated on each row, and the Passages sheet is gone from the template (older files that name a passage by title still work). The Passages tab and the passage dropdown are removed, so the Question bank has two tabs, Questions and Upload. A passage no question uses any more is removed automatically | **Tested live** | 24 new backend tests and 7 frontend tests changed or added (713 and 299 in all). On dev, with the real template: two questions with the same pasted text (one in capitals) shared one passage, editing the group changed both, an Excel file repeating a passage on two rows previewed 1 new passage and imported 2 questions in one group, and after deleting my `ZZ` questions the passage count was back to what it was before. The new screens weren't clicked in a browser |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -138,7 +139,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `693 passed`.
+You should see `713 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -400,14 +401,14 @@ In **Courses** (`/aaptprep/admin/courses`).
 | 4 | Under **Add a course**, type `CUET` as the name and click outside the box | All 37 CUET subjects get ticked (you can change them) |
 | 5 | Type a name like `Foundation` | Nothing is ticked; choose subjects by hand |
 
-### Q9 (reading passages): what to try
+### Q13 (passages by pasted text): what to try
 | Step | What to do | What you should see |
 |---|---|---|
-| 1 | In **Question bank**, find the **Reading passages** card and click **Add a passage**. Give it a title and some text with a blank line between paragraphs | "Added the passage." and it is listed with "0 questions" |
-| 2 | Click **Add a question**, choose the passage in the **Reading passage** dropdown | "Show the passage" appears so you can read it while writing |
-| 3 | Save two questions with the same passage | In the list, the passage appears once above both questions |
-| 4 | Try **Delete** on the passage | Refused: "2 questions use this passage." |
-| 5 | Download the template: it has a **Passages** sheet and a **Passage** column. Put a passage on the Passages sheet and its title on several question rows. Upload it | The preview says "1 new passage"; after Import, the questions share it |
+| 1 | In **Question bank**, click **Add question**, fill it in and paste a passage into the **Passage** box. Click **Save and add another** | The passage stays filled in for the next question |
+| 2 | Write a second question and save | In the list, both questions sit together under the passage, shown once |
+| 3 | Click the pencil on the passage header, change the text, **Save passage** | Both questions show the new text |
+| 4 | Edit one question and change only its passage text | That question moves to its own group; the other stays |
+| 5 | Download the template and paste the same passage text in the **Passage** column of several rows. Upload it | The preview says "1 new passage"; after Import the questions are grouped |
 
 ### Q8 (bulk delete): what to try
 Use only test questions for this.
@@ -506,7 +507,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 693 passed, 0 failed. Frontend: 300 passed, 0 failed. Total: 993.**
+**Backend, run on my machine: 713 passed, 0 failed. Frontend: 299 passed, 0 failed. Total: 1012.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -530,9 +531,9 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_fill_in` | Q6 fill-in questions (marking rules for text and numbers, checking the admin's answer, the API, switching type, pictures, the Excel columns) | 70 |
 | `test_question_status` | Q7 bulk publish (publish, back to draft, counts, bad requests, who may, privacy between institutes) | 15 |
 | `test_question_bulk_delete` | Q8 bulk delete (the word DELETE, counts, pictures removed, who may, privacy between institutes) | 19 |
-| `test_passages` | Q9 reading passages (the API, limits and unique titles, link from a question, delete rules, privacy, the Excel Passages sheet and column) | 24 |
+| `test_passages` | Q9 and Q13 reading passages (the API, limits and unique titles, passage text pasted on a question and grouped by text, clean-up of unused passages, privacy, the Excel Passage column) | 45 |
 | `test_course_papers` | Q10 subjects on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) and Q11 courses without a fee | 32 |
-| | **Total** | **693** |
+| | **Total** | **713** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -549,7 +550,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | `question-upload.spec` | Excel upload card: template download, preview, problems, confirm, wrong file type, picture step | 15 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
 | `ui.spec` | The icon kit (every icon draws, sizes, the info tip, short access wording) | 5 |
-| | **Total** | **300** |
+| | **Total** | **299** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

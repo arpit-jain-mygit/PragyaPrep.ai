@@ -88,10 +88,11 @@ def test_a_passage_in_use_cannot_be_deleted_but_a_free_one_can(client, admin):
     q = client.post(URL, json=question(passage=p["id"]), headers=admin).json()
     response = client.delete(f"{PASSAGES}/{p['id']}", headers=admin)
     assert response.status_code == 409 and "1 question uses" in response.json()["detail"]
-    client.delete(f"{URL}/{q['id']}", headers=admin)
-    assert client.delete(f"{PASSAGES}/{p['id']}", headers=admin).status_code == 204
-    assert client.delete(f"{PASSAGES}/{p['id']}", headers=admin).status_code == 404
-    assert client.patch(f"{PASSAGES}/{p['id']}", json={"title": "x"}, headers=admin).status_code == 404
+    free = passage(client, admin, "Free one", "Nobody uses this.")
+    assert client.delete(f"{PASSAGES}/{free['id']}", headers=admin).status_code == 204
+    assert client.delete(f"{PASSAGES}/{free['id']}", headers=admin).status_code == 404
+    assert client.patch(f"{PASSAGES}/{free['id']}", json={"title": "x"}, headers=admin).status_code == 404
+    assert q["passage"] == p["id"]
 
 
 # ---- Questions and passages ----
@@ -148,12 +149,12 @@ def test_only_an_admin_can_use_passages(client, admin, sign_in):
 
 # ---- The Excel file ----
 
-def test_the_template_has_a_passages_sheet_and_a_passage_column(client, admin):
+def test_the_template_has_a_passage_column_for_the_text_and_no_passages_sheet(client, admin):
     book = load_workbook(BytesIO(client.get(f"{URL}/template", headers=admin).content))
-    assert "Passages" in book.sheetnames
-    assert [c.value for c in book["Passages"][1]] == ["Title", "Text"]
+    assert "Passages" not in book.sheetnames
     assert book["Questions"].cell(row=1, column=len(qi.COLUMNS) + len(qi.OPTIONAL_COLUMNS)).value == "Passage"
-    assert "Reading passages" in "".join(str(c.value) for row in book["Instructions"].iter_rows() for c in row)
+    guide = "".join(str(c.value) for row in book["Instructions"].iter_rows() for c in row)
+    assert "Reading passages" in guide and "repeating it on each row" in guide
 
 
 def test_questions_naming_a_passage_share_one_saved_passage(client, admin):
@@ -191,9 +192,10 @@ def test_a_title_that_exists_with_different_text_is_refused_not_overwritten(clie
     assert client.get(PASSAGES, headers=admin).json()[0]["text"] == TEXT
 
 
-def test_an_unknown_title_is_a_problem_on_the_passage_column(client, admin):
-    result = post(client, admin, book_with([good_row(Passage="Nowhere")], [("Monsoon", TEXT)])).json()
-    assert "isn't on the Passages sheet" in result["problems"][0]["errors"]["Passage"]
+def test_a_passage_cell_that_is_not_a_known_title_is_the_passage_text(client, admin):
+    result = post(client, admin, book_with([good_row(Passage="Some words that are not a title")], [("Monsoon", TEXT)]), confirm=True).json()
+    assert result["imported"] == 1 and result["problems"] == []
+    assert client.get(PASSAGES, headers=admin).json()[0]["text"] == "Some words that are not a title"
 
 
 def test_a_bad_passage_row_is_reported_on_the_question_using_it(client, admin):
@@ -229,3 +231,136 @@ def test_a_changed_passages_heading_is_refused(client, admin):
     out = BytesIO()
     book.save(out)
     assert post(client, admin, out.getvalue()).status_code == 422
+
+
+# ---- Passage text pasted on the question ----
+
+def test_questions_with_the_same_text_share_one_passage_and_the_title_is_automatic(client, admin):
+    ids = []
+    for i in range(3):
+        made = client.post(URL, json=question(text=f"Q{i}", passage_text=TEXT), headers=admin).json()
+        ids.append(made["passage"])
+    assert len(set(ids)) == 1 and ids[0]
+    saved = client.get(PASSAGES, headers=admin).json()
+    assert len(saved) == 1 and saved[0]["text"] == TEXT and saved[0]["questions"] == 3
+    assert saved[0]["title"].startswith("The monsoon arrives in June.")
+
+
+def test_capitals_and_spacing_do_not_split_a_group(client, admin):
+    a = client.post(URL, json=question(text="A", passage_text="The  MONSOON arrives."), headers=admin).json()
+    b = client.post(URL, json=question(text="B", passage_text="the monsoon   arrives."), headers=admin).json()
+    assert a["passage"] == b["passage"]
+
+
+def test_different_text_makes_a_separate_group(client, admin):
+    a = client.post(URL, json=question(text="A", passage_text="One text."), headers=admin).json()
+    b = client.post(URL, json=question(text="B", passage_text="Another text."), headers=admin).json()
+    assert a["passage"] != b["passage"] and len(client.get(PASSAGES, headers=admin).json()) == 2
+
+
+def test_empty_passage_text_means_no_passage(client, admin):
+    assert client.post(URL, json=question(passage_text="  "), headers=admin).json()["passage"] is None
+    assert client.get(PASSAGES, headers=admin).json() == []
+
+
+def test_a_question_with_mistakes_does_not_leave_a_passage_behind(client, admin):
+    response = client.post(URL, json=question(text="", passage_text=TEXT), headers=admin)
+    assert response.status_code == 422 and client.get(PASSAGES, headers=admin).json() == []
+
+
+@pytest.mark.parametrize("bad", [5, True, ["x"], "x" * 5001])
+def test_bad_passage_text_is_refused_next_to_the_field(client, admin, bad):
+    response = client.post(URL, json=question(passage_text=bad), headers=admin)
+    assert response.status_code == 422 and "passage" in response.json()["errors"]
+
+
+def test_editing_the_text_of_one_question_moves_only_that_question(client, admin):
+    a = client.post(URL, json=question(text="A", passage_text="Shared."), headers=admin).json()
+    b = client.post(URL, json=question(text="B", passage_text="Shared."), headers=admin).json()
+    moved = client.patch(f"{URL}/{b['id']}", json={"passage_text": "Different."}, headers=admin).json()
+    assert moved["passage"] != a["passage"]
+    still = [q for q in client.get(URL, headers=admin).json() if q["id"] == a["id"]][0]
+    assert still["passage"] == a["passage"]
+    assert sorted(p["text"] for p in client.get(PASSAGES, headers=admin).json()) == ["Different.", "Shared."]
+
+
+def test_other_edits_keep_the_passage_and_empty_text_removes_it(client, admin):
+    made = client.post(URL, json=question(passage_text="Keep me."), headers=admin).json()
+    assert client.patch(f"{URL}/{made['id']}", json={"text": "New wording?"}, headers=admin).json()["passage"] == made["passage"]
+    assert client.patch(f"{URL}/{made['id']}", json={"passage_text": ""}, headers=admin).json()["passage"] is None
+
+
+def test_a_passage_no_question_uses_any_more_is_removed(client, admin):
+    a = client.post(URL, json=question(text="A", passage_text="Only A."), headers=admin).json()
+    b = client.post(URL, json=question(text="B", passage_text="Only A."), headers=admin).json()
+    client.delete(f"{URL}/{a['id']}", headers=admin)
+    assert len(client.get(PASSAGES, headers=admin).json()) == 1  # B still uses it
+    client.patch(f"{URL}/{b['id']}", json={"passage_text": "Now B's own."}, headers=admin)
+    assert [p["text"] for p in client.get(PASSAGES, headers=admin).json()] == ["Now B's own."]
+    client.post(f"{URL}/delete", json={"ids": [b["id"]], "confirm": "DELETE"}, headers=admin)
+    assert client.get(PASSAGES, headers=admin).json() == []
+
+
+def test_editing_a_passage_changes_every_question_in_its_group(client, admin):
+    a = client.post(URL, json=question(text="A", passage_text="Old text."), headers=admin).json()
+    client.post(URL, json=question(text="B", passage_text="Old text."), headers=admin)
+    client.patch(f"{PASSAGES}/{a['passage']}", json={"text": "New text."}, headers=admin)
+    assert {client.get(PASSAGES, headers=admin).json()[0]["text"]} == {"New text."}
+    assert client.get(PASSAGES, headers=admin).json()[0]["questions"] == 2
+
+
+def test_the_list_can_filter_on_having_a_passage(client, admin):
+    client.post(URL, json=question(text="With", passage_text=TEXT), headers=admin)
+    client.post(URL, json=question(text="Without"), headers=admin)
+    assert [q["text"] for q in client.get(f"{URL}?passage=any", headers=admin).json()] == ["With"]
+
+
+def test_passage_text_is_private_to_the_institute(client, admin, make_tenant, sign_in):
+    client.post(URL, json=question(passage_text=TEXT), headers=admin)
+    make_tenant("other-school", "Other", "boss@example.com")
+    other = sign_in("other-school", "boss@example.com")
+    made = client.post(URL, json=question(passage_text=TEXT), headers=other).json()
+    assert client.get(PASSAGES, headers=other).json()[0]["id"] == made["passage"]
+    assert len(client.get(PASSAGES, headers=admin).json()) == 1
+
+
+# ---- Excel: the text repeated on each row ----
+
+def test_excel_rows_with_the_same_passage_text_share_one_passage(client, admin):
+    rows = [good_row(Question=f"Question {i}", Passage=TEXT) for i in range(3)] + [good_row(Question="Plain")]
+    preview = post(client, admin, book_with(rows)).json()
+    assert preview["new_passages"] == 1 and len(preview["ready"]) == 4
+    assert client.get(PASSAGES, headers=admin).json() == []
+    assert post(client, admin, book_with(rows), confirm=True).json()["imported"] == 4
+    saved = client.get(PASSAGES, headers=admin).json()
+    assert len(saved) == 1 and saved[0]["questions"] == 3 and saved[0]["text"] == TEXT
+
+
+def test_excel_passage_text_matching_a_saved_passage_is_reused(client, admin):
+    p = passage(client, admin)
+    result = post(client, admin, book_with([good_row(Passage="  THE MONSOON arrives in June.\n\nFarmers sow rice soon after.")]), confirm=True).json()
+    assert result["imported"] == 1 and result["new_passages"] == 0
+    assert bank(client, admin)[0]["passage"] == p["id"]
+
+
+def test_excel_passage_text_that_is_too_long_is_a_problem_on_its_column(client, admin):
+    result = post(client, admin, book_with([good_row(Passage="x" * 5001)])).json()
+    assert "5000" in result["problems"][0]["errors"]["Passage"]
+
+
+def test_excel_a_bad_row_does_not_create_its_passage(client, admin):
+    post(client, admin, book_with([good_row(Passage="Only for a bad row.", Correct="Z")]), confirm=True)
+    assert client.get(PASSAGES, headers=admin).json() == []
+
+
+def test_every_question_comes_back_with_its_passage_text(client, admin):
+    made = client.post(URL, json=question(text="A", passage_text=TEXT), headers=admin).json()
+    assert made["passage_text"] == TEXT
+    plain = client.post(URL, json=question(text="B"), headers=admin).json()
+    assert plain["passage_text"] is None
+    listed = {q["text"]: q["passage_text"] for q in client.get(URL, headers=admin).json()}
+    assert listed == {"A": TEXT, "B": None}
+    edited = client.patch(f"{URL}/{plain['id']}", json={"passage_text": "Other."}, headers=admin).json()
+    assert edited["passage_text"] == "Other."
+    client.patch(f"{PASSAGES}/{made['passage']}", json={"text": "Fixed."}, headers=admin)
+    assert {q["text"]: q["passage_text"] for q in client.get(URL, headers=admin).json()}["A"] == "Fixed."

@@ -3,7 +3,7 @@ and an explanation). Private to one institute."""
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from app import answers, clock, logos
+from app import answers, clock, logos, passages
 from app.config import Settings
 from app.papers import BY_ID
 from app.repo import TenantRepo, now_iso
@@ -154,13 +154,28 @@ def _resolve_images(scoped: TenantRepo, requested: dict, current: dict) -> tuple
     return now, gone, problem
 
 
-def _passage(scoped: TenantRepo, raw) -> tuple[str | None, str | None]:
-    """The passage id to keep, and a problem if there is one. Blank means no passage."""
+def _passage(scoped: TenantRepo, data: dict, current: str | None = None) -> tuple[str | None, str | None, str | None]:
+    """What a question's passage should be: (an existing passage id, passage text still to be saved, a problem).
+
+    The admin gives passage_text (empty removes the passage). An id is still accepted, for older callers and the
+    Excel import. Nothing is saved here: a new passage is only created once the whole question has passed its checks."""
+    if data.get("passage_text") is not None:
+        text = data["passage_text"]
+        if not isinstance(text, str):
+            return None, None, "The passage must be text."
+        problem = passages.check_text(text)
+        if problem:
+            return None, None, problem
+        if not text.strip():
+            return None, None, None
+        existing = passages.find_by_text(scoped, text)
+        return (existing["id"], None, None) if existing else (None, text, None)
+    raw = data["passage"] if "passage" in data else current
     if raw is None or raw == "":
-        return None, None
+        return None, None, None
     if not isinstance(raw, str) or scoped.get_passage(raw) is None:
-        return None, "Choose a passage from the list."
-    return raw, None
+        return None, None, "Choose a passage from the list."
+    return raw, None, None
 
 
 def _check(data: dict, pictures: dict, problem: str | None, passage_problem: str | None = None) -> dict:
@@ -183,9 +198,12 @@ def _check(data: dict, pictures: dict, problem: str | None, passage_problem: str
 
 def create_question(scoped: TenantRepo, data: dict, admin_email: str) -> dict:
     pictures, _, problem = _resolve_images(scoped, data.get("images") or {}, {})
-    passage, passage_problem = _passage(scoped, data.get("passage"))
+    passage, new_text, passage_problem = _passage(scoped, data)
+    checked = _check(data, pictures, problem, passage_problem)
+    if new_text is not None:
+        passage = passages.ensure_by_text(scoped, new_text, admin_email)
     question = {
-        **_check(data, pictures, problem, passage_problem),
+        **checked,
         "passage": passage,
         "images": pictures,
         "id": uuid4().hex,
@@ -206,8 +224,10 @@ def update_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
     asked = changes.get("images") or {}
     pictures, gone, problem = _resolve_images(scoped, asked, current.get("images") or {})
     merged = {**current, **{key: value for key, value in changes.items() if value is not None and key != "images"}}
-    passage, passage_problem = _passage(scoped, changes["passage"] if "passage" in changes else current.get("passage"))
+    passage, new_text, passage_problem = _passage(scoped, changes, current.get("passage"))
     fields = _check(merged, pictures, problem, passage_problem)
+    if new_text is not None:
+        passage = passages.ensure_by_text(scoped, new_text, admin_email)
     fields.update(passage=passage, images=pictures, edited_by=admin_email, edited_at=now_iso())
     if fields["kind"] == "mcq":
         fields.update(answer=None, explanation=None)  # nothing left over from when it was a fill-in question
@@ -216,6 +236,8 @@ def update_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
         if picture["id"] not in {item["id"] for item in (current.get("images") or {}).values()}:
             scoped.attach_image(picture["id"], question_id)
     _drop(scoped, storage, gone)
+    if current.get("passage") and current.get("passage") != passage:
+        passages.drop_if_unused(scoped, current["passage"])
     return scoped.get_question(question_id)
 
 
@@ -275,6 +297,7 @@ def delete_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
         raise QuestionNotFound()
     scoped.delete_question(question_id)
     _drop(scoped, storage, list((question.get("images") or {}).values()))
+    passages.drop_if_unused(scoped, question.get("passage"))
 
 
 # ---- Pictures: uploaded straight to S3 first, then attached when the question is saved ----
@@ -341,6 +364,8 @@ def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, diff
         items = [item for item in items if item.get("kind", "mcq") == kind]
     if passage == "none":
         items = [item for item in items if not item.get("passage")]
+    elif passage == "any":
+        items = [item for item in items if item.get("passage")]
     elif passage:
         items = [item for item in items if item.get("passage") == passage]
     if pictures == "yes":

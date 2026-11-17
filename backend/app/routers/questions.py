@@ -16,13 +16,19 @@ PICTURE_LINK_SECONDS = 3600
 router = APIRouter(tags=["questions"])
 
 
-def _present(question: dict, storage: ContentStorage) -> dict:
-    """The question as the admin sees it: each picture comes with a short-lived link instead of its storage path."""
+def _present(question: dict, storage: ContentStorage, passage_texts: dict[str, str] | None = None) -> dict:
+    """The question as the admin sees it: each picture comes with a short-lived link instead of its storage path, and
+    its passage comes with its text so the screen can show the group."""
     pictures = {
         slot: {"id": picture["id"], "url": storage.presigned_download(picture["key"], picture["content_type"], PICTURE_LINK_SECONDS)}
         for slot, picture in (question.get("images") or {}).items()
     }
-    return {**question, "images": pictures}
+    texts = passage_texts or {}
+    return {**question, "images": pictures, "passage_text": texts.get(question.get("passage") or "")}
+
+
+def _texts(scoped: TenantRepo) -> dict[str, str]:
+    return {item["id"]: item["text"] for item in scoped.list_passages()}
 
 
 def _errors(error: questions.QuestionErrors):
@@ -49,7 +55,8 @@ def list_questions(
     scoped: TenantRepo = Depends(get_tenant_repo),
     storage: ContentStorage = Depends(get_storage),
 ):
-    return [_present(item, storage) for item in questions.list_questions(scoped, paper, topic, status, difficulty, pictures, kind, passage)]
+    texts = _texts(scoped)
+    return [_present(item, storage, texts) for item in questions.list_questions(scoped, paper, topic, status, difficulty, pictures, kind, passage)]
 
 
 # ---- Reading passages ----
@@ -106,7 +113,7 @@ def add_question(
         question = questions.create_question(scoped, body.model_dump(), admin["email"])
     except questions.QuestionErrors as error:
         return _errors(error)
-    return QuestionOut.model_validate(_present(question, storage))
+    return QuestionOut.model_validate(_present(question, storage, _texts(scoped)))
 
 
 @router.patch("/api/admin/questions/{question_id}")
@@ -126,7 +133,7 @@ def change_question(
         raise HTTPException(status_code=404, detail="We couldn't find that question.")
     except questions.QuestionErrors as error:
         return _errors(error)
-    return QuestionOut.model_validate(_present(question, storage))
+    return QuestionOut.model_validate(_present(question, storage, _texts(scoped)))
 
 
 @router.post("/api/admin/questions/status")
@@ -198,9 +205,13 @@ async def import_questions(
             try:
                 passage = item["passage"]
                 if passage and "id" not in passage:
-                    key = " ".join(passage["title"].lower().split())
+                    key = " ".join((passage["title"] if passage["via"] == "sheet" else passage["text"]).lower().split())
                     if key not in made:
-                        made[key] = passages.ensure(scoped, passage["title"], passage["text"], admin["email"])
+                        made[key] = (
+                            passages.ensure(scoped, passage["title"], passage["text"], admin["email"])
+                            if passage["via"] == "sheet"
+                            else passages.ensure_by_text(scoped, passage["text"], admin["email"])
+                        )
                     passage = {"id": made[key]}
                 questions.create_question(
                     scoped, {**item["question"], "images": item["images"], "passage": passage["id"] if passage else None}, admin["email"]
@@ -228,7 +239,10 @@ async def import_questions(
         ],
         "problems": result["problems"],
         "duplicates": result["duplicates"],
-        "new_passages": len({" ".join(i["passage"]["title"].lower().split()) for i in result["ready"] if i["passage"] and "id" not in i["passage"]}),
+        "new_passages": len({
+            " ".join((i["passage"]["title"] if i["passage"]["via"] == "sheet" else i["passage"]["text"]).lower().split())
+            for i in result["ready"] if i["passage"] and "id" not in i["passage"]
+        }),
         "imported": imported,
     }
 

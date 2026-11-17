@@ -191,20 +191,8 @@ export class ApiService {
     return this.get(`/api/admin/questions${query.size ? '?' + query : ''}`);
   }
 
-  passages(): Promise<Passage[]> {
-    return this.get('/api/admin/passages');
-  }
-
-  addPassage(body: { title: string; text: string }): Promise<Passage> {
-    return this.post('/api/admin/passages', body);
-  }
-
   updatePassage(id: string, body: { title?: string; text?: string }): Promise<Passage> {
     return this.patch(`/api/admin/passages/${encodeURIComponent(id)}`, body);
-  }
-
-  deletePassage(id: string): Promise<void> {
-    return this.delete(`/api/admin/passages/${encodeURIComponent(id)}`);
   }
 
   addQuestion(body: QuestionInput): Promise<Question> {
