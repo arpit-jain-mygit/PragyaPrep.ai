@@ -1,8 +1,9 @@
-"""Question bank: multiple-choice questions, each with a reason for every option. Private to one institute."""
+"""Question bank: multiple-choice questions (a reason for every option) and fill-in questions (one typed answer
+and an explanation). Private to one institute."""
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from app import clock, logos
+from app import answers, clock, logos
 from app.config import Settings
 from app.papers import BY_ID
 from app.repo import TenantRepo, now_iso
@@ -12,6 +13,7 @@ from app.tenants import ValidationError
 OPTION_COUNT = 4
 DIFFICULTIES = ["easy", "medium", "hard"]
 STATUSES = ["draft", "published"]
+KINDS = ["mcq", "fill_in"]  # multiple choice, or one box the student types the answer into
 # A question can carry a picture on the question itself and one on each option.
 SLOTS = ["question", "A", "B", "C", "D"]
 PENDING_HOURS = 24  # a picture that is never attached to a question is forgotten after this long
@@ -63,38 +65,51 @@ def clean(data: dict, picture_slots: frozenset | set = frozenset()) -> dict:
 
     attempt("text", lambda: _text(data.get("text"), "The question", 2000))
 
-    options = data.get("options")
-    if not isinstance(options, list) or len(options) != OPTION_COUNT:
-        errors["options"] = f"Give exactly {OPTION_COUNT} options."
-    else:
-        cleaned = []
-        for number, option in enumerate(options, start=1):
-            option = option if isinstance(option, dict) else {}
-            letter = SLOTS[number]
-            try:
-                if letter in picture_slots and not " ".join(str(option.get("text") or "").split()):
-                    option_text = ""
-                else:
-                    option_text = _text(option.get("text"), f"Option {number}", 500)
-                cleaned.append({
-                    "text": option_text,
-                    "why": _text(option.get("why"), f"The reason for option {number}", 1000),
-                })
-            except ValidationError as error:
-                errors["options"] = str(error)
-                break
-        else:
-            names = [item["text"].lower() for item in cleaned if item["text"]]
-            if len(set(names)) != len(names):
-                errors["options"] = "Two options are the same. Each option must be different."
-            else:
-                out["options"] = cleaned
+    kind = data.get("kind") or "mcq"
+    if kind not in KINDS:
+        errors["kind"] = "The type must be multiple choice or fill in."
+        kind = "mcq"
+    out["kind"] = kind
 
-    correct = data.get("correct")
-    if isinstance(correct, bool) or not isinstance(correct, int) or not 0 <= correct < OPTION_COUNT:
-        errors["correct"] = "Choose which option is correct."
+    if kind == "fill_in":
+        out["options"] = []
+        out["correct"] = None
+        attempt("answer", lambda: answers.clean_answer(data.get("answer")))
+        attempt("explanation", lambda: _text(data.get("explanation"), "The explanation", 2000))
     else:
-        out["correct"] = correct
+        options = data.get("options")
+        if not isinstance(options, list) or len(options) != OPTION_COUNT:
+            errors["options"] = f"Give exactly {OPTION_COUNT} options."
+        else:
+            cleaned = []
+            for number, option in enumerate(options, start=1):
+                option = option if isinstance(option, dict) else {}
+                letter = SLOTS[number]
+                try:
+                    if letter in picture_slots and not " ".join(str(option.get("text") or "").split()):
+                        option_text = ""
+                    else:
+                        option_text = _text(option.get("text"), f"Option {number}", 500)
+                    cleaned.append({
+                        "text": option_text,
+                        "why": _text(option.get("why"), f"The reason for option {number}", 1000),
+                    })
+                except ValidationError as error:
+                    errors["options"] = str(error)
+                    break
+            else:
+                names = [item["text"].lower() for item in cleaned if item["text"]]
+                if len(set(names)) != len(names):
+                    errors["options"] = "Two options are the same. Each option must be different."
+                else:
+                    out["options"] = cleaned
+
+        correct = data.get("correct")
+        if isinstance(correct, bool) or not isinstance(correct, int) or not 0 <= correct < OPTION_COUNT:
+            errors["correct"] = "Choose which option is correct."
+        else:
+            out["correct"] = correct
+
 
     difficulty = data.get("difficulty") or "medium"
     if difficulty in DIFFICULTIES:
@@ -141,6 +156,8 @@ def _resolve_images(scoped: TenantRepo, requested: dict, current: dict) -> tuple
 
 def _check(data: dict, pictures: dict, problem: str | None) -> dict:
     """clean(), plus the picture problem, reported together as one set of mistakes."""
+    if (data.get("kind") or "mcq") == "fill_in" and any(slot != "question" for slot in pictures):
+        problem = "A fill-in question has no options, so it can't have option pictures. Remove them first."
     try:
         cleaned = clean(data, set(pictures))
         errors: dict[str, str] = {}
@@ -178,6 +195,8 @@ def update_question(scoped: TenantRepo, storage: ContentStorage, question_id: st
     merged = {**current, **{key: value for key, value in changes.items() if value is not None and key != "images"}}
     fields = _check(merged, pictures, problem)
     fields.update(images=pictures, edited_by=admin_email, edited_at=now_iso())
+    if fields["kind"] == "mcq":
+        fields.update(answer=None, explanation=None)  # nothing left over from when it was a fill-in question
     scoped.update_question(question_id, fields)
     for picture in pictures.values():
         if picture["id"] not in {item["id"] for item in (current.get("images") or {}).values()}:
@@ -256,10 +275,12 @@ def discard_image(scoped: TenantRepo, storage: ContentStorage, image_id: str) ->
     _drop(scoped, storage, [image])
 
 
-def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, difficulty=None, pictures=None) -> list[dict]:
+def list_questions(scoped: TenantRepo, paper=None, topic=None, status=None, difficulty=None, pictures=None, kind=None) -> list[dict]:
     """Newest first, optionally filtered. pictures='yes' keeps questions with a picture on the question or any option,
     'no' keeps those with none."""
     items = scoped.list_questions()
+    if kind:
+        items = [item for item in items if item.get("kind", "mcq") == kind]
     if pictures == "yes":
         items = [item for item in items if item.get("images")]
     elif pictures == "no":

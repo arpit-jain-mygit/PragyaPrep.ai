@@ -58,9 +58,9 @@ def test_the_template_has_the_columns_dropdowns_and_instructions(client, admin):
     assert "question-bank-template.xlsx" in response.headers["content-disposition"]
     book = load_workbook(BytesIO(response.content))
     assert book.sheetnames[0] == "Instructions"
-    assert [cell.value for cell in book["Questions"][1]] == qi.COLUMNS + list(qi.PICTURE_COLUMNS.values())
+    assert [cell.value for cell in book["Questions"][1]] == qi.COLUMNS + qi.OPTIONAL_COLUMNS
     assert len(book["Papers and topics"][1]) == 37
-    assert len(book["Questions"].data_validations.dataValidation) == 5
+    assert len(book["Questions"].data_validations.dataValidation) == 7
 
 
 def test_the_template_itself_is_empty_and_not_importable(client, admin):
@@ -243,7 +243,7 @@ def pic_book(rows: list[dict]) -> bytes:
 
 def test_the_template_has_the_five_optional_picture_columns(client, admin):
     book = load_workbook(BytesIO(client.get(f"{URL}/template", headers=admin).content))
-    assert [c.value for c in book["Questions"][1]][14:] == ["Question image", "Image A", "Image B", "Image C", "Image D"]
+    assert [c.value for c in book["Questions"][1]][14:19] == ["Question image", "Image A", "Image B", "Image C", "Image D"]
     assert "Pictures (optional)" in "".join(str(c.value) for row in book["Instructions"].iter_rows() for c in row)
 
 

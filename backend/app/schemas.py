@@ -280,6 +280,10 @@ class QuestionIn(BaseModel):
     status: str | None = None
     # Picture ids by position (question, A, B, C, D). None removes a picture.
     images: dict[str, str | None] | None = None
+    # "mcq" (default) or "fill_in". A fill-in question has an answer and an explanation instead of options.
+    kind: str | None = None
+    answer: dict | None = None
+    explanation: str | None = None
 
 
 class QuestionPictureOut(BaseModel):
@@ -302,8 +306,11 @@ class QuestionOut(BaseModel):
     paper: str
     topic: str
     text: str
+    kind: str = "mcq"
     options: list[QuestionOptionIO]
-    correct: int
+    correct: int | None = None
+    answer: dict | None = None
+    explanation: str | None = None
     difficulty: str
     status: str
     created_at: str = ""

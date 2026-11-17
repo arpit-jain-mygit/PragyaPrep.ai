@@ -450,3 +450,179 @@ describe('Admin question bank: finding questions with pictures', () => {
     http.expectOne(`${API}/api/admin/questions?paper=physics&pictures=yes`).flush([]);
   });
 });
+
+const FILL = {
+  id: 'f1', kind: 'fill_in', paper: 'physics', topic: 'Optics', text: 'What is the speed of light in km/s (nearest thousand)?',
+  options: [], correct: null, answer: { type: 'number', value: '300000', tolerance: '1000' },
+  explanation: 'About 299,792 km/s.', difficulty: 'easy', status: 'published', created_at: '2027-01-01T00:00:00+00:00', images: {},
+};
+
+describe('Admin question bank: fill-in questions', () => {
+  it('starts as multiple choice, and switching to fill-in swaps the options for an answer and an explanation', async () => {
+    const { fixture } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('mcq');
+    expect(all(fixture, '#q-opt-0').length).toBe(1);
+    expect(all(fixture, '#q-answer-text').length).toBe(0);
+
+    type(fixture, '#q-kind', 'fill_in');
+    await settle(fixture);
+    expect(all(fixture, '#q-opt-0').length).toBe(0);
+    expect(all(fixture, 'app-picture-picker input').map((i) => i.id)).toEqual(['pic-question']);
+    expect(all(fixture, '#q-answer-text').length).toBe(1);
+    expect(all(fixture, '#q-explanation').length).toBe(1);
+    expect(text(fixture)).toContain('separate them with |');
+  });
+
+  it('shows a number box and a tolerance when the answer is a number', async () => {
+    const { fixture } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    type(fixture, '#q-kind', 'fill_in');
+    await settle(fixture);
+    type(fixture, '#q-answer-type', 'number');
+    await settle(fixture);
+    expect(all(fixture, '#q-answer-number').length).toBe(1);
+    expect(all(fixture, '#q-tolerance').length).toBe(1);
+    expect(all(fixture, '#q-answer-text').length).toBe(0);
+  });
+
+  async function fillInForm(fixture: Parameters<typeof type>[0], kind: 'text' | 'number') {
+    type(fixture, '#q-kind', 'fill_in');
+    await settle(fixture);
+    type(fixture, '#q-paper', 'physics');
+    await settle(fixture);
+    type(fixture, '#q-topic', 'Optics');
+    type(fixture, '#q-text', 'Speed of light?');
+    type(fixture, '#q-answer-type', kind);
+    await settle(fixture);
+    if (kind === 'text') type(fixture, '#q-answer-text', 'Mumbai | Bombay ');
+    else {
+      type(fixture, '#q-answer-number', '300000');
+      type(fixture, '#q-tolerance', '1000');
+    }
+    type(fixture, '#q-explanation', 'Because.');
+    await settle(fixture);
+  }
+
+  it('sends a text fill-in question with its accepted answers and no options', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillInForm(fixture, 'text');
+    clickButton(fixture, 'Save and close');
+    const body = http.expectOne(`${API}/api/admin/questions`).request.body;
+    expect(body).toMatchObject({ kind: 'fill_in', answer: { type: 'text', accepted: ['Mumbai ', ' Bombay '] }, explanation: 'Because.' });
+    expect(body.options).toBeUndefined();
+    expect(body.correct).toBeUndefined();
+  });
+
+  it('sends a number fill-in question with its tolerance', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillInForm(fixture, 'number');
+    clickButton(fixture, 'Save and close');
+    expect(http.expectOne(`${API}/api/admin/questions`).request.body.answer).toEqual({ type: 'number', value: '300000', tolerance: '1000' });
+  });
+
+  it('a multiple-choice question is still sent with options and the correct number, and no answer', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillForm(fixture);
+    clickButton(fixture, 'Save and close');
+    const body = http.expectOne(`${API}/api/admin/questions`).request.body;
+    expect(body.kind).toBe('mcq');
+    expect(body.options.length).toBe(4);
+    expect(body.answer).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+  });
+
+  it('shows the answer and explanation errors next to their boxes', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillInForm(fixture, 'number');
+    clickButton(fixture, 'Save and close');
+    http.expectOne(`${API}/api/admin/questions`).flush(
+      { detail: 'Please correct the marked fields.', errors: { answer: 'The answer must be a number.', explanation: 'The explanation is required.' } },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    await settle(fixture);
+    expect(text(fixture)).toContain('The answer must be a number.');
+    expect(text(fixture)).toContain('The explanation is required.');
+    expect(el<HTMLInputElement>(fixture, '#q-answer-number').value).toBe('300000');
+  });
+
+  it('lists a fill-in question with its answer, tolerance, explanation and a tag, and no options', async () => {
+    const { fixture } = await open([FILL, Q1]);
+    const rows = all(fixture, '[data-question]');
+    expect(rows[0].textContent).toContain('fill in');
+    expect(rows[0].textContent).toContain('Answer: 300000');
+    expect(rows[0].textContent).toContain('within 1000');
+    expect(rows[0].textContent).toContain('About 299,792 km/s.');
+    expect(rows[0].querySelectorAll('.options li').length).toBe(0);
+    expect(rows[1].querySelectorAll('.options li').length).toBe(4);
+  });
+
+  it('lists a text answer with all accepted spellings', async () => {
+    const q = { ...FILL, id: 'f2', answer: { type: 'text', accepted: ['Mumbai', 'Bombay'] } };
+    const { fixture } = await open([q]);
+    expect(text(fixture)).toContain('Answer: Mumbai or Bombay');
+    expect(text(fixture)).not.toContain('within');
+  });
+
+  it('opens a fill-in question for editing with its answer filled in, and sends only fill-in fields', async () => {
+    const { fixture, http } = await open([FILL]);
+    clickButton(fixture, 'Edit');
+    await settle(fixture);
+    expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('fill_in');
+    expect(el<HTMLSelectElement>(fixture, '#q-answer-type').value).toBe('number');
+    expect(el<HTMLInputElement>(fixture, '#q-answer-number').value).toBe('300000');
+    expect(el<HTMLInputElement>(fixture, '#q-tolerance').value).toBe('1000');
+    expect(el<HTMLTextAreaElement>(fixture, '#q-explanation').value).toBe('About 299,792 km/s.');
+    clickButton(fixture, 'Save changes');
+    const body = http.expectOne(`${API}/api/admin/questions/f1`).request.body;
+    expect(body.kind).toBe('fill_in');
+    expect(body.options).toBeUndefined();
+  });
+
+  it('filters the list by type', async () => {
+    const { fixture, http } = await open();
+    type(fixture, '#f-kind', 'fill_in');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions?kind=fill_in`).flush([FILL]);
+    await settle(fixture);
+    expect(all(fixture, '[data-question]').length).toBe(1);
+  });
+
+  it('keeps the type and answer kind for the next question after Save and add another', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    await fillInForm(fixture, 'number');
+    clickButton(fixture, 'Save and add another');
+    http.expectOne(`${API}/api/admin/questions`).flush({ ...FILL, id: 'n1' });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Optics`).flush([]);
+    await settle(fixture);
+    expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('fill_in');
+    expect(el<HTMLSelectElement>(fixture, '#q-answer-type').value).toBe('number');
+    expect(el<HTMLInputElement>(fixture, '#q-answer-number').value).toBe('');
+    expect(el<HTMLTextAreaElement>(fixture, '#q-explanation').value).toBe('');
+  });
+
+  it('switching to fill-in drops any option pictures already chosen', async () => {
+    const { fixture, http } = await open([]);
+    clickButton(fixture, 'Add a question');
+    await settle(fixture);
+    emitPicture(fixture, 'B', { id: 'pb', url: 'https://s3.example/pb' });
+    await settle(fixture);
+    type(fixture, '#q-kind', 'fill_in');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/question-images/pb`).flush(null);
+    expect(all(fixture, '#question-form img').length).toBe(0);
+  });
+});

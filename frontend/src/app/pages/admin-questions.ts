@@ -6,6 +6,13 @@ import { PicturePicker } from './picture-picker';
 import { QuestionUpload } from './question-upload';
 
 interface Draft {
+  kind: 'mcq' | 'fill_in';
+  /** Fill in: what the student types. Text: accepted answers separated by | . Number: the number and a tolerance. */
+  answerType: 'text' | 'number';
+  answerText: string;
+  answerNumber: string;
+  tolerance: string;
+  explanation: string;
   paper: string;
   topic: string;
   text: string;
@@ -21,6 +28,12 @@ const LETTERS = ['A', 'B', 'C', 'D'];
 
 function emptyDraft(): Draft {
   return {
+    kind: 'mcq',
+    answerType: 'text',
+    answerText: '',
+    answerNumber: '',
+    tolerance: '',
+    explanation: '',
     paper: '',
     topic: '',
     text: '',
@@ -33,11 +46,18 @@ function emptyDraft(): Draft {
 }
 
 function draftFrom(question: Question): Draft {
+  const answer = question.answer;
   return {
+    kind: question.kind ?? 'mcq',
+    answerType: answer?.type ?? 'text',
+    answerText: answer?.type === 'text' ? answer.accepted.join(' | ') : '',
+    answerNumber: answer?.type === 'number' ? answer.value : '',
+    tolerance: answer?.type === 'number' && answer.tolerance !== '0' ? answer.tolerance : '',
+    explanation: question.explanation ?? '',
     paper: question.paper,
     topic: question.topic,
     text: question.text,
-    options: question.options.map((option) => ({ ...option })),
+    options: question.kind === 'fill_in' ? LETTERS.map(() => ({ text: '', why: '' })) : question.options.map((option) => ({ ...option })),
     correct: question.correct,
     difficulty: question.difficulty,
     status: question.status,
@@ -69,6 +89,13 @@ function draftFrom(question: Question): Draft {
             @if (addedCount()) { <strong>{{ addedCount() }} added so far.</strong> }
           </p>
         }
+        <div class="field">
+          <label for="q-kind">Type of question</label>
+          <select id="q-kind" name="kind" [(ngModel)]="draft.kind" (ngModelChange)="kindChanged()">
+            <option value="mcq">Multiple choice (four options)</option>
+            <option value="fill_in">Fill in the answer (the student types it)</option>
+          </select>
+        </div>
         <div class="grid-2">
           <div class="field">
             <label for="q-paper">Paper</label>
@@ -99,30 +126,71 @@ function draftFrom(question: Question): Draft {
         </div>
         <app-picture-picker inputId="pic-question" label="Picture for the question (optional, PNG or JPG, up to 1 MB)" [picture]="draft.pictures['question']" (changed)="setPicture('question', $event)" />
 
-        <h3>Options</h3>
-        <p class="hint">Mark the correct option, and for every option say why it is correct or why it is wrong.</p>
-        @for (option of draft.options; track $index) {
-          <fieldset class="option">
-            <legend>Option {{ letters[$index] }}</legend>
+        @if (draft.kind === 'mcq') {
+          <h3>Options</h3>
+          <p class="hint">Mark the correct option, and for every option say why it is correct or why it is wrong.</p>
+          @for (option of draft.options; track $index) {
+            <fieldset class="option">
+              <legend>Option {{ letters[$index] }}</legend>
+              <div class="field">
+                <label [attr.for]="'q-opt-' + $index">Option {{ letters[$index] }} text</label>
+                <input [id]="'q-opt-' + $index" [name]="'opt' + $index" type="text" [(ngModel)]="option.text" (input)="clearError('options')" />
+                <div class="hint">Leave the text empty if the option is only a picture.</div>
+              </div>
+              <app-picture-picker [inputId]="'pic-' + letters[$index]" [label]="'Picture for option ' + letters[$index] + ' (optional)'" [picture]="draft.pictures[letters[$index]]" (changed)="setPicture(letters[$index], $event)" />
+              <div class="field">
+                <label [attr.for]="'q-why-' + $index">Why option {{ letters[$index] }} is correct or wrong</label>
+                <textarea [id]="'q-why-' + $index" [name]="'why' + $index" rows="2" [(ngModel)]="option.why" (input)="clearError('options')"></textarea>
+              </div>
+              <label class="inline">
+                <input type="radio" name="correct" [id]="'q-correct-' + $index" [value]="$index" [(ngModel)]="draft.correct" (ngModelChange)="clearError('correct')" />
+                This is the correct answer
+              </label>
+            </fieldset>
+          }
+          @if (fieldErrors()['options']) { <div class="error-text">{{ fieldErrors()['options'] }}</div> }
+          @if (fieldErrors()['images']) { <div class="error-text">{{ fieldErrors()['images'] }}</div> }
+          @if (fieldErrors()['correct']) { <div class="error-text">{{ fieldErrors()['correct'] }}</div> }
+
+        } @else {
+          <h3>Answer</h3>
+          <p class="hint">The student sees one box under the question and types the answer.</p>
+          <div class="grid-2">
             <div class="field">
-              <label [attr.for]="'q-opt-' + $index">Option {{ letters[$index] }} text</label>
-              <input [id]="'q-opt-' + $index" [name]="'opt' + $index" type="text" [(ngModel)]="option.text" (input)="clearError('options')" />
-              <div class="hint">Leave the text empty if the option is only a picture.</div>
+              <label for="q-answer-type">The answer is</label>
+              <select id="q-answer-type" name="answerType" [(ngModel)]="draft.answerType" (ngModelChange)="clearError('answer')">
+                <option value="text">Text</option>
+                <option value="number">A number</option>
+              </select>
             </div>
-            <app-picture-picker [inputId]="'pic-' + letters[$index]" [label]="'Picture for option ' + letters[$index] + ' (optional)'" [picture]="draft.pictures[letters[$index]]" (changed)="setPicture(letters[$index], $event)" />
+            @if (draft.answerType === 'text') {
+              <div class="field">
+                <label for="q-answer-text">Correct answer</label>
+                <input id="q-answer-text" name="answerText" type="text" [(ngModel)]="draft.answerText" (input)="clearError('answer')" [attr.aria-invalid]="fieldErrors()['answer'] ? 'true' : null" />
+                <div class="hint">For other accepted answers, separate them with |, for example Mumbai | Bombay. Capitals and extra spaces don't matter.</div>
+              </div>
+            } @else {
+              <div class="field">
+                <label for="q-answer-number">Correct number</label>
+                <input id="q-answer-number" name="answerNumber" type="text" inputmode="decimal" [(ngModel)]="draft.answerNumber" (input)="clearError('answer')" [attr.aria-invalid]="fieldErrors()['answer'] ? 'true' : null" />
+              </div>
+            }
+          </div>
+          @if (draft.answerType === 'number') {
             <div class="field">
-              <label [attr.for]="'q-why-' + $index">Why option {{ letters[$index] }} is correct or wrong</label>
-              <textarea [id]="'q-why-' + $index" [name]="'why' + $index" rows="2" [(ngModel)]="option.why" (input)="clearError('options')"></textarea>
+              <label for="q-tolerance">Tolerance (optional)</label>
+              <input id="q-tolerance" name="tolerance" type="text" inputmode="decimal" [(ngModel)]="draft.tolerance" (input)="clearError('answer')" />
+              <div class="hint">How far off a student's number may be and still count, for example 0.01. Empty means exact.</div>
             </div>
-            <label class="inline">
-              <input type="radio" name="correct" [id]="'q-correct-' + $index" [value]="$index" [(ngModel)]="draft.correct" (ngModelChange)="clearError('correct')" />
-              This is the correct answer
-            </label>
-          </fieldset>
+          }
+          @if (fieldErrors()['answer']) { <div class="error-text">{{ fieldErrors()['answer'] }}</div> }
+          <div class="field">
+            <label for="q-explanation">Explanation</label>
+            <textarea id="q-explanation" name="explanation" rows="3" [(ngModel)]="draft.explanation" (input)="clearError('explanation')" [attr.aria-invalid]="fieldErrors()['explanation'] ? 'true' : null"></textarea>
+            <div class="hint">Why this is the right answer.</div>
+            @if (fieldErrors()['explanation']) { <div class="error-text">{{ fieldErrors()['explanation'] }}</div> }
+          </div>
         }
-        @if (fieldErrors()['options']) { <div class="error-text">{{ fieldErrors()['options'] }}</div> }
-        @if (fieldErrors()['images']) { <div class="error-text">{{ fieldErrors()['images'] }}</div> }
-        @if (fieldErrors()['correct']) { <div class="error-text">{{ fieldErrors()['correct'] }}</div> }
 
         <div class="grid-2" style="margin-top: 0.75rem">
           <div class="field">
@@ -184,6 +252,14 @@ function draftFrom(question: Question): Draft {
           </select>
         </div>
         <div class="field">
+          <label for="f-kind">Type</label>
+          <select id="f-kind" name="fkind" [(ngModel)]="filter.kind" (ngModelChange)="load()">
+            <option value="">All types</option>
+            <option value="mcq">Multiple choice</option>
+            <option value="fill_in">Fill in</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="f-pictures">Pictures</label>
           <select id="f-pictures" name="fpictures" [(ngModel)]="filter.pictures" (ngModelChange)="load()">
             <option value="">All questions</option>
@@ -201,12 +277,20 @@ function draftFrom(question: Question): Draft {
             <div class="row">
               <span class="chip" [class]="'chip ' + (question.status === 'published' ? 'open' : 'hidden')">{{ question.status }}</span>
               <span class="muted">{{ paperName(question.paper) }} · {{ question.topic }} · {{ question.difficulty }}</span>
+              @if (question.kind === 'fill_in') { <span class="chip pictures">fill in</span> }
               @if (hasPictures(question)) { <span class="chip pictures">pictures</span> }
             </div>
             <p><strong>{{ question.text }}</strong></p>
             @if (question.images?.['question']; as picture) {
               <img class="qimg" [src]="picture.url" alt="Picture for the question" />
             }
+            @if (question.kind === 'fill_in') {
+              <p class="answer">
+                <strong>Answer:</strong> {{ answerShown(question) }}
+                @if (question.answer?.type === 'number' && question.answer?.tolerance !== '0') { <span class="muted">(within {{ toleranceOf(question) }})</span> }
+              </p>
+              <div class="hint">{{ question.explanation }}</div>
+            } @else {
             <ol class="options" type="A">
               @for (option of question.options; track $index) {
                 <li [class.correct]="$index === question.correct">
@@ -219,6 +303,7 @@ function draftFrom(question: Question): Draft {
                 </li>
               }
             </ol>
+            }
             <div class="row">
               <button class="btn secondary small" type="button" (click)="startEdit(question)">Edit</button>
               @if (confirming() === question.id) {
@@ -256,7 +341,7 @@ export class AdminQuestions implements OnInit {
   draft: Draft = emptyDraft();
   /** The pictures the question already had when it was opened for editing, by position. */
   private original: Record<string, string> = {};
-  filter = { paper: '', topic: '', status: '', pictures: '' };
+  filter = { paper: '', topic: '', status: '', pictures: '', kind: '' };
 
   /** Papers grouped by section, for the dropdown. */
   readonly groups = computed(() => {
@@ -285,6 +370,27 @@ export class AdminQuestions implements OnInit {
     return this.papers().find((paper) => paper.id === paperId)?.topics ?? [];
   }
 
+  /** The type was switched: option pictures can't stay on a fill-in question. */
+  kindChanged(): void {
+    this.fieldErrors.set({});
+    if (this.draft.kind === 'fill_in') {
+      for (const letter of LETTERS) {
+        const picture = this.draft.pictures[letter];
+        if (picture) this.setPicture(letter, null);
+      }
+    }
+  }
+
+  answerShown(question: Question): string {
+    const answer = question.answer;
+    if (!answer) return '';
+    return answer.type === 'text' ? answer.accepted.join(' or ') : answer.value;
+  }
+
+  toleranceOf(question: Question): string {
+    return question.answer?.type === 'number' ? question.answer.tolerance : '';
+  }
+
   hasPictures(question: Question): boolean {
     return Object.keys(question.images ?? {}).length > 0;
   }
@@ -305,7 +411,7 @@ export class AdminQuestions implements OnInit {
   async uploaded(count: number): Promise<void> {
     this.reset();
     this.notice.set(`Imported ${count} ${count === 1 ? 'question' : 'questions'}.`);
-    this.filter = { paper: '', topic: '', status: '', pictures: '' };
+    this.filter = { paper: '', topic: '', status: '', pictures: '', kind: '' };
     await this.load();
   }
 
@@ -382,9 +488,20 @@ export class AdminQuestions implements OnInit {
     if (this.saving()) return;
     this.saving.set(true);
     this.reset();
-    const { pictures: _pictures, ...fields } = this.draft;
     const images = this.pictureChanges();
-    const body = { ...fields, correct: this.draft.correct as number, ...(Object.keys(images).length ? { images } : {}) };
+    const d = this.draft;
+    const common = { kind: d.kind, paper: d.paper, topic: d.topic, text: d.text, difficulty: d.difficulty, status: d.status };
+    const kindFields =
+      d.kind === 'fill_in'
+        ? {
+            answer:
+              d.answerType === 'number'
+                ? { type: 'number' as const, value: d.answerNumber, tolerance: d.tolerance }
+                : { type: 'text' as const, accepted: d.answerText.split('|') },
+            explanation: d.explanation,
+          }
+        : { options: d.options, correct: d.correct as number };
+    const body = { ...common, ...kindFields, ...(Object.keys(images).length ? { images } : {}) };
     const editing = this.editingId();
     try {
       if (editing) await this.api.updateQuestion(editing, body);
@@ -394,7 +511,7 @@ export class AdminQuestions implements OnInit {
         this.addedCount.update((count) => count + 1);
         const total = this.addedCount();
         this.notice.set(`Added question ${total} in ${this.paperName(body.paper)} · ${body.topic}. Add the next one.`);
-        this.draft = { ...emptyDraft(), paper: body.paper, topic: body.topic, difficulty: body.difficulty, status: body.status };
+        this.draft = { ...emptyDraft(), kind: body.kind, answerType: d.answerType, paper: body.paper, topic: body.topic, difficulty: body.difficulty, status: body.status };
         // Show the list for the same paper and topic, so the admin sees what is already there.
         this.filter = { ...this.filter, paper: body.paper, topic: body.topic };
         this.scrollToForm();

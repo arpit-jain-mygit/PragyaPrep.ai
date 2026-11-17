@@ -228,13 +228,22 @@ export interface Picture {
 
 export const PICTURE_SLOTS = ['question', 'A', 'B', 'C', 'D'] as const;
 
+/** The right answer to a fill-in question: text (any accepted spelling) or a number (numbers are strings, to stay exact). */
+export type FillInAnswer =
+  | { type: 'text'; accepted: string[] }
+  | { type: 'number'; value: string; tolerance: string };
+
 export interface Question {
   id: string;
   paper: string;
   topic: string;
   text: string;
+  /** Multiple choice (4 options) or fill in (one box the student types the answer into). */
+  kind: 'mcq' | 'fill_in';
   options: QuestionOption[];
-  correct: number;
+  correct: number | null;
+  answer?: FillInAnswer | null;
+  explanation?: string | null;
   difficulty: 'easy' | 'medium' | 'hard';
   status: 'draft' | 'published';
   created_at: string;
@@ -244,7 +253,9 @@ export interface Question {
 }
 
 /** What the admin sends. For an edit, only what changed. */
-export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images'>> & {
+export type QuestionInput = Partial<Omit<Question, 'id' | 'created_at' | 'edited_by' | 'edited_at' | 'images' | 'answer' | 'correct'>> & {
+  correct?: number | null;
+  answer?: { type: 'text'; accepted: string[] } | { type: 'number'; value: string; tolerance: string };
   /** Picture ids by position. null takes a picture off. */
   images?: Record<string, string | null>;
 };

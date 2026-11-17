@@ -40,6 +40,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | Q3 | **Pictures on questions:** the admin can attach one PNG or JPG (up to 1 MB) to a question and one to each option. An option may be picture-only (the reason is still required). Pictures show in the form and the list, and can be replaced or removed. Deleting a question, or replacing or removing a picture, deletes the file from storage. Students don't see questions yet | **Tested live** | 37 backend and 19 frontend tests (513 and 242 in all). On dev with real S3, from the real website: a real PNG went onto the question and onto option B (which had no text), a fake `.png` was refused and removed from S3, the question saved and showed both pictures, removing the question's picture deleted its file, deleting the question deleted the other, and afterwards there were no files and no question or picture rows left. No Lambda errors |
 | Q4 | **Pictures in the Excel upload:** the template gets optional columns Question image and Image A to D. The admin first chooses all the pictures in a picture step on the upload card, then types each picture's file name in the sheet. The preview says how many pictures will be attached and flags a missing picture, or one used twice, by row and column. A picture-only option may leave its text empty | **Tested live** | 14 new backend tests and 7 new frontend tests (527 and 249 in all). On dev from the real website: two real PNGs and a fake `.png` were chosen (the fake one was refused), an Excel file named them, the preview showed 2 ready (2 pictures) and one row with problems (a picture used twice and one not uploaded), the import attached both pictures and they loaded in the list. I then deleted the questions: no files, no rows and no Lambda errors left |
 | Q5 | **Find questions with pictures:** each question that has a picture on the question or on any option shows a "pictures" tag, and the list has a **Pictures** filter (All questions, With pictures, Without pictures) that combines with Paper, Topic and Status. It is worked out from the pictures actually attached, so it covers questions added by the form or by Excel, and there is no manual column to keep in step | **Tested live** | 4 backend and 3 frontend tests (531 and 252 in all). On dev: a question with a picture on option B and one without were added, the filter returned each correctly, and both were deleted with no files, rows or Lambda errors left |
+| Q6 | **Fill-in questions:** a second question type with one box the student types the answer into. The answer is text (accepted spellings separated by `|`, capitals and extra spaces ignored) or a number (compared as a number, with an optional tolerance). It has one explanation instead of per-option reasons, and may have a question picture. The form has a Type choice, the Excel template has optional columns Type, Answer, Answer type, Tolerance and Explanation, and the list has a Type filter and a "fill in" tag. The marking rules are built and tested; students don't see questions yet | **Tested live** | 70 backend and 12 frontend tests (601 and 264 in all). On dev, from the real website: a fill-in question was added through the form (a missing explanation was refused first), an Excel file with two fill-in rows and a bad number imported 2 and flagged the bad row on its Answer column, and the Type filter showed them. I deleted only my three `ZZ` questions; the 25 real questions already in AaptPrep were not touched. No Lambda errors |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -129,7 +130,7 @@ The API address is `https://byk6esj2muxebponlkbnsark540cqwpn.lambda-url.ap-south
 cd backend
 PYTHONPATH=. .venv/bin/python -m pytest -q
 ```
-You should see `531 passed`.
+You should see `601 passed`.
 
 ### M1 (tenant foundation): what to try
 Open **GET /api/tenant**, click **Try it out**, type a value into `X-Tenant`, and click **Execute**.
@@ -380,6 +381,21 @@ On the Question bank page, in the **Questions** list.
 | 3 | Set it to **Without pictures** | Only the others |
 | 4 | Combine it with Paper, Topic or Status | The filters work together |
 
+### Q6 (fill-in questions): what to try
+In **Question bank**, click **Add a question**.
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Set **Type of question** to **Fill in the answer** | The four options go away. An **Answer** section and an **Explanation** box appear. Only the question picture is offered |
+| 2 | Answer is **Text**: type `Mumbai | Bombay` | The hint says other accepted answers go after a `|` |
+| 3 | Answer is **A number**: type `3.14` and a tolerance `0.01` | |
+| 4 | Leave the explanation empty and save | "The explanation is required." next to the box |
+| 5 | Fill it in and save | The list shows a "fill in" tag, the answer ("Mumbai or Bombay", or "3.14 (within 0.01)") and the explanation |
+| 6 | In the Excel template, set **Type** to `fill_in`, leave the options empty, and fill **Answer**, **Answer type**, **Tolerance** and **Explanation** | The preview names the column of any mistake, for example "Answer: The answer must be a number." |
+| 7 | Use the **Type** filter | Only fill-in, or only multiple choice |
+
+Delete your test questions afterwards.
+
 ### M7 (hosting): what to try
 The dev website is at **https://d1szng4oy9m4an.cloudfront.net**. Open it on any device. There is no start page content yet, so use an institute's address:
 
@@ -442,7 +458,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 531 passed, 0 failed. Frontend: 252 passed, 0 failed. Total: 783.**
+**Backend, run on my machine: 601 passed, 0 failed. Frontend: 264 passed, 0 failed. Total: 865.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -463,7 +479,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_questions` | Q1 question bank (the 37 papers, checks with all mistakes at once, filters, edit, delete, who may, privacy between institutes) | 32 |
 | `test_question_import` | Q2 and Q4 Excel upload (template, preview, import, problems by row and column, duplicates, unreadable files, 500-row limit, privacy, pictures named in the sheet) | 39 |
 | `test_question_images` | Q3 pictures (who may, types and size, real contents, attach to question and options, replace, remove, delete clean-up, privacy) and Q5 the pictures filter | 41 |
-| | **Total** | **531** |
+| `test_fill_in` | Q6 fill-in questions (marking rules for text and numbers, checking the admin's answer, the API, switching type, pictures, the Excel columns) | 70 |
+| | **Total** | **601** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -476,10 +493,10 @@ My own test rows and files are always removed after each live test. Login codes 
 | `my-courses.spec` | Student's courses: open a PDF, play a video, renew a link, access ended | 10 |
 | `platform-admin.spec` | Institutes page: list, add, edit, admin replacement, logos | 33 |
 | `shell.spec` | Page frame, logo in the top bar, student home, start page, not found | 20 |
-| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures, pictures filter | 27 |
+| `admin-questions.spec` | Question bank page: list, paper and topic dropdowns, add, field errors, edit, delete, filters, adding several in a row, upload card, pictures, pictures filter, fill-in questions | 39 |
 | `question-upload.spec` | Excel upload card: template download, preview, problems, confirm, wrong file type, picture step | 15 |
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
-| | **Total** | **252** |
+| | **Total** | **264** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

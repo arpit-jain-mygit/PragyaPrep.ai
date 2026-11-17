@@ -27,6 +27,9 @@ COLUMNS = [
 LETTERS = ["A", "B", "C", "D"]
 # Optional columns after the required ones: the file name of a picture the admin uploaded first. position -> column
 PICTURE_COLUMNS = {"question": "Question image", "A": "Image A", "B": "Image B", "C": "Image C", "D": "Image D"}
+# Optional columns for fill-in questions (one box the student types the answer into). Blank Type means multiple choice.
+FILL_IN_COLUMNS = ["Type", "Answer", "Answer type", "Tolerance", "Explanation"]
+OPTIONAL_COLUMNS = list(PICTURE_COLUMNS.values()) + FILL_IN_COLUMNS
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -35,13 +38,13 @@ def build_template() -> bytes:
     book = Workbook()
     sheet = book.active
     sheet.title = SHEET
-    sheet.append(COLUMNS + list(PICTURE_COLUMNS.values()))
-    for index, name in enumerate(COLUMNS + list(PICTURE_COLUMNS.values()), start=1):
+    sheet.append(COLUMNS + OPTIONAL_COLUMNS)
+    for index, name in enumerate(COLUMNS + OPTIONAL_COLUMNS, start=1):
         cell = sheet.cell(row=1, column=index)
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="2563EB")
         cell.alignment = Alignment(vertical="center", wrap_text=True)
-        width = 42 if name in ("Question", "Why A", "Why B", "Why C", "Why D") else 22 if name.startswith("Option") or name in ("Paper", "Topic") or name in PICTURE_COLUMNS.values() else 13
+        width = 42 if name in ("Question", "Why A", "Why B", "Why C", "Why D", "Explanation") else 22 if name.startswith("Option") or name in ("Paper", "Topic") or name in PICTURE_COLUMNS.values() else 13
         sheet.column_dimensions[get_column_letter(index)].width = width
     sheet.freeze_panes = "A2"
 
@@ -71,6 +74,9 @@ def build_template() -> bytes:
     dropdown('"A,B,C,D"', "L", "Type A, B, C or D.")
     dropdown('"easy,medium,hard"', "M", "Choose easy, medium or hard.")
     dropdown('"draft,published"', "N", "Choose draft or published.")
+    first = len(COLUMNS) + len(PICTURE_COLUMNS) + 1  # the Type column
+    dropdown('"mcq,fill_in"', get_column_letter(first), "Choose mcq (multiple choice) or fill_in.")
+    dropdown('"text,number"', get_column_letter(first + 2), "Choose text or number.")
 
     guide = book.create_sheet("Instructions", 0)
     guide.column_dimensions["A"].width = 110
@@ -84,6 +90,7 @@ def build_template() -> bytes:
         ("6. Up to 500 questions per file. Save as .xlsx and upload it on the Question bank page. You will see a preview first, and nothing is saved until you confirm.", False),
         ("7. A question that is already in the bank (same paper, topic and wording) is skipped, so uploading a file twice does no harm.", False),
         ("8. Pictures (optional): first choose your PNG or JPG pictures (up to 1 MB each) in the picture step on the upload card. Then type each picture's file name, for example circuit1.png, in 'Question image' or 'Image A' to 'Image D'. A picture can be on one question only. An option that is only a picture may leave its option text empty, but still needs its reason.", False),
+        ("9. Fill-in questions (one box the student types the answer into): set Type to fill_in, leave the four options, their reasons and Correct empty, and fill in Answer, Answer type and Explanation. Answer type 'text': type the answer, and add other accepted spellings after a | sign, for example Mumbai|Bombay (capitals and extra spaces don't matter). Answer type 'number': type the number; the optional Tolerance says how far off a student's number may be, for example 0.01. Leave Type empty for multiple choice. A fill-in question can have a Question image but no option pictures.", False),
         ("", False),
         ("Example row", True),
         ("Paper: Physics | Topic: Optics | Question: Which colour bends the most in a prism? | Option A: Red | Option B: Violet | Option C: Green | Option D: Yellow | "
@@ -132,11 +139,11 @@ def _rows(content: bytes) -> list[tuple[int, dict]]:
         raise ValidationError("The column headings have changed. Download a fresh template and copy your questions into it.")
 
     # The picture columns are optional: an older template without them still works.
-    where = {name: header.index(name) for name in list(PICTURE_COLUMNS.values()) if name in header}
+    where = {name: header.index(name) for name in OPTIONAL_COLUMNS if name in header}
     found = []
     for number, values in enumerate(rows, start=2):
         row = {name: _cell(values[index]) if index < len(values) else "" for index, name in enumerate(COLUMNS)}
-        for name in PICTURE_COLUMNS.values():
+        for name in OPTIONAL_COLUMNS:
             row[name] = _cell(values[where[name]]) if name in where and where[name] < len(values) else ""
         if any(row.values()):
             found.append((number, row))
@@ -169,10 +176,26 @@ def _to_question(row: dict) -> tuple[dict, dict[str, str]]:
             data["topic"] = topic
 
     data["text"] = row["Question"]
-    data["options"] = [{"text": row[f"Option {letter}"], "why": row[f"Why {letter}"]} for letter in LETTERS]
+    kind = row["Type"].lower().replace("-", "_").replace(" ", "_") or "mcq"
+    if kind not in questions.KINDS:
+        problems["Type"] = "Type must be mcq or fill_in."
+        kind = "mcq"
+    data["kind"] = kind
 
-    correct = row["Correct"].upper()
-    data["correct"] = LETTERS.index(correct) if correct in LETTERS else None
+    if kind == "fill_in":
+        # No options for this type, so whatever is in those cells is ignored.
+        answer_type = row["Answer type"].lower() or "text"
+        if answer_type == "number":
+            data["answer"] = {"type": "number", "value": row["Answer"], "tolerance": row["Tolerance"]}
+        elif answer_type == "text":
+            data["answer"] = {"type": "text", "accepted": row["Answer"].split("|")}
+        else:
+            data["answer"] = {"type": answer_type}
+        data["explanation"] = row["Explanation"]
+    else:
+        data["options"] = [{"text": row[f"Option {letter}"], "why": row[f"Why {letter}"]} for letter in LETTERS]
+        correct = row["Correct"].upper()
+        data["correct"] = LETTERS.index(correct) if correct in LETTERS else None
     data["difficulty"] = row["Difficulty"].lower() or "medium"
     data["status"] = row["Status"].lower() or "draft"
     return data, problems
@@ -184,6 +207,17 @@ def _column_for(field: str, message: str) -> str:
         return "Question"
     if field == "correct":
         return "Correct"
+    if field == "kind":
+        return "Type"
+    if field == "explanation":
+        return "Explanation"
+    if field == "answer":
+        lowered = message.lower()
+        if "tolerance" in lowered:
+            return "Tolerance"
+        if "text or a number" in lowered:
+            return "Answer type"
+        return "Answer"
     if field == "difficulty":
         return "Difficulty"
     if field == "status":
@@ -227,6 +261,9 @@ def read(content: bytes, existing: list[dict], find_picture=lambda name: None) -
             cleaned = None
             for field, message in error.errors.items():
                 bad.setdefault(_column_for(field, message), message)
+        if "Type" in bad:
+            bad = {"Type": bad["Type"]}  # the other messages would only be about the wrong type
+            cleaned = None
         if cleaned is not None and not bad:
             key = (cleaned["paper"], cleaned["topic"], " ".join(cleaned["text"].lower().split()))
             if key in seen:
@@ -236,6 +273,9 @@ def read(content: bytes, existing: list[dict], find_picture=lambda name: None) -
         images: dict[str, str] = {}
         for slot, name in named.items():
             column = PICTURE_COLUMNS[slot]
+            if data["kind"] == "fill_in" and slot != "question":
+                bad.setdefault(column, "A fill-in question has no options, so it can't have an option picture.")
+                continue
             if not name:
                 bad.setdefault(column, "Type the picture's file name.")
                 continue
