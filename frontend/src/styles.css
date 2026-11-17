@@ -206,8 +206,11 @@ label.inline { display: flex; gap: 0.5rem; align-items: center; font-weight: 600
 .picture { margin: 0.5rem 0 0.75rem; }
 .picture label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
 .thumb { margin: 0.25rem 0 0.5rem; }
-.thumb img, img.qimg { max-width: 220px; max-height: 160px; border: 1px solid var(--line); border-radius: 0.4rem; background: #fff; display: block; }
+/* Pictures: shown large enough to read (charts and tables), never wider than the page, never stretched. */
+.thumb img, img.qimg { max-width: min(100%, 720px); height: auto; border: 1px solid var(--line); border-radius: 0.4rem; background: #fff; display: block; }
+.thumb img { max-width: min(100%, 360px); max-height: 260px; width: auto; }
 img.qimg { margin: 0.4rem 0; }
+.options img.qimg { max-width: min(100%, 360px); }
 .staged { list-style: none; margin: 0.5rem 0 0; padding: 0; }
 .staged li { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; padding: 0.2rem 0; }
 .chip.pictures { background: #eef2ff; color: #3730a3; }
