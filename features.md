@@ -121,7 +121,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Only published questions can be added. A question on a passage always comes with the rest of its passage, so the picked total can be a little more than asked. The page shows the count, the total marks and the count per subject.
 - A test needs at least one question and one course to be published. A question in a published test can't be deleted; deleting a question takes it out of draft tests.
 - The list has a **search** by name, a **course** filter and a **status** filter, with a count and a clear button.
-- Students taking tests (timing, answers, results, reasons afterwards) is the next step and isn't built yet.
+- Students take tests from their own **Tests** page (see the Student section). The admin's view of students' results is not built yet.
 
 ## Platform admin
 - Created only by a script, never from the screens.
@@ -136,6 +136,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Register, then log in with an emailed code once approved.
 - See only the courses they have been granted, in their own tenant, under **My courses**.
 - Open a course, play its MP4 videos (with seeking) and open its PDFs.
+- **Take tests:** a **Tests** page lists the tests of the courses the student can open now, with the window, attempts used and best score. A test has an intro (questions, marks, marking, time, pass mark, instructions), then one question at a time with a numbered palette, passages shown with their questions, pictures, typed answers for fill-in questions, mark for review, a countdown, and Submit. Answers save as they go and a refresh resumes the attempt with the time left. The test submits itself when time runs out. The result shows marks, percentage, pass or fail and the counts, and (if the test allows it) a review of every question with the right answer, the student's answer and the reason for each option. Attempts are limited by the test; a started attempt counts.
 - *(Phase 2)* Pay and upload a payment screenshot for the requested course.
 - *(Phase 2)* Edit their own contact details after logging in. Until then the admin does it.
 

@@ -300,6 +300,38 @@ class TenantRepo:
     def delete_access(self, email: str, course_id: str) -> None:
         self.table.delete_item(Key=self._access_key(email, course_id))
 
+    # ---- Test attempts: stored with the student, so a student can only ever reach their own ----
+
+    def _attempt_key(self, email: str, test_id: str, number: int) -> dict:
+        return {"PK": self._member_key(email)["PK"], "SK": f"ATTEMPT#{test_id}#{number:03d}"}
+
+    def create_attempt(self, attempt: dict) -> None:
+        """Save a new attempt. Raises ConflictError if that attempt number already exists (two clicks at once)."""
+        _put_new(
+            self.table,
+            {
+                **self._attempt_key(attempt["email"], attempt["test_id"], attempt["number"]),
+                **attempt,
+                # So the admin can list everyone's attempts at one test later.
+                "GSI1PK": f"{self._prefix}ATTEMPTS#{attempt['test_id']}",
+                "GSI1SK": f"{attempt['started_at']}#{attempt['email']}",
+            },
+        )
+
+    def get_attempt(self, email: str, test_id: str, number: int) -> dict | None:
+        return _plain(self.table.get_item(Key=self._attempt_key(email, test_id, number)).get("Item"))
+
+    def list_attempts(self, email: str, test_id: str | None = None) -> list[dict]:
+        """A student's attempts, oldest first: all of them, or those at one test."""
+        prefix = f"ATTEMPT#{test_id}#" if test_id else "ATTEMPT#"
+        response = self.table.query(
+            KeyConditionExpression=Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with(prefix),
+        )
+        return [_plain(item) for item in response["Items"]]
+
+    def update_attempt(self, email: str, test_id: str, number: int, fields: dict) -> None:
+        _update(self.table, self._attempt_key(email, test_id, number), fields)
+
     # ---- Login codes ----
 
     def _otp_key(self, email: str) -> dict:

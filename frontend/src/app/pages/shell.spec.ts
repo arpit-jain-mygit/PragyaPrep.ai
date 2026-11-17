@@ -51,7 +51,7 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My courses']);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My courses', 'Tests']);
   });
 
   it('signs the person out and goes to the login page', async () => {

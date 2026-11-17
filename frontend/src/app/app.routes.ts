@@ -55,6 +55,21 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-questions').then((m) => m.AdminQuestions),
       },
       {
+        path: 'tests',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests),
+      },
+      {
+        path: 'tests/:id',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-test').then((m) => m.StudentTest),
+      },
+      {
+        path: 'tests/:id/attempts/:number',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-attempt').then((m) => m.StudentAttempt),
+      },
+      {
         path: 'courses',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/my-courses').then((m) => m.MyCourses),

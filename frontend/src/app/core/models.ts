@@ -112,6 +112,8 @@ export interface ApiError {
   errors?: Record<string, string>;
   /** For "too many requests": how many seconds to wait. */
   retryAfter?: number;
+  /** The whole answer the server sent, for the few errors that carry more than a message. */
+  body?: Record<string, unknown>;
 }
 
 /** The institute's admin, as the platform admin sees them. */
@@ -347,4 +349,97 @@ export interface AutoPickResult {
   picked: number;
   added_for_passages: number;
   short: { rule: number; wanted: number; found: number }[];
+}
+
+// ---- A student taking tests ----
+
+export interface AttemptLine {
+  number: number;
+  status: 'in_progress' | 'submitted';
+  started_at: string;
+  submitted_at?: string | null;
+  marks?: string;
+  total_marks?: string;
+  percentage?: string;
+  passed?: boolean;
+  auto_submitted?: boolean;
+}
+
+export interface StudentTestCard {
+  id: string;
+  title: string;
+  description: string;
+  start_at: string | null;
+  end_at: string | null;
+  duration_minutes: number;
+  max_attempts: number;
+  pass_percentage: number;
+  marks_correct: string;
+  marks_incorrect: string;
+  show_answers: boolean;
+  question_count: number;
+  total_marks: string;
+  state: 'upcoming' | 'open' | 'ended';
+  attempts_used: number;
+  attempts_left: number;
+  /** The number of the attempt in progress, if there is one. */
+  in_progress: number | null;
+  best: { marks: string; percentage: string; passed: boolean } | null;
+  attempts: AttemptLine[];
+}
+
+/** A question as a student sees it during a test: no correct answer and no reasons. */
+export interface AttemptQuestion {
+  id: string;
+  kind: 'mcq' | 'fill_in';
+  text: string;
+  options: { text: string }[];
+  /** Picture links by position (question, A to D). */
+  images: Record<string, string>;
+  passage: string | null;
+  passage_text: string | null;
+}
+
+export interface AttemptView {
+  status: 'in_progress';
+  test_id: string;
+  number: number;
+  title: string;
+  started_at: string;
+  duration_minutes: number;
+  remaining_seconds: number;
+  questions: AttemptQuestion[];
+  /** Saved answers: an option number for multiple choice, typed text for fill-in. */
+  answers: Record<string, number | string>;
+}
+
+export interface ReviewItem extends AttemptQuestion {
+  result: 'c' | 'w' | 'u';
+  given: number | string | null;
+  correct: number | null;
+  reasons: string[];
+  answer: string | null;
+  explanation: string | null;
+}
+
+export interface AttemptResult {
+  status: 'submitted';
+  test_id: string;
+  number: number;
+  title: string;
+  started_at: string;
+  submitted_at: string | null;
+  auto_submitted: boolean;
+  correct: number;
+  wrong: number;
+  unanswered: number;
+  marks: string;
+  total_marks: string;
+  percentage: string;
+  passed: boolean;
+  pass_percentage: number;
+  marks_correct: string;
+  marks_incorrect: string;
+  show_answers: boolean;
+  review: ReviewItem[] | null;
 }

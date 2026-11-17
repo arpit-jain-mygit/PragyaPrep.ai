@@ -54,6 +54,7 @@ M means backend (the API, data and email). F means frontend (screens in a browse
 | T1 | **Tests built from the question bank (admin side):** a new **Tests** page. A test has a title and instructions, a start and an end (date and time pickers, India time, each optional), a duration, the maximum attempts, the pass percentage, marks for a correct and for a wrong answer (the wrong-answer marks are 0 or negative, decimals such as -0.25 are fine), whether students may see the correct answers after submitting, and the courses it is assigned to (checkboxes: CAT, CLAT, IPMAT and so on). Questions are added **Manually** (a picker over the published questions with search, subject, topic and level filters) or **Automatically** (rules of subject, optional topic, optional level and how many; **Pick questions** chooses at random, **Pick again** re-rolls). Either way the test keeps a fixed list, so every student gets the same questions. Only published questions can be added; a question on a passage always brings the rest of its passage; the page shows the count, total marks and a count per subject. A test needs at least one question and one course to be published. A question that is in a published test can't be deleted (single or bulk), and deleting a question takes it out of draft tests | **Tested live** | 79 backend and 17 frontend tests (792 and 318 in all, 1,110 with both). On dev through the real API: a published `ZZ` test was created (2 questions, 6 marks), marks of +1 for a wrong answer were refused, the auto-pick respected the exclusions and reported a shortfall, deleting a question in the published test gave 409 and bulk delete skipped it, then the test and my `ZZ` questions were removed. In a real browser on the sandbox: an automatic test with three rules picked 10 questions (2 pulled in with their passage), saved, and showed in the list. Students can't take tests yet; that is the next step |
 | Q15 | **No limit on bulk publish:** the 500-question limit on **Publish selected** and **Move to draft** is gone, so the whole bank (for example all 1,500 questions) can be published in one click. The screen sends the ids in groups of 200 and shows progress ("Publishing… 400 of 1500"); if a group fails it says how many were done and the same click finishes the rest later. The server reads the bank once and changes questions 16 at a time. Bulk delete also works on any number now, in groups of 100, still behind the typed DELETE | **Tested live** | 1 new backend test (publishes 1,200 at once), 4 frontend tests changed or added (792 and 321 in all, 1,113 with both). On dev, 600 `ZZ` questions: one call to publish all 600 took 7.5 seconds and back to draft 7.2 seconds, which is why the screen uses groups (the server's limit per request is 15 seconds); a delete of 500 took 14.5 seconds, so delete is grouped by 100. All `ZZ` questions were removed. The real bank (1,500 draft questions) was not changed |
 | T2 | **Search and filters on the Tests page:** above the list, a search box (by words in the test's name, any order, capitals ignored), a course filter (a test shared by several courses shows under each), a status filter (published or draft), a count ("12 of 55 tests"), a clear icon, and a "No tests match" message. The filters work on the list already loaded, so they are instant, and they stay while tests are published, moved to draft or deleted | **Tested** | 6 new frontend tests (327 in all, 1,119 with the backend's 792). Deployed to dev; not looked at in a browser |
+| S1 | **Students take tests:** a **Tests** link in the student's menu. The list shows tests for the courses the student can open now (state Open, Upcoming, Ended, In progress or Done; the window; attempts used; best score). The intro page shows the questions, total marks, marking, time, pass mark, window, attempts left and instructions, and an attempts table. **Start** begins the clock and opens the test: one question at a time with a numbered palette (answered, current, marked for review), the passage with its questions, pictures, multiple choice or a typed answer, Previous, Next, Clear answer, Mark for review, a countdown (red in the last five minutes) and Submit (with a count of what was answered). Answers save as the student goes (typed answers after a short pause; a failed save is kept and retried), and a refresh resumes the attempt with the answers and the time left. The server owns the clock: the deadline is fixed at the start, answers up to 3 seconds late are accepted, and later ones submit the attempt for the student. The **result** shows marks, percentage, pass or fail, and correct, wrong and unanswered counts; if the test allows it, a review of every question with the right answer, the student's answer and the reason for every option (filter: all, wrong, not answered). Each attempt freezes the test's questions and marking when it starts; correct answers and reasons are never sent before submitting | **Tested live** | 44 backend tests and 50 frontend tests (836 and 367 in all, 1,203 with both). On dev with a temporary `ZZ` student and a 4-question `ZZ` test (all removed afterwards): the student saw the tests of their course, started (no answers or reasons in the response), saved answers, resumed with them, submitted (marks 0 of 12 for 1 right and 3 wrong at +3 and -1), got a 4-question review, and an admin got 403 on the student endpoints. In a real browser on the sandbox: intro, taking a 7-question test with a passage and a typed answer, a refresh in the middle (time and answers kept), submit and a result with a review. Note: the 55 tests I created start on 18 Nov 2026 at 00:00, so students see them as Upcoming until then. Not done: the admin's view of students' results, the timer running out was tested only in the automated tests |
 | M8 | **Production and operations:** prod environment, alarms, backups, deploy automation | Not started | |
 
 ## How you can test each step
@@ -405,6 +406,17 @@ In **Courses** (`/aaptprep/admin/courses`).
 | 4 | Under **Add a course**, type `CUET` as the name and click outside the box | All 37 CUET subjects get ticked (you can change them) |
 | 5 | Type a name like `Foundation` | Nothing is ticked; choose subjects by hand |
 
+### S1 (students take tests): what to try
+Sign in as a student whose course has a published test that is open now (a test shows as Upcoming until its start time).
+
+| Step | What to do | What you should see |
+|---|---|---|
+| 1 | Click **Tests** in the menu | The tests for your courses, with their state and your attempts |
+| 2 | Click **Start** on an open test, then **Start test** | The clock starts; question 1 appears with the numbered palette |
+| 3 | Pick options, type an answer to a fill-in question, mark one for review | Blue numbers for answered questions, a dot for the marked one; "Saving…" briefly |
+| 4 | Refresh the page | You are back in the same attempt with your answers and the time left |
+| 5 | Click **Submit**, then **Yes, submit** | Your marks, percentage and Passed or Not passed, and a review with the right answers and reasons if the test allows it |
+
 ### T1 (tests): what to try
 Click **Tests** in the menu (publish some questions first: tick them in the Question bank and use Publish selected).
 
@@ -522,7 +534,7 @@ My own test rows and files are always removed after each live test. Login codes 
 | Before launch | Request SES production access, a legal check on personal data (students under 18), and a domain |
 
 ## Latest test results
-**Backend, run on my machine: 792 passed, 0 failed. Frontend: 327 passed, 0 failed. Total: 1119.**
+**Backend, run on my machine: 836 passed, 0 failed. Frontend: 367 passed, 0 failed. Total: 1203.**
 
 | Backend test file | What it covers | Tests |
 |---|---|---|
@@ -549,7 +561,8 @@ My own test rows and files are always removed after each live test. Login codes 
 | `test_passages` | Q9 and Q13 reading passages (the API, limits and unique titles, passage text pasted on a question and grouped by text, clean-up of unused passages, privacy, the Excel Passage column) | 45 |
 | `test_course_papers` | Q10 subjects on a course (the suggestions by course name, whole-word matching, add and change, bad ids, who may, privacy between institutes) and Q11 courses without a fee | 32 |
 | `test_quizzes` | T1 tests (every field and its checks, dates, marks, courses, choosing questions by hand, passages kept together, random picking and its repeatability, questions used by tests, who may, privacy between institutes) | 79 |
-| | **Total** | **792** |
+| `test_student_tests` | S1 students taking tests (which tests a student sees, the window in India time, starting and resuming, attempt limits, saving and clearing answers and what is refused, the clock and the grace seconds, auto-submit, scoring for choice, fill-in, decimal and negative marks, the review and its absence, frozen rules, privacy between students and institutes) | 44 |
+| | **Total** | **836** |
 
 | Frontend test file | What it covers | Tests |
 |---|---|---|
@@ -567,7 +580,10 @@ My own test rows and files are always removed after each live test. Login codes 
 | `picture-picker.spec` | Picture picker: upload in three steps, remove, wrong type, too big, server refusals | 10 |
 | `ui.spec` | The icon kit (every icon draws, sizes, the info tip, short access wording) | 5 |
 | `admin-tests.spec` | Tests page (list, search and filters, form with date pickers and courses, picking by hand with filters, passages brought along, automatic rules, errors, edit, publish, delete) | 23 |
-| | **Total** | **327** |
+| `student-tests.spec` | S1 student list, intro and attempt pages | 15 |
+| `take-test.spec` | S1 taking a test (countdown, palette, saving and retrying, typing pause, clearing, marking for review, submit, time up, finished by the server) | 15 |
+| `test-result.spec` | S1 result and review | 8 |
+| | **Total** | **367** |
 
 **F1 in a real browser, against the sandbox:** I registered a student through the form (the empty form showed every mistake, then a `+91` mobile was accepted), saw "pending" at login, signed in as the admin with a code from the sandbox log, opened details, approved (email in the log), rejected with a reason (email includes it), edited a course to 180 days, signed out and signed in as the new student, was sent back from an admin address, saw the unknown and switched-off institute pages, and checked a phone-sized window.
 

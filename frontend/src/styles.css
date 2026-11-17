@@ -314,3 +314,38 @@ button.text-btn:hover { background: var(--info-bg); }
 .selected-box .row { margin-bottom: 0.4rem; }
 .selected-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; border-top: 1px solid var(--line); font-size: 0.9rem; }
 .selected-row .icon-btn { width: 1.7rem; height: 1.7rem; }
+
+/* ---- A student taking a test ---- */
+.take-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem 0.9rem; margin-bottom: 0.75rem; }
+.take-title { flex: 1 1 10rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timer { display: inline-flex; align-items: center; gap: 0.35rem; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; }
+.timer.low { color: var(--danger); }
+.save-state { min-width: 8rem; }
+.take-layout { display: grid; grid-template-columns: 11rem 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 40rem) { .take-layout { grid-template-columns: 1fr; } }
+.palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.1rem, 1fr)); gap: 0.35rem; }
+.pal { height: 2.1rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; font: inherit; cursor: pointer; position: relative; }
+.pal.answered { background: var(--brand); color: var(--brand-text); border-color: var(--brand); }
+.pal.current { outline: 3px solid color-mix(in srgb, var(--brand) 45%, white); outline-offset: 1px; font-weight: 700; }
+.pal.flag::after { content: ''; position: absolute; top: 3px; right: 3px; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #f59e0b; }
+.take-question { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; min-width: 0; }
+.take-text { font-size: 1.05rem; white-space: pre-wrap; }
+.choices { display: grid; gap: 0.5rem; margin: 0.75rem 0; }
+.choice { display: flex; gap: 0.6rem; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.8rem; cursor: pointer; background: #fff; }
+.choice:hover { background: #f8fafc; }
+.choice.chosen { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, white); }
+.choice input { margin-top: 0.3rem; }
+.letter { display: inline-flex; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #eef2f7; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex: none; }
+.choice-body { flex: 1; min-width: 0; }
+.take-actions { flex-wrap: wrap; margin-top: 1rem; }
+.btn.on { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.flip { display: inline-flex; transform: rotate(180deg); }
+.score { font-size: 1.8rem; font-weight: 800; }
+.status.big { font-size: 1rem; font-weight: 700; }
+.counts { margin-top: 0.5rem; }
+.review { margin-bottom: 0.75rem; }
+.rev-opt { border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 0.7rem; margin: 0.35rem 0; }
+.rev-opt.is-correct { border-color: #86efac; background: var(--ok-bg); }
+.rev-opt.is-wrong { border-color: #fecaca; background: var(--danger-bg); }
+.rev-why { margin-top: 0.2rem; }
+.rev-typed { margin: 0.25rem 0; }

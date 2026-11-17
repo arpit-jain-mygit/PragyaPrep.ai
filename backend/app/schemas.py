@@ -330,6 +330,11 @@ class TestIn(BaseModel):
     status: Any = None
 
 
+class AnswersIn(BaseModel):
+    # Question id -> the answer (an option number, or typed text). null or empty clears an answer.
+    answers: Any = None
+
+
 class AutoPickIn(BaseModel):
     rules: Any = None
     exclude: Any = None

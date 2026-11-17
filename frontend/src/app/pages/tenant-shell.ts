@@ -47,6 +47,7 @@ import { TenantService } from '../core/tenant.service';
               } @else {
                 <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
                 <a [routerLink]="['/', info.slug, 'courses']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">My courses</span></a>
+                <a [routerLink]="['/', info.slug, 'tests']" routerLinkActive="active"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
               }
               <span class="who">{{ member()!.first_name }}</span>
               <button class="icon-btn" type="button" title="Sign out" (click)="signOut()"><app-icon name="logout" /><span class="sr-only">Sign out</span></button>

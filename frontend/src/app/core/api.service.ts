@@ -20,7 +20,10 @@ import {
   InstituteUpdate,
   Member,
   MyCourse,
+  AttemptResult,
+  AttemptView,
   AutoPickResult,
+  StudentTestCard,
   Paper,
   TestDetail,
   TestInput,
@@ -54,7 +57,7 @@ export function toApiError(error: unknown): ApiError {
       detail = 'Something went wrong on our side. Please try again in a few minutes.';
     }
     const retry = Number(error.headers?.get('Retry-After'));
-    return { status: error.status, detail, errors, retryAfter: retry > 0 ? retry : undefined };
+    return { status: error.status, detail, errors, retryAfter: retry > 0 ? retry : undefined, body: body && typeof body === 'object' ? body : undefined };
   }
   return { status: -1, detail: 'Something went wrong. Please try again.' };
 }
@@ -270,6 +273,32 @@ export class ApiService {
     const url = `${this.base}/api/admin/questions/import?confirm=${confirm}`;
     const headers = { 'Content-Type': 'application/octet-stream' };
     return this.call(firstValueFrom(this.http.post<QuestionImport>(url, file, { headers })));
+  }
+
+  // ---- Student: tests ----
+
+  myTests(): Promise<StudentTestCard[]> {
+    return this.get('/api/my/tests');
+  }
+
+  myTest(id: string): Promise<StudentTestCard> {
+    return this.get(`/api/my/tests/${encodeURIComponent(id)}`);
+  }
+
+  startTest(id: string): Promise<AttemptView> {
+    return this.post(`/api/my/tests/${encodeURIComponent(id)}/start`);
+  }
+
+  attempt(testId: string, number: number): Promise<AttemptView | AttemptResult> {
+    return this.get(`/api/my/tests/${encodeURIComponent(testId)}/attempts/${number}`);
+  }
+
+  saveAnswers(testId: string, number: number, answers: Record<string, number | string | null>): Promise<{ saved: number; remaining_seconds: number }> {
+    return this.call(firstValueFrom(this.http.put<{ saved: number; remaining_seconds: number }>(`${this.base}/api/my/tests/${encodeURIComponent(testId)}/attempts/${number}/answers`, { answers })));
+  }
+
+  submitAttempt(testId: string, number: number): Promise<AttemptResult> {
+    return this.post(`/api/my/tests/${encodeURIComponent(testId)}/attempts/${number}/submit`);
   }
 
   // ---- Student ----
