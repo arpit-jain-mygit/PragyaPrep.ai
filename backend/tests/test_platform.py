@@ -485,7 +485,7 @@ def test_the_platform_admin_sees_an_institutes_details_and_size(client, owner, m
     admin = sign_in("aaptprep", "ritesh@aaptprep.example.com")
     client.put("/api/admin/institute", json={"city": "Noida", "contact_email": "hi@aaptprep.example.com", "exam_categories": ["CLAT"]}, headers=admin)
     found = client.get(f"{URL}/aaptprep", headers=owner).json()
-    assert found["counts"] == {"students": 1, "parents": 1, "pending": 1, "courses": 1}
+    assert found["counts"] == {"students": 1, "parents": 1, "pending": 1, "courses": 1, "batches": 0}
     assert found["profile"]["city"] == "Noida" and found["profile"]["exam_categories"] == ["CLAT"]
     listed = next(i for i in client.get(URL, headers=owner).json() if i["slug"] == "aaptprep")
     assert listed["counts"]["students"] == 1

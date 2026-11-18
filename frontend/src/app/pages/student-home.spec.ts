@@ -197,5 +197,33 @@ describe('Student home', () => {
     expect(el<HTMLAnchorElement>(fixture, '#contact-institute a[href^="mailto:"]').getAttribute('href')).toBe('mailto:hi@demo.example');
     expect(el<HTMLAnchorElement>(fixture, '#contact-institute a[href^="tel:"]').getAttribute('href')).toBe('tel:9876543210');
   });
+
+  it('shows the student their own batches', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(StudentHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush(me);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/batches`).flush([{ id: 'b1', name: 'Morning CAT', course_names: ['CAT'], start_date: '2027-02-01', end_date: '2027-06-30', faculty: 'Dr Rao', schedule: 'Mon to Fri, 7 to 9 am' }]);
+    await settle(fixture);
+    const card = el(fixture, '#my-batches').textContent!.replace(/\s+/g, ' ');
+    expect(card).toContain('My batch');
+    expect(card).toContain('Morning CAT');
+    expect(card).toContain('Dr Rao');
+  });
+
+  it('works without batches when they cannot be loaded', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(StudentHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush(me);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/batches`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(fixture.nativeElement.querySelector('#my-batches')).toBeNull();
+    expect(text(fixture)).toContain('Welcome, Asha');
+  });
 });
 

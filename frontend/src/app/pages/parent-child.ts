@@ -6,13 +6,14 @@ import { shortDate, timeAgo } from '../core/format';
 import { ApiError, ChildDetail, StudentProgress } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Avatar } from '../ui/avatar';
+import { BatchList } from '../ui/batch-list';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
 /** One child, for their parent: course status, what is overdue, tests, and weak topics with a button to set a practice test. */
 @Component({
   selector: 'app-parent-child',
-  imports: [FormsModule, RouterLink, Avatar, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Avatar, BatchList, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1 class="greeting">
@@ -57,6 +58,9 @@ import { InfoTip } from '../ui/info-tip';
         <div class="empty-state" id="no-courses"><app-icon name="layers" [size]="32" /><p>{{ d.student.name }} is not enrolled in a course yet</p></div>
       }
 
+      @if (d.batches?.length) {
+        <section class="card" id="child-batches"><h2><app-icon name="layers" [size]="18" /> {{ firstName() }}'s {{ d.batches!.length === 1 ? 'batch' : 'batches' }}</h2><app-batch-list [batches]="d.batches!" /></section>
+      }
       <h2>Tests</h2>
       <div class="toolbar" id="test-filters">
         <div class="field" style="flex: 2 1 12rem">

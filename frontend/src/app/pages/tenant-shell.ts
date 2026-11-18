@@ -47,6 +47,7 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">Courses</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'batches']" routerLinkActive="active" data-tone="batch"><app-icon name="layers" /><span class="nav-label">Batches</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active" data-tone="qbank"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active" data-tone="tests"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>

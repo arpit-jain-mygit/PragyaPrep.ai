@@ -1,5 +1,5 @@
 """What a parent sees of their children: where each one stands in each course, how their tests went, and where they are weak."""
-from app import attempts, avatars, parents, progress, student_coursework
+from app import attempts, avatars, batches, parents, progress, student_coursework
 from app.repo import TenantRepo
 from app.tenants import ValidationError, normalize_email
 
@@ -56,6 +56,7 @@ def detail(scoped: TenantRepo, parent: dict, email: str, storage) -> dict:
     return {
         "student": {"email": email, "name": parents._name(child), "avatar_url": avatars.url_for(storage, child)},
         "courses": courses,
+        "batches": batches.for_student(scoped, email),
         "practice": practice,
         "results": {"summary": results["summary"], "trend": results["trend"], "subjects": results["subjects"]},
     }

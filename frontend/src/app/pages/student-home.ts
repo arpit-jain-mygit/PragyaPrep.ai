@@ -1,8 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
-import { ApiError, Member } from '../core/models';
+import { ApiError, Member, MyBatch } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Avatar } from '../ui/avatar';
+import { BatchList } from '../ui/batch-list';
 import { Icon } from '../ui/icon';
 import { FreeHome } from './free-home';
 import { StudentTiles } from './student-tiles';
@@ -10,7 +11,7 @@ import { StudentTiles } from './student-tiles';
 /** A student's home page: a greeting and action tiles. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
-  imports: [Avatar, Icon, StudentTiles, FreeHome],
+  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome],
   template: `
     @if (error(); as problem) {
       <div class="alert error" role="alert">{{ problem.detail }}</div>
@@ -23,6 +24,9 @@ import { StudentTiles } from './student-tiles';
         <span class="muted small">{{ m.email }}</span>
       </div>
       <app-student-tiles />
+      @if (batches().length) {
+        <section class="card" id="my-batches"><h2><app-icon name="layers" [size]="18" /> My {{ batches().length === 1 ? 'batch' : 'batches' }}</h2><app-batch-list [batches]="batches()" /></section>
+      }
       @if (contact(); as c) {
         <section class="card" id="contact-institute">
           <h2><app-icon name="building" [size]="18" /> Contact your institute</h2>
@@ -45,6 +49,7 @@ export class StudentHome implements OnInit {
   private readonly api = inject(ApiService);
   readonly tenants = inject(TenantService);
   readonly member = signal<Member | null>(null);
+  readonly batches = signal<MyBatch[]>([]);
   /** What the institute chose to show, or nothing when it has filled in none of it. */
   readonly contact = computed(() => {
     const p = this.tenants.info()?.profile;
@@ -58,6 +63,13 @@ export class StudentHome implements OnInit {
       this.member.set(await this.api.me());
     } catch (error) {
       this.error.set(error as ApiError);
+      return;
+    }
+    // Batches are a bonus on the page: if they cannot be loaded the page works without them.
+    try {
+      this.batches.set(await this.api.myBatches());
+    } catch {
+      this.batches.set([]);
     }
   }
 }

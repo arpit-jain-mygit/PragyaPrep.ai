@@ -8,6 +8,8 @@ import {
   FreeState,
   SignupForm,
   Access,
+  Batch,
+  MyBatch,
   MyInstitute,
   MyProfile,
   StudentPhotoStart,
@@ -146,6 +148,36 @@ export class ApiService {
   /** The student's photo has been sent: attach it to their registration. */
   finishRegistrationPhoto(email: string, token: string): Promise<{ ok: boolean }> {
     return this.post('/api/register/photo', { email, token });
+  }
+
+  // ---- Batches ----
+
+  batches(): Promise<Batch[]> {
+    return this.get('/api/admin/batches');
+  }
+
+  batch(id: string): Promise<Batch> {
+    return this.get(`/api/admin/batches/${encodeURIComponent(id)}`);
+  }
+
+  createBatch(fields: Record<string, unknown>): Promise<Batch> {
+    return this.post('/api/admin/batches', fields);
+  }
+
+  updateBatch(id: string, fields: Record<string, unknown>): Promise<Batch> {
+    return this.patch(`/api/admin/batches/${encodeURIComponent(id)}`, fields);
+  }
+
+  enrolInBatch(id: string, emails: string[]): Promise<Batch> {
+    return this.post(`/api/admin/batches/${encodeURIComponent(id)}/students`, { emails });
+  }
+
+  removeFromBatch(id: string, email: string): Promise<Batch> {
+    return this.call(firstValueFrom(this.http.delete<Batch>(`${this.base}/api/admin/batches/${encodeURIComponent(id)}/students/${encodeURIComponent(email)}`)));
+  }
+
+  myBatches(): Promise<MyBatch[]> {
+    return this.get('/api/my/batches');
   }
 
   // ---- My institute (the institute admin) ----

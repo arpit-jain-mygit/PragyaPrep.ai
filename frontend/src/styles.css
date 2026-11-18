@@ -604,6 +604,7 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 .nav a[data-tone="prog"] { --tone: #86efac; }
 .nav a[data-tone="news"] { --tone: #f0abfc; }
 .nav a[data-tone="inst"] { --tone: #7dd3fc; }
+.nav a[data-tone="batch"] { --tone: #fdba74; }
 .nav a[data-tone="plus"] { --tone: #86efac; }
 .nav a[data-tone="out"] { --tone: #e5e7eb; }
 
@@ -616,6 +617,7 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 :root[data-bar="light"] .nav a[data-tone="prog"] { --tone: #15803d; }
 :root[data-bar="light"] .nav a[data-tone="news"] { --tone: #a21caf; }
 :root[data-bar="light"] .nav a[data-tone="inst"] { --tone: #0369a1; }
+:root[data-bar="light"] .nav a[data-tone="batch"] { --tone: #c2410c; }
 :root[data-bar="light"] .nav a[data-tone="plus"] { --tone: #15803d; }
 :root[data-bar="light"] .nav a[data-tone="out"] { --tone: #374151; }
 :root[data-bar="light"] .nav a app-icon { color: var(--tone, var(--brand-text)); }
@@ -655,3 +657,9 @@ fieldset.field { border: 0; padding: 0; margin: 0 0 0.9rem; }
 /* ---- Inside the Android app: keep content clear of the status bar and the gesture bar ---- */
 .topbar { padding-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
 .footer { padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px)); }
+
+/* ---- Batches ---- */
+.batch.archived { opacity: 0.75; }
+.batch-detail { border-top: 1px solid var(--line); margin-top: 0.6rem; padding-top: 0.6rem; }
+.batch-detail h3 { margin: 0.9rem 0 0.4rem; font-size: 1rem; }
+.pick-list { max-height: 14rem; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; margin: 0.5rem 0; }

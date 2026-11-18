@@ -48,6 +48,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-home').then((m) => m.AdminHome),
       },
       {
+        path: 'admin/batches',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-batches').then((m) => m.AdminBatchesPage),
+      },
+      {
         path: 'admin/institute',
         canActivate: [signedInGuard, adminGuard],
         loadComponent: () => import('./pages/admin-institute').then((m) => m.AdminInstitutePage),

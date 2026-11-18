@@ -548,6 +548,23 @@ class TenantRepo:
     def delete_otp(self, email: str) -> None:
         self.table.delete_item(Key=self._otp_key(email))
 
+    # ---- Batches: a cohort inside the institute. The enrolled students' emails are kept on the batch itself ----
+
+    def _batch_key(self, batch_id: str) -> dict:
+        return {"PK": f"{self._prefix}BATCH#{batch_id}", "SK": "META"}
+
+    def put_batch(self, batch: dict) -> None:
+        """Save a batch (new or changed) as a whole."""
+        self.table.put_item(Item={**self._batch_key(batch["id"]), **batch, "GSI1PK": f"{self._prefix}BATCHES", "GSI1SK": batch["name"].strip().lower()})
+
+    def get_batch(self, batch_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._batch_key(batch_id)).get("Item"))
+
+    def list_batches(self) -> list[dict]:
+        """All batches of this institute, in name order."""
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}BATCHES"))
+        return [_plain(item) for item in response["Items"]]
+
     # ---- Courses ----
 
     def _course_key(self, course_id: str) -> dict:

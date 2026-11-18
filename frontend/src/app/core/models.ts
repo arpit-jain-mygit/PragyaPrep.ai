@@ -1014,6 +1014,7 @@ export interface ChildSummary {
 export interface ChildDetail {
   student: { email: string; name: string; avatar_url: string };
   courses: StudentProgress[];
+  batches?: MyBatch[];
   /** The child's practice tests, made by the child or set by a parent. */
   practice: { id: string; title: string; question_count: number; attempts_used: number; best: { marks: string; percentage: string; passed: boolean } | null; set_by_parent: boolean; created_at: string }[];
   results: { summary: MyResults['summary']; trend: MyResults['trend']; subjects: SubjectResult[] };
@@ -1062,4 +1063,32 @@ export interface MyProfile {
   consent?: boolean;
   deletion_requested: boolean;
   linked: { name: string; email: string }[];
+}
+
+/** A batch (a cohort) as the admin sees it. The students list is only in the detail. */
+export interface Batch {
+  id: string;
+  name: string;
+  status: 'active' | 'archived';
+  course_ids: string[];
+  course_names: string[];
+  start_date: string;
+  end_date: string;
+  seat_limit: number | null;
+  seats_left: number | null;
+  enrolled: number;
+  faculty: string;
+  schedule: string;
+  students?: { email: string; name: string; status: string }[];
+}
+
+/** A batch as the student or a parent sees it: no other students. */
+export interface MyBatch {
+  id: string;
+  name: string;
+  course_names: string[];
+  start_date: string;
+  end_date: string;
+  faculty: string;
+  schedule: string;
 }

@@ -36,6 +36,19 @@ async function open(reply: object = DATA) {
 }
 
 describe('Parent: one child', () => {
+  it('shows the child\'s batches with faculty and timetable, and nothing when there are none', async () => {
+    const { fixture } = await open({ ...DATA, batches: [{ id: 'b1', name: 'Morning CAT', course_names: ['CAT'], start_date: '2027-02-01', end_date: '', faculty: 'Dr Rao', schedule: 'Mon to Fri, 7 to 9 am' }] });
+    const card = el(fixture, '#child-batches').textContent!.replace(/\s+/g, ' ');
+    expect(card).toContain('Morning CAT');
+    expect(card).toContain('Dr Rao');
+    expect(card).toContain('Mon to Fri, 7 to 9 am');
+  });
+
+  it('shows no batch card when the child is in no batch', async () => {
+    const { fixture } = await open({ ...DATA, batches: [] });
+    expect(fixture.nativeElement.querySelector('#child-batches')).toBeNull();
+  });
+
   it('lists course tests and practice tests with their type, and the practice ones set by the parent', async () => {
     const { fixture } = await open();
     const rows = all(fixture, '#tests tbody tr').map((r) => r.getAttribute('data-test'));

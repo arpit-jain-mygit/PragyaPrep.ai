@@ -153,6 +153,7 @@ def _counts(scoped) -> dict:
         "parents": sum(1 for m in approved if m.get("role") == "parent"),
         "pending": len(scoped.all_members_by_status("pending")),
         "courses": len(scoped.list_courses()),
+        "batches": sum(1 for b in scoped.list_batches() if b.get("status", "active") == "active"),
     }
 
 

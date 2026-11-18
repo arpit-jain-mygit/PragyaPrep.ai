@@ -216,3 +216,4 @@ The login page shows these messages straight away. When an email isn't registere
 - Students and parents have a My profile page (the photo in the top bar): photo, mobile, and for students date of birth, exam goals, exam date, weekly goal and email choices; for parents relation, summary rhythm and consent. They can download their data and ask for deletion (the admin decides).
 - A free student also gets one free test for their picked course: one attempt, no dates, with the score and answer review.
 - Institute admins have a My institute page: name, logo, colour, description, city, contact details, website, exam categories, and their own name, mobile and photo. Students see a Contact your institute card.
+- Batches: cohorts with courses, dates, seats, faculty and timetable. Enrolling opens the courses; students and parents see their batches.
