@@ -37,26 +37,26 @@ import { TenantService } from '../core/tenant.service';
           <nav class="nav" aria-label="Main">
             @if (!member()) {
               @if (info.slug !== 'platform') {
-                <a [routerLink]="['/', info.slug, 'register']" routerLinkActive="active"><app-icon name="plus" /><span class="nav-label">Register</span></a>
+                <a [routerLink]="['/', info.slug, 'register']" routerLinkActive="active" data-tone="plus"><app-icon name="plus" /><span class="nav-label">Register</span></a>
               }
-              <a [routerLink]="['/', info.slug, 'login']" routerLinkActive="active"><app-icon name="logout" /><span class="nav-label">Log in</span></a>
+              <a [routerLink]="['/', info.slug, 'login']" routerLinkActive="active" data-tone="out"><app-icon name="logout" /><span class="nav-label">Log in</span></a>
             } @else {
               @if (isPlatformAdmin()) {
-                <a routerLink="/platform-admin" routerLinkActive="active"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
+                <a routerLink="/platform-admin" routerLinkActive="active" data-tone="inst"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
               } @else if (isAdmin()) {
-                <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">Courses</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">Courses</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active" data-tone="qbank"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active" data-tone="tests"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active" data-tone="news"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
               } @else if (isParent()) {
-                <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active"><app-icon name="users" /><span class="nav-label">My children</span></a>
+                <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">My children</span></a>
               } @else {
-                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
-                <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
-                <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
+                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
+                <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
+                <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link" data-tone="news"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
               }
               <app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" />
               @if (!isPlatformAdmin()) {
