@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from app import clock, coursework
+from app import clock, coursework, live_classes
 from app.config import Settings
 from app.repo import TenantRepo, now_iso
 from app.storage import ContentStorage
@@ -81,6 +81,7 @@ def start_upload(
         "id": file_id,
         "course_id": course_id,
         "title": clean_title,
+        "filename": PurePosixPath(str(filename).strip().replace("\\", "/")).name,
         "kind": kind["kind"],
         "content_type": kind["content_type"],
         "size": size,
@@ -135,6 +136,7 @@ def delete_file(scoped: TenantRepo, storage: ContentStorage, course_id: str, fil
     if not key_in_use(scoped, file["key"]):
         storage.delete(file["key"])
     coursework.drop_file(scoped, course_id, file_id)
+    live_classes.drop_file(scoped, course_id, file_id)
 
 
 # ---- Access ----

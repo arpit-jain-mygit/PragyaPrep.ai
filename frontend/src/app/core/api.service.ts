@@ -12,6 +12,9 @@ import {
   CourseFile,
   AdminBehind,
   Announcement,
+  LiveClass,
+  LiveClassInput,
+  LiveImport,
   StudentImport,
   WelcomeResult,
   AnnouncementInput,
@@ -207,6 +210,33 @@ export class ApiService {
   }
 
   // ---- Course files and access (admin) ----
+
+  // ---- Live classes (admin) ----
+
+  liveClasses(courseId: string): Promise<LiveClass[]> {
+    return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/live-classes`);
+  }
+
+  addLiveClass(courseId: string, body: LiveClassInput): Promise<LiveClass[]> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/live-classes`, body);
+  }
+
+  editLiveClass(courseId: string, id: string, body: LiveClassInput): Promise<LiveClass[]> {
+    return this.patch(`/api/admin/courses/${encodeURIComponent(courseId)}/live-classes/${encodeURIComponent(id)}`, body);
+  }
+
+  removeLiveClass(courseId: string, id: string): Promise<LiveClass[]> {
+    return this.call(firstValueFrom(this.http.delete<LiveClass[]>(`${this.base}/api/admin/courses/${encodeURIComponent(courseId)}/live-classes/${encodeURIComponent(id)}`)));
+  }
+
+  liveTemplate(courseId: string): Promise<Blob> {
+    return this.call(firstValueFrom(this.http.get(`${this.base}/api/admin/courses/${encodeURIComponent(courseId)}/live-classes/template`, { responseType: 'blob' })));
+  }
+
+  importLiveClasses(courseId: string, file: File, confirm: boolean): Promise<LiveImport> {
+    const url = `${this.base}/api/admin/courses/${encodeURIComponent(courseId)}/live-classes/import?confirm=${confirm}`;
+    return this.call(firstValueFrom(this.http.post<LiveImport>(url, file, { headers: { 'Content-Type': 'application/octet-stream' } })));
+  }
 
   // ---- Coursework (admin) ----
 

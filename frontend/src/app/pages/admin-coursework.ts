@@ -6,6 +6,7 @@ import { shortDate } from '../core/format';
 import { AdminCourse, ApiError, CopyResult, CourseFile, CourseworkPlan, WorkMaterial, WorkSubject, WorkSubtopic, WorkTopic } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
+import { AdminLiveClasses } from './admin-live-classes';
 import { InfoTip } from '../ui/info-tip';
 
 export { shortDate };
@@ -16,7 +17,7 @@ export { shortDate };
  */
 @Component({
   selector: 'app-admin-coursework',
-  imports: [FormsModule, RouterLink, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Icon, InfoTip, AdminLiveClasses],
   template: `
     <div class="page-head">
       <h1>
@@ -31,7 +32,14 @@ export { shortDate };
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
-    @if (loading()) {
+    <nav class="tabs" aria-label="Coursework views">
+      <button type="button" class="tab with-icon" id="tab-plan" [class.active]="view() === 'plan'" (click)="view.set('plan')"><app-icon name="layers" [size]="16" /> Plan</button>
+      <button type="button" class="tab with-icon" id="tab-live" [class.active]="view() === 'live'" (click)="view.set('live')"><app-icon name="play" [size]="16" /> Live classes</button>
+    </nav>
+
+    @if (view() === 'live') {
+      <app-admin-live-classes [courseId]="courseId" />
+    } @else if (loading()) {
       <p class="muted">Loading…</p>
     } @else if (plan(); as p) {
       <div class="stat-grid" id="counts">
@@ -253,6 +261,7 @@ export class AdminCoursework implements OnInit {
   readonly tenants = inject(TenantService);
 
   readonly courseId = this.route.snapshot.paramMap.get('id') ?? '';
+  readonly view = signal<'plan' | 'live'>('plan');
   readonly plan = signal<CourseworkPlan | null>(null);
   readonly files = signal<CourseFile[]>([]);
   readonly selected = signal<string | null>(null);

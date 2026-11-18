@@ -857,3 +857,42 @@ export interface StudentPhotoStart {
   name: string;
   upload: UploadForm;
 }
+
+// ---- Live classes ----
+
+export interface LiveClass {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD */
+  held_on: string;
+  /** HH:MM, or empty. */
+  held_time: string;
+  description: string;
+  status: 'draft' | 'published';
+  materials: WorkMaterial[];
+}
+
+export interface LiveClassInput {
+  title?: string;
+  held_on?: string;
+  held_time?: string;
+  description?: string;
+  status?: 'draft' | 'published';
+  materials?: ({ type: 'file'; file_id: string } | { type: 'link'; url: string; title: string })[];
+}
+
+export interface LiveImportRow {
+  row: number;
+  title: string;
+  held_on: string;
+  files: number;
+  status: 'ready' | 'skipped' | 'error' | 'created';
+  message: string;
+  problems: Record<string, string>;
+}
+
+export interface LiveImport {
+  summary: { total: number; ready: number; skipped: number; errors: number; created?: number };
+  rows: LiveImportRow[];
+  confirmed: boolean;
+}

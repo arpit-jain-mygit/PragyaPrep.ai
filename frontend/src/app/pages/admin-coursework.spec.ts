@@ -397,6 +397,22 @@ describe('Admin coursework page', () => {
     expect(el(fixture, '#do-copy').textContent).toContain('Copy 0');
   });
 
+  it('switches between the plan and the live classes of the course', async () => {
+    const { fixture, http } = await open();
+    expect(all(fixture, 'app-admin-live-classes').length).toBe(0);
+    el(fixture, '#tab-live').click();
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/courses/c1/live-classes`).flush([]);
+    http.expectOne(`${API}/api/admin/courses/c1/files`).flush([]);
+    await settle(fixture);
+    expect(all(fixture, 'app-admin-live-classes').length).toBe(1);
+    expect(all(fixture, '#tree').length).toBe(0);
+    expect(el(fixture, '#tab-live').className).toContain('active');
+    el(fixture, '#tab-plan').click();
+    await settle(fixture);
+    expect(all(fixture, '#tree').length).toBe(1);
+  });
+
   it('formats dates without a time-zone shift', () => {
     expect(shortDate('2027-02-10')).toBe('10 Feb 2027');
     expect(shortDate(null)).toBe('');

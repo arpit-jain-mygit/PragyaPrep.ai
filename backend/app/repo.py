@@ -329,6 +329,35 @@ class TenantRepo:
     def delete_work(self, course_id: str, node_id: str) -> None:
         self.table.delete_item(Key=self._work_key(course_id, node_id))
 
+    # ---- Live classes: recordings and slides of a course's live sessions, stored under the course's own key ----
+
+    def _live_key(self, course_id: str, live_id: str) -> dict:
+        return {"PK": self._course_key(course_id)["PK"], "SK": f"LIVE#{live_id}"}
+
+    def put_live(self, course_id: str, record: dict) -> None:
+        self.table.put_item(Item={**self._live_key(course_id, record["id"]), **record})
+
+    def get_live(self, course_id: str, live_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._live_key(course_id, live_id)).get("Item"))
+
+    def list_live(self, course_id: str) -> list[dict]:
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._course_key(course_id)["PK"]) & Key("SK").begins_with("LIVE#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_live(self, course_id: str, live_id: str, fields: dict) -> None:
+        _update(self.table, self._live_key(course_id, live_id), fields)
+
+    def delete_live(self, course_id: str, live_id: str) -> None:
+        self.table.delete_item(Key=self._live_key(course_id, live_id))
+
     # ---- Access: which courses a student may open, and until when. Stored with the student ----
 
     def _access_key(self, email: str, course_id: str) -> dict:

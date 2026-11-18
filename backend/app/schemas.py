@@ -474,3 +474,14 @@ class PhotoDoneIn(BaseModel):
 class StudentPhotoStartIn(BaseModel):
     filename: Any = None
     size: Any = None
+
+
+class LiveClassIn(BaseModel):
+    """A live class. Every field is checked by hand, so any of them may be left out."""
+
+    title: Any = None
+    held_on: Any = None
+    held_time: Any = None
+    description: Any = None
+    materials: Any = None
+    status: Any = None
