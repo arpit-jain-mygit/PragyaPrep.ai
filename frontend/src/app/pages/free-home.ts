@@ -36,7 +36,17 @@ import { Icon } from '../ui/icon';
             @if (x.links.length) {
               <ul class="plain-list">@for (l of x.links; track l.url) { <li><app-icon name="eye" [size]="16" /> <a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.title }}</a></li> }</ul>
             }
-            @if (x.more_in_paid > 0) { <p class="soft small"><app-icon name="lock" [size]="14" /> {{ x.more_in_paid }} file{{ x.more_in_paid === 1 ? '' : 's' }} in this sub-topic open on a paid plan.</p> }
+            @if (x.files.length) {
+              <ul class="plain-list" id="free-files">
+                @for (f of x.files; track f.file_id) {
+                  <li>
+                    <button class="btn small secondary" type="button" [attr.data-file]="f.file_id" [disabled]="opening() === f.file_id" (click)="openFile(f.file_id)">
+                      <app-icon [name]="f.kind === 'video' ? 'play' : 'file'" [size]="16" /> {{ opening() === f.file_id ? 'Opening…' : f.title }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
           }
           <h3 style="margin-top: 1.25rem">The rest of {{ s.picked }}</h3>
           <ul class="plain-list" id="locked-list">
@@ -59,6 +69,7 @@ export class FreeHome implements OnInit {
   readonly state = signal<FreeState | null>(null);
   readonly sample = signal<FreeSample | null>(null);
   readonly busy = signal(false);
+  readonly opening = signal<string | null>(null);
   readonly error = signal<ApiError | null>(null);
 
   async ngOnInit(): Promise<void> {
@@ -73,6 +84,25 @@ export class FreeHome implements OnInit {
 
   private async loadSample(): Promise<void> {
     if (this.state()?.picked) this.sample.set((await this.api.freeSample()).sample);
+  }
+
+  /** Open a file of the free sub-topic in a new tab. The tab is opened first, while the click is fresh, so the browser doesn't block it. */
+  async openFile(fileId: string): Promise<void> {
+    if (this.opening()) return;
+    this.opening.set(fileId);
+    this.error.set(null);
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
+    try {
+      const link = await this.api.freeFileLink(fileId);
+      if (tab) tab.location.href = link.url;
+      else window.location.href = link.url;
+    } catch (error) {
+      tab?.close();
+      this.error.set(error as ApiError);
+    } finally {
+      this.opening.set(null);
+    }
   }
 
   async pick(course: string): Promise<void> {

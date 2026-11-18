@@ -4,9 +4,10 @@ from pydantic import BaseModel
 
 from app import free_plan
 from app.config import Settings
-from app.deps import PARENT, STUDENT, get_repo, get_settings, get_tenant, get_tenant_repo, require_roles
+from app.deps import PARENT, STUDENT, get_repo, get_settings, get_storage, get_tenant, get_tenant_repo, require_roles
 from app.repo import Repo, TenantRepo
 from app.signup import FREE_SLUG
+from app.storage import ContentStorage
 
 router = APIRouter(prefix="/api/free", tags=["free plan"])
 
@@ -39,3 +40,12 @@ def pick(body: PickIn, repo: Repo = Depends(get_repo), settings: Settings = Depe
 @router.get("/sample")
 def sample(repo: Repo = Depends(get_repo), settings: Settings = Depends(get_settings), member: dict = Depends(free_member)):
     return {"sample": free_plan.sample(repo, settings, member)}
+
+
+@router.get("/files/{file_id}/link")
+def file_link(file_id: str, repo: Repo = Depends(get_repo), settings: Settings = Depends(get_settings), storage: ContentStorage = Depends(get_storage), member: dict = Depends(free_member)):
+    """A link to one file of the free sub-topic that works for a few minutes. Any other file is 'not found'."""
+    try:
+        return free_plan.file_link(repo, storage, settings, member, file_id)
+    except free_plan.FileNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that file.")

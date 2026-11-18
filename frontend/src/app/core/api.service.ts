@@ -384,6 +384,10 @@ export class ApiService {
     return this.call(firstValueFrom(this.http.put<FreeState>(`${this.base}/api/free/pick`, { course })));
   }
 
+  freeFileLink(fileId: string): Promise<FileLink> {
+    return this.get(`/api/free/files/${encodeURIComponent(fileId)}/link`);
+  }
+
   freeSample(): Promise<{ sample: FreeSample | null }> {
     return this.get('/api/free/sample');
   }

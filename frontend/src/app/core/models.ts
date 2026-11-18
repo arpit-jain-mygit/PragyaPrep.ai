@@ -1013,7 +1013,7 @@ export interface FreeSample {
   title: string;
   note: string;
   links: { title: string; url: string }[];
-  more_in_paid: number;
+  files: { file_id: string; title: string; kind: string; size: number | null }[];
 }
 
 /** A student's or parent's own profile (the part they keep themselves). Fields of the other role are absent. */

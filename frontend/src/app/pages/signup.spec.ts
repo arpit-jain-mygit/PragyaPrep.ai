@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { API, all, el, settle, setupTestBed, text, type } from '../testing';
 import { FreeHome } from './free-home';
 import { Signup } from './signup';
@@ -95,11 +95,55 @@ describe('Free home', () => {
     el(fixture, '[data-course="CAT"]').click();
     env.http.expectOne(`${API}/api/free/pick`).flush({ picked: 'CAT', courses: COURSES });
     await settle(fixture);
-    env.http.expectOne(`${API}/api/free/sample`).flush({ sample: { course: 'CAT', subject: 'Quant', topic: 'Percentages', title: 'Concepts', note: 'Free note', links: [{ title: 'Read this', url: 'https://x.example' }], more_in_paid: 2 } });
+    env.http.expectOne(`${API}/api/free/sample`).flush({ sample: { course: 'CAT', subject: 'Quant', topic: 'Percentages', title: 'Concepts', note: 'Free note', links: [{ title: 'Read this', url: 'https://x.example' }], files: [{ file_id: 'f1', title: 'Free notes', kind: 'pdf', size: 10 }] } });
     await settle(fixture);
     expect(el(fixture, '#free-sample').textContent).toContain('Free note');
-    expect(text(fixture)).toContain('2 files in this sub-topic open on a paid plan');
+    expect(el(fixture, '#free-files [data-file="f1"]').textContent).toContain('Free notes');
+    expect(text(fixture)).not.toContain('paid plan');
     expect(all(fixture, '#locked-list li').map((li) => li.textContent!.trim())).toEqual(['Percentages: Practice']);
     expect(fixture.nativeElement.querySelector('#pick-course')).toBeNull();
+  });
+
+  async function openSample(files = [{ file_id: 'f1', title: 'Free notes', kind: 'pdf', size: 10 }]) {
+    const env = setupTestBed();
+    const fixture = TestBed.createComponent(FreeHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush(ME);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/free/courses`).flush({ picked: 'CAT', courses: COURSES });
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/free/sample`).flush({ sample: { course: 'CAT', subject: 'Quant', topic: 'Percentages', title: 'Concepts', note: 'Free note', links: [], files } });
+    await settle(fixture);
+    return { ...env, fixture };
+  }
+
+  it('opens a free file in a new tab with a fresh link', async () => {
+    const tab = { opener: 'x', location: { href: '' }, close: () => undefined };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    const { fixture, http } = await openSample();
+    el(fixture, '[data-file="f1"]').click();
+    http.expectOne(`${API}/api/free/files/f1/link`).flush({ url: 'https://files.example/f1', expires_in: 300, content_type: 'application/pdf', title: 'Free notes' });
+    await settle(fixture);
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(tab.location.href).toBe('https://files.example/f1');
+    open.mockRestore();
+  });
+
+  it('shows the problem and closes the empty tab when the link cannot be made', async () => {
+    let closed = false;
+    const tab = { opener: 'x', location: { href: '' }, close: () => (closed = true) };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    const { fixture, http } = await openSample();
+    el(fixture, '[data-file="f1"]').click();
+    http.expectOne(`${API}/api/free/files/f1/link`).flush({ detail: "We couldn't find that file." }, { status: 404, statusText: 'Not Found' });
+    await settle(fixture);
+    expect(closed).toBe(true);
+    expect(text(fixture)).toContain("couldn't find that file");
+    open.mockRestore();
+  });
+
+  it('shows no file list when the free sub-topic has no files', async () => {
+    const { fixture } = await openSample([]);
+    expect(fixture.nativeElement.querySelector('#free-files')).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import re
 import pytest
 
 from app import tenants
-from test_coursework import sub, topic
+from test_coursework import add_file, sub, topic
 
 
 def code_from(mailer, to):
@@ -108,14 +108,16 @@ def test_too_many_codes_for_one_email_are_slowed_down(client, mailer):
 # ---- the free plan itself ----
 
 @pytest.fixture
-def school(make_tenant, add_course, client, sign_in):
+def school(make_tenant, add_course, client, sign_in, repo):
     make_tenant("aaptprep", "AaptPrep", "ritesh@example.com")
     admin = sign_in("aaptprep", "ritesh@example.com")
     cat = add_course("aaptprep", "CAT")
     percent = topic(client, admin, cat["id"], "Percentages")
+    add_file(repo, cat["id"], "f1", "Free notes")
+    add_file(repo, cat["id"], "f2", "Locked notes")
     sub(client, admin, cat["id"], percent["id"], "Concepts", note="Free note", status="published",
-        materials=[{"type": "link", "url": "https://example.com/x", "title": "Read this"}])
-    sub(client, admin, cat["id"], percent["id"], "Practice", note="Locked note", status="published")
+        materials=[{"type": "link", "url": "https://example.com/x", "title": "Read this"}, {"type": "file", "file_id": "f1"}])
+    sub(client, admin, cat["id"], percent["id"], "Practice", note="Locked note", status="published", materials=[{"type": "file", "file_id": "f2"}])
 
 
 @pytest.fixture
@@ -132,6 +134,17 @@ def test_a_free_learner_sees_the_courses_picks_one_and_opens_only_its_first_sub_
     sample = client.get("/api/free/sample", headers=learner).json()["sample"]
     assert sample["title"] == "Concepts" and sample["note"] == "Free note" and sample["links"] == [{"title": "Read this", "url": "https://example.com/x"}]
     assert "Locked note" not in str(sample) and "AaptPrep" not in str(sample)
+    assert [(f["file_id"], f["title"]) for f in sample["files"]] == [("f1", "Free notes")]
+
+
+def test_a_free_learner_can_open_the_free_sub_topics_files_and_no_others(client, learner):
+    assert client.get("/api/free/files/f1/link", headers=learner).status_code == 404  # no course picked yet
+    client.put("/api/free/pick", json={"course": "CAT"}, headers=learner)
+    opened = client.get("/api/free/files/f1/link", headers=learner)
+    assert opened.status_code == 200 and opened.json()["url"].startswith("http") and opened.json()["title"] == "Free notes"
+    assert client.get("/api/free/files/f2/link", headers=learner).status_code == 404  # in a locked sub-topic
+    assert client.get("/api/free/files/nope/link", headers=learner).status_code == 404
+    assert client.get("/api/free/files/f1/link", headers={"X-Tenant": "free"}).status_code == 401
 
 
 def test_the_free_course_cannot_be_changed_or_invented(client, learner):
