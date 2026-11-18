@@ -501,3 +501,13 @@ class PracticeIn(BaseModel):
     paper: Any = None
     topic: Any = None
     count: Any = 10
+
+
+class ParentIn(BaseModel):
+    """A parent and one child. Checked by hand."""
+
+    first_name: Any = None
+    last_name: Any = None
+    email: Any = None
+    mobile: Any = None
+    student_email: Any = None

@@ -406,5 +406,8 @@ def edit(
     except ConflictError:
         raise FormErrors({"email": taken})
     scoped.delete_otp(email)
+    from app import parents  # imported here because parents itself uses this module
+
+    parents.relink(scoped, email, new_email)
     updated = scoped.get_member(new_email)
     return updated, send_quietly(mailer, _email_changed_email(tenant, updated))

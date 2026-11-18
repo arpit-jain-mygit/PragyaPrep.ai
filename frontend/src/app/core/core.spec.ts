@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API, DEMO, sessionFor } from '../testing';
 import { toApiError } from './api.service';
 import { formatDate, formatFee, formatSize, describeAccess } from './format';
-import { adminGuard, platformGuard, signedInGuard } from './guards';
+import { adminGuard, parentGuard, platformGuard, signedInGuard } from './guards';
 import { apiInterceptor } from './interceptor';
 import { SessionService } from './session.service';
 import { TenantService, readableTextColor } from './tenant.service';
@@ -240,6 +240,17 @@ describe('guards', () => {
 
   it('sends a signed-out person away from admin pages to the login page', () => {
     expect(String(run(adminGuard))).toBe('/demo/login');
+  });
+
+  it('lets a parent into parent pages and sends everyone else to their own home or the login page', () => {
+    sessions.save(sessionFor('parent'));
+    expect(run(parentGuard)).toBe(true);
+    sessions.save(sessionFor('student'));
+    expect(String(run(parentGuard))).toBe('/demo/home');
+    sessions.save(sessionFor('tenant_admin'));
+    expect(String(run(parentGuard))).toBe('/demo/admin/home');
+    sessions.clear('demo');
+    expect(String(run(parentGuard))).toBe('/demo/login');
   });
 });
 

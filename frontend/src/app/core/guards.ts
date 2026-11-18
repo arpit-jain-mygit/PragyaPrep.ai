@@ -26,6 +26,15 @@ export const adminGuard: CanActivateFn = () => {
   return inject(Router).createUrlTree(['/', slug ?? '', member ? 'home' : 'login']);
 };
 
+/** Only a parent may open the page. Others go to their own home page. */
+export const parentGuard: CanActivateFn = () => {
+  const slug = inject(TenantService).slug();
+  const member = inject(SessionService).member(slug);
+  if (member?.role === 'parent') return true;
+  const where = !member ? ['login'] : member.role === 'tenant_admin' ? ['admin', 'home'] : ['home'];
+  return inject(Router).createUrlTree(['/', slug ?? '', ...where]);
+};
+
 /**
  * The platform admin's page. It belongs to the platform's own institute, so this loads that institute,
  * and only a signed-in platform admin may open it. Everyone else goes to the platform login page.

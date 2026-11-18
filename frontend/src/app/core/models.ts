@@ -98,7 +98,7 @@ export interface Member {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'student' | 'tenant_admin' | 'platform_admin';
+  role: 'student' | 'tenant_admin' | 'platform_admin' | 'parent';
   status: string;
   /** A short-lived link to their photo, or empty. */
   avatar_url?: string;
@@ -920,4 +920,60 @@ export interface LiveImport {
   summary: { total: number; ready: number; skipped: number; errors: number; created?: number };
   rows: LiveImportRow[];
   confirmed: boolean;
+}
+
+
+// ---- Parents ----
+
+export interface AdminParent {
+  email: string;
+  name: string;
+  mobile: string;
+  children: { email: string; name: string }[];
+  created_at: string;
+}
+
+export interface ParentInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  mobile: string;
+  student_email: string;
+}
+
+export interface ParentImportRow {
+  row: number;
+  email: string;
+  name: string;
+  children: string[];
+  status: 'ready' | 'skipped' | 'error' | 'created';
+  message: string;
+  problems: Record<string, string>;
+}
+
+export interface ParentImport {
+  summary: { total: number; ready: number; skipped: number; errors: number; created?: number; linked?: number; emailed?: number };
+  rows: ParentImportRow[];
+  confirmed: boolean;
+}
+
+/** A parent's view of one child in one course (the same numbers the admin sees on the Progress page). */
+export interface ChildCourse {
+  id: string;
+  name: string;
+  row: ProgressRow;
+}
+
+export interface ChildSummary {
+  email: string;
+  name: string;
+  avatar_url: string;
+  status: string;
+  courses: ChildCourse[];
+}
+
+export interface ChildDetail {
+  student: { email: string; name: string; avatar_url: string };
+  courses: StudentProgress[];
+  results: { summary: MyResults['summary']; trend: MyResults['trend']; subjects: SubjectResult[] };
 }

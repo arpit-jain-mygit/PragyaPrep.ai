@@ -50,6 +50,7 @@ interface Notice {
       <h1>Registrations <app-info text="Review who has registered, and decide who may log in." /></h1>
       <span class="row">
         <button class="btn secondary small" type="button" id="template" title="Excel template for importing many students" (click)="downloadTemplate()"><app-icon name="download" [size]="16" /> Template</button>
+        <a class="btn secondary small" id="parents-link" [routerLink]="['/', tenants.slug(), 'admin', 'parents']"><app-icon name="users" [size]="16" /> Parents</a>
         <a class="btn secondary small" id="import-link" [routerLink]="['/', tenants.slug(), 'admin', 'import-students']"><app-icon name="upload" [size]="16" /> Import</a>
       </span>
     </div>

@@ -13,6 +13,7 @@ TENANT_HEADER = "X-Tenant"
 
 # The three kinds of people.
 STUDENT = "student"
+PARENT = "parent"
 TENANT_ADMIN = "tenant_admin"
 PLATFORM_ADMIN = "platform_admin"
 

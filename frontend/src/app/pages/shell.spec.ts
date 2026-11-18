@@ -27,6 +27,17 @@ describe('Institute page frame', () => {
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });
 
+  it('shows a parent only My children, with support, and sends the institute name there', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('parent'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['My children']);
+    expect(all<HTMLAnchorElement>(fixture, 'nav a')[0].getAttribute('href')).toBe('/demo/parent');
+    expect(all<HTMLAnchorElement>(fixture, 'a.brand-name')[0].getAttribute('href')).toBe('/demo/parent');
+    expect(all(fixture, '#support-open').length).toBe(1);
+  });
+
   it('gives admins and students a Contact support button that opens the form, but not the platform admin', async () => {
     for (const role of ['tenant_admin', 'student'] as const) {
       const env = setupTestBed();

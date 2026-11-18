@@ -51,6 +51,8 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
+              } @else if (isParent()) {
+                <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active"><app-icon name="users" /><span class="nav-label">My children</span></a>
               } @else {
                 <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
                 <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
@@ -97,6 +99,7 @@ export class TenantShell {
   readonly member = computed(() => this.sessions.member(this.tenants.slug()));
   readonly isAdmin = computed(() => this.member()?.role === 'tenant_admin');
 
+  readonly isParent = computed(() => this.member()?.role === 'parent');
   readonly isPlatformAdmin = computed(() => this.member()?.role === 'platform_admin');
 
   /** Where the institute's name in the top bar leads. Each part of the address is its own item, so slashes aren't escaped. */
@@ -104,6 +107,7 @@ export class TenantShell {
     const slug = this.tenants.slug() ?? '';
     if (this.isPlatformAdmin()) return ['/', 'platform-admin'];
     if (this.isAdmin()) return ['/', slug, 'admin', 'home'];
+    if (this.isParent()) return ['/', slug, 'parent'];
     return ['/', slug, this.member() ? 'home' : 'login'];
   });
 

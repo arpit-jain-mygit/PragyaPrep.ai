@@ -25,6 +25,11 @@ import {
   CourseProgress,
   CourseStuck,
   StudentProgress,
+  AdminParent,
+  ChildDetail,
+  ChildSummary,
+  ParentImport,
+  ParentInput,
   StudentCoursework,
   StudentLiveCourse,
   CopyResult,
@@ -277,6 +282,44 @@ export class ApiService {
 
   myCoursework(): Promise<StudentCoursework> {
     return this.get('/api/my/coursework');
+  }
+
+  // ---- Parents ----
+
+  parents(): Promise<AdminParent[]> {
+    return this.get('/api/admin/parents');
+  }
+
+  addParent(body: ParentInput): Promise<AdminParent[]> {
+    return this.post('/api/admin/parents', body);
+  }
+
+  removeParent(email: string): Promise<AdminParent[]> {
+    return this.call(firstValueFrom(this.http.delete<AdminParent[]>(`${this.base}/api/admin/parents/${encodeURIComponent(email)}`)));
+  }
+
+  unlinkChild(email: string, child: string): Promise<AdminParent[]> {
+    return this.call(firstValueFrom(this.http.delete<AdminParent[]>(`${this.base}/api/admin/parents/${encodeURIComponent(email)}/children/${encodeURIComponent(child)}`)));
+  }
+
+  parentTemplate(): Promise<Blob> {
+    return this.call(firstValueFrom(this.http.get(`${this.base}/api/admin/parents/template`, { responseType: 'blob' })));
+  }
+
+  importParents(file: File, confirm: boolean): Promise<ParentImport> {
+    return this.call(firstValueFrom(this.http.post<ParentImport>(`${this.base}/api/admin/parents/import?confirm=${confirm}`, file, { headers: { 'Content-Type': 'application/octet-stream' } })));
+  }
+
+  myChildren(): Promise<ChildSummary[]> {
+    return this.get('/api/parent/children');
+  }
+
+  myChild(email: string): Promise<ChildDetail> {
+    return this.get(`/api/parent/children/${encodeURIComponent(email)}`);
+  }
+
+  makeChildPractice(email: string, body: { paper: string; topic: string; count?: number }): Promise<{ id: string; title: string; question_count: number }> {
+    return this.post(`/api/parent/children/${encodeURIComponent(email)}/practice`, body);
   }
 
   makePractice(body: { paper: string; topic: string; count?: number }): Promise<{ id: string; title: string; question_count: number }> {

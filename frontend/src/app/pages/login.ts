@@ -11,7 +11,7 @@ const RESEND_SECONDS = 30;
 /** Where each kind of person lands after signing in. */
 export function homeFor(member: Member, slug: string): string[] {
   if (member.role === 'platform_admin') return ['/', 'platform-admin'];
-  return member.role === 'tenant_admin' ? ['/', slug, 'admin', 'home'] : ['/', slug, 'home'];
+  return member.role === 'tenant_admin' ? ['/', slug, 'admin', 'home'] : member.role === 'parent' ? ['/', slug, 'parent'] : ['/', slug, 'home'];
 }
 
 /**

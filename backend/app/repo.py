@@ -178,6 +178,9 @@ class TenantRepo:
         response = self.table.get_item(Key=self._member_key(email))
         return _plain(response.get("Item"))
 
+    def delete_member(self, email: str) -> None:
+        self.table.delete_item(Key=self._member_key(email))
+
     def update_member(self, email: str, **fields) -> None:
         if "status" in fields:
             fields = {**fields, "GSI1PK": f"{self._prefix}MEMBERS#{fields['status']}"}

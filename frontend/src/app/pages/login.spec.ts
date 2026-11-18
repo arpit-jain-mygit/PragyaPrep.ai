@@ -214,6 +214,10 @@ describe('Login page: already signed in', () => {
 });
 
 describe('homeFor', () => {
+  it('sends a parent to their children', () => {
+    expect(homeFor({ ...sessionFor('parent').member }, 'demo')).toEqual(['/', 'demo', 'parent']);
+  });
+
   it('sends institute admins to the queue, the platform admin to the institutes page, and students home', () => {
     expect(homeFor({ ...sessionFor('tenant_admin').member }, 'demo')).toEqual(['/', 'demo', 'admin', 'home']);
     expect(homeFor({ ...sessionFor('student').member }, 'demo')).toEqual(['/', 'demo', 'home']);
