@@ -1,8 +1,10 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { logoSrc } from '../core/format';
+import { Avatar } from '../ui/avatar';
 import { Icon } from '../ui/icon';
 import { NoticeService } from '../core/notice.service';
+import { ProfileService } from '../core/profile.service';
 import { SessionService } from '../core/session.service';
 import { TenantService } from '../core/tenant.service';
 
@@ -12,7 +14,7 @@ import { TenantService } from '../core/tenant.service';
  */
 @Component({
   selector: 'app-tenant-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon],
   template: `
     @if (tenants.loading()) {
       <p class="center muted" style="margin-top: 3rem">Loading…</p>
@@ -53,6 +55,7 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
                 <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
               }
+              <app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" />
               <span class="who">{{ member()!.first_name }}</span>
               <button class="icon-btn" type="button" title="Sign out" (click)="signOut()"><app-icon name="logout" /><span class="sr-only">Sign out</span></button>
             }
@@ -72,12 +75,16 @@ export class TenantShell {
   private readonly sessions = inject(SessionService);
   private readonly router = inject(Router);
   readonly notices = inject(NoticeService);
+  readonly profile = inject(ProfileService);
 
   constructor() {
     // A signed-in student's unread count sits on the Notices link; everyone else has none.
     effect(() => {
-      if (this.member()?.role === 'student') void this.notices.refresh();
+      const role = this.member()?.role;
+      if (role === 'student') void this.notices.refresh();
       else this.notices.clear();
+      if (role === 'student' || role === 'tenant_admin') void this.profile.refresh();
+      else this.profile.clear();
     });
   }
 

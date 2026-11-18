@@ -2,8 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import coursework, progress
-from app.deps import TENANT_ADMIN, get_tenant_repo, require_roles
+from app.deps import TENANT_ADMIN, get_storage, get_tenant_repo, require_roles
 from app.repo import TenantRepo
+from app.storage import ContentStorage
 
 router = APIRouter(tags=["progress"], dependencies=[Depends(require_roles(TENANT_ADMIN))])
 
@@ -21,8 +22,8 @@ def _guard(action):
 
 
 @router.get("/api/admin/progress/{course_id}")
-def course_progress(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
-    return _guard(lambda: progress.students(scoped, course_id))
+def course_progress(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo), storage: ContentStorage = Depends(get_storage)):
+    return _guard(lambda: progress.students(scoped, course_id, storage))
 
 
 @router.get("/api/admin/progress/{course_id}/stuck")
@@ -31,5 +32,5 @@ def course_stuck(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
 
 
 @router.get("/api/admin/progress/{course_id}/students/{email}")
-def student_progress(course_id: str, email: str, scoped: TenantRepo = Depends(get_tenant_repo)):
-    return _guard(lambda: progress.student(scoped, course_id, email.strip().lower()))
+def student_progress(course_id: str, email: str, scoped: TenantRepo = Depends(get_tenant_repo), storage: ContentStorage = Depends(get_storage)):
+    return _guard(lambda: progress.student(scoped, course_id, email.strip().lower(), storage))

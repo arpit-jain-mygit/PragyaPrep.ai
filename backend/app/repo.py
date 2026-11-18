@@ -737,6 +737,38 @@ class TenantRepo:
     def delete_test(self, test_id: str) -> None:
         self.table.delete_item(Key=self._test_key(test_id))
 
+    # ---- Student photos for a bulk import: uploaded first (by file name), then attached to a student ----
+
+    def _photo_key(self, photo_id: str) -> dict:
+        return {"PK": f"{self._prefix}SPHOTO#{photo_id}", "SK": "META"}
+
+    def create_photo(self, photo: dict) -> None:
+        _put_new(self.table, {**self._photo_key(photo["id"]), **photo, "GSI1PK": f"{self._prefix}SPHOTOS", "GSI1SK": f"{photo.get('name', '')}#{photo['id']}"})
+
+    def find_loose_photo(self, name: str) -> dict | None:
+        """The newest photo with this file name that is uploaded, checked and not yet on any student."""
+        response = self.table.query(
+            IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}SPHOTOS") & Key("GSI1SK").begins_with(f"{name}#"),
+        )
+        found = [_plain(i) for i in response["Items"] if i.get("name") == name and i.get("status") == "ready" and not i.get("student")]
+        return max(found, key=lambda p: (p.get("created_at", ""), p["id"])) if found else None
+
+    def get_photo(self, photo_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._photo_key(photo_id)).get("Item"))
+
+    def mark_photo_ready(self, photo_id: str, size: int) -> None:
+        _update(self.table, self._photo_key(photo_id), {"status": "ready", "size": size})
+
+    def attach_photo(self, photo_id: str, email: str) -> None:
+        """Tie a photo to a student. A photo that was never attached has an expiry time, which this removes."""
+        self.table.update_item(
+            Key=self._photo_key(photo_id), UpdateExpression="SET #s = :s REMOVE #ttl",
+            ExpressionAttributeNames={"#s": "student", "#ttl": "ttl"}, ExpressionAttributeValues={":s": email},
+        )
+
+    def delete_photo(self, photo_id: str) -> None:
+        self.table.delete_item(Key=self._photo_key(photo_id))
+
     # ---- Question pictures: uploaded first, then attached to a question ----
 
     def _image_key(self, image_id: str) -> dict:

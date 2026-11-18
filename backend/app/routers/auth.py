@@ -1,11 +1,12 @@
 """Login routes. The only way to sign in is an emailed 6-digit code, for an email an admin has approved."""
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import otp
+from app import avatars, otp
 from app.config import Settings
-from app.deps import get_client_ip, get_current_member, get_mailer, get_repo, get_settings, get_tenant
+from app.deps import get_client_ip, get_current_member, get_mailer, get_repo, get_settings, get_storage, get_tenant
 from app.mailer import Mailer
 from app.repo import Repo
+from app.storage import ContentStorage
 from app.schemas import MemberOut, RequestCodeIn, RequestCodeOut, SessionOut, VerifyCodeIn
 from app.security import create_token
 from app.tenants import ValidationError, normalize_email
@@ -73,6 +74,6 @@ def verify_code(
 
 
 @router.get("/me", response_model=MemberOut)
-def me(member: dict = Depends(get_current_member)):
-    """Who is signed in right now."""
-    return member
+def me(member: dict = Depends(get_current_member), storage: ContentStorage = Depends(get_storage)):
+    """Who is signed in right now, with a link to their photo if they have one."""
+    return avatars.with_url(storage, member)

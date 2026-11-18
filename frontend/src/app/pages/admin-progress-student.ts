@@ -5,16 +5,20 @@ import { ApiService } from '../core/api.service';
 import { shortDate, timeAgo } from '../core/format';
 import { ApiError, ReminderResult, StudentProgress } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { Avatar } from '../ui/avatar';
 import { Icon } from '../ui/icon';
 import { STATUS_LABELS } from './admin-progress';
 
 /** One student in one course: status, coursework by subject and topic, what is overdue, and their tests. */
 @Component({
   selector: 'app-admin-progress-student',
-  imports: [FormsModule, RouterLink, Icon],
+  imports: [FormsModule, RouterLink, Avatar, Icon],
   template: `
     <div class="page-head">
-      <h1>{{ data()?.student?.name ?? 'Student' }}@if (data()) { <span class="soft"> · {{ data()!.course.name }}</span> }</h1>
+      <h1 class="greeting">
+        @if (data(); as d) { <app-avatar [url]="d.student.avatar_url" [first]="d.student.name.split(' ')[0]" [last]="d.student.name.split(' ')[1] ?? ''" [email]="d.student.email" [size]="48" /> }
+        {{ data()?.student?.name ?? 'Student' }}@if (data()) { <span class="soft"> · {{ data()!.course.name }}</span> }
+      </h1>
       <span class="row">
         @if (data()?.row?.status === 'behind') {
           <button class="btn small" type="button" id="remind" [disabled]="busy()" (click)="confirmRemind.set(!confirmRemind())"><app-icon name="bell" [size]="16" /> Remind</button>

@@ -4,6 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   Access,
+  StudentPhotoStart,
+  RegistrationReceived,
   AdminCourse,
   ApiError,
   CourseAccess,
@@ -121,8 +123,36 @@ export class ApiService {
     return this.get('/api/courses');
   }
 
-  register(form: RegistrationForm): Promise<{ status: string; message: string }> {
-    return this.post('/api/register', form);
+  register(form: RegistrationForm, photo = false): Promise<RegistrationReceived> {
+    return this.post('/api/register', photo ? { ...form, photo: true } : form);
+  }
+
+  /** The student's photo has been sent: attach it to their registration. */
+  finishRegistrationPhoto(email: string, token: string): Promise<{ ok: boolean }> {
+    return this.post('/api/register/photo', { email, token });
+  }
+
+  // ---- Photos (admin) ----
+
+  startStudentPhoto(email: string): Promise<{ upload: UploadForm; key: string }> {
+    return this.post(`/api/admin/registrations/${encodeURIComponent(email)}/photo`);
+  }
+
+  finishStudentPhoto(email: string, key: string): Promise<Registration> {
+    return this.post(`/api/admin/registrations/${encodeURIComponent(email)}/photo/complete`, { key });
+  }
+
+  removeStudentPhoto(email: string): Promise<Registration> {
+    return this.call(firstValueFrom(this.http.delete<Registration>(`${this.base}/api/admin/registrations/${encodeURIComponent(email)}/photo`)));
+  }
+
+  /** A photo for a bulk import, sent under its file name. */
+  startBulkPhoto(filename: string, size: number): Promise<StudentPhotoStart> {
+    return this.post('/api/admin/student-photos', { filename, size });
+  }
+
+  finishBulkPhoto(id: string): Promise<{ id: string; name: string }> {
+    return this.post(`/api/admin/student-photos/${encodeURIComponent(id)}/complete`);
   }
 
   // ---- Signing in ----

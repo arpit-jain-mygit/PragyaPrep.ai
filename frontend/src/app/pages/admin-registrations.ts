@@ -5,7 +5,10 @@ import { ApiService } from '../core/api.service';
 import { TenantService } from '../core/tenant.service';
 import { GENDER_LABELS, formatDate, formatDateTime } from '../core/format';
 import { AdminCourse, ApiError, CourseAccess, DecisionAction, Registration, RegistrationEdit } from '../core/models';
+import { Avatar } from '../ui/avatar';
 import { Icon } from '../ui/icon';
+import { PhotoPicker } from '../ui/photo-picker';
+import { UploadService } from '../core/upload.service';
 import { InfoTip } from '../ui/info-tip';
 
 interface Draft {
@@ -31,11 +34,6 @@ export function searchText(person: Registration): string {
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
-const AVATAR_COLORS = [
-  ['#2563eb', '#7c3aed'], ['#ea580c', '#db2777'], ['#059669', '#0891b2'], ['#a21caf', '#e11d48'],
-  ['#d97706', '#dc2626'], ['#4f46e5', '#0891b2'], ['#0d9488', '#4f46e5'], ['#be185d', '#7c3aed'],
-] as const;
-
 const TABS = ['pending', 'approved', 'rejected', 'suspended', 'all'] as const;
 
 interface Notice {
@@ -46,7 +44,7 @@ interface Notice {
 /** The admin's review queue: look at each registration, correct its details, then approve, reject, suspend or reactivate it. */
 @Component({
   selector: 'app-admin-registrations',
-  imports: [FormsModule, RouterLink, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Avatar, Icon, InfoTip, PhotoPicker],
   template: `
     <div class="page-head">
       <h1>Registrations <app-info text="Review who has registered, and decide who may log in." /></h1>
@@ -87,7 +85,7 @@ interface Notice {
     @for (person of visible(); track person.email) {
       <article class="item reg-tile" [class.wide]="expanded(person.email)" [attr.data-status]="person.status" [attr.data-email]="person.email">
         <div class="item-head">
-          <span class="avatar" [style.background]="avatar(person.email)" aria-hidden="true">{{ initials(person) }}</span>
+          <app-avatar [url]="person.avatar_url" [first]="person.first_name" [last]="person.last_name" [email]="person.email" [size]="42" />
           <div class="who">
             <div class="item-title">{{ person.first_name }} {{ person.last_name }}</div>
             <div class="muted small who-email" [attr.title]="person.email">{{ person.email }}</div>
@@ -158,6 +156,10 @@ interface Notice {
         @if (editing() === person.email) {
           <form class="edit" (ngSubmit)="saveEdit(person)" novalidate>
             @if (editError(); as problem) { <div class="alert error" role="alert">{{ problem }}</div> }
+            <div class="field" [attr.data-photo]="person.email">
+              <app-photo-picker [current]="person.avatar_url" [first]="person.first_name" [last]="person.last_name" [email]="person.email" [disabled]="busy() === person.email" (photo)="savePhoto(person, $event)" />
+              @if (photoError(); as problem) { <div class="error-text" role="alert" id="photo-save-error">{{ problem }}</div> }
+            </div>
             <div class="field">
               <label for="e-email">Email</label>
               <input id="e-email" name="email" type="email" [(ngModel)]="draft.email" (input)="clearError('email')" autocomplete="off" [attr.aria-invalid]="fieldErrors()['email'] ? 'true' : null" />
@@ -337,23 +339,33 @@ export class AdminRegistrations implements OnInit {
     }
   }
 
+  readonly photoError = signal('');
+  private readonly uploader = inject(UploadService);
+
+  /** Save a photo the admin made for a student (or remove it when null), and show it on the tile at once. */
+  async savePhoto(person: Registration, photo: Blob | null): Promise<void> {
+    this.photoError.set('');
+    this.busy.set(person.email);
+    try {
+      let updated: Registration;
+      if (photo) {
+        const start = await this.api.startStudentPhoto(person.email);
+        await this.uploader.send(start.upload, new File([photo], 'photo.jpg', { type: 'image/jpeg' }), () => undefined);
+        updated = await this.api.finishStudentPhoto(person.email, start.key);
+      } else {
+        updated = await this.api.removeStudentPhoto(person.email);
+      }
+      this.items.update((list) => list.map((p) => (p.email === person.email ? { ...p, avatar_url: updated.avatar_url } : p)));
+    } catch (error) {
+      this.photoError.set((error as ApiError).detail ?? "The photo couldn't be saved.");
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
   /** A tile opens to the full width of the page while its details, edit form or reject box are showing. */
   expanded(email: string): boolean {
     return this.isOpen(email) || this.editing() === email || this.rejecting() === email;
-  }
-
-  /** The letters in a tile's round badge: first and last name, else the start of the email. */
-  initials(person: Registration): string {
-    const letters = `${person.first_name?.[0] ?? ''}${person.last_name?.[0] ?? ''}`.toUpperCase();
-    return letters || (person.email[0] ?? '?').toUpperCase();
-  }
-
-  /** A steady colour for each person, from their email, so a badge never changes between visits. */
-  avatar(email: string): string {
-    let hash = 0;
-    for (const ch of email) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-    const [from, to] = AVATAR_COLORS[hash % AVATAR_COLORS.length];
-    return `linear-gradient(135deg, ${from}, ${to})`;
   }
 
   async show(tab: string): Promise<void> {

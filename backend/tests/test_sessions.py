@@ -40,6 +40,7 @@ def test_a_signed_in_student_sees_who_they_are(client, school, sign_in):
         "last_name": "Rao",
         "role": "student",
         "status": "approved",
+        "avatar_url": "",
     }
 
 

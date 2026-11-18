@@ -42,6 +42,7 @@ class MemberOut(BaseModel):
     last_name: str = ""
     role: str
     status: str
+    avatar_url: str = ""
 
 
 class SessionOut(BaseModel):
@@ -116,6 +117,8 @@ class RegistrationIn(BaseModel):
     # The courses chosen (ids). course_id is still accepted from an older caller and means one course.
     course_ids: Any = None
     course_id: str | None = None
+    # True when the student is about to send a photo: the answer then carries a permission to upload it.
+    photo: bool = False
 
 
 class RegistrationEditIn(RegistrationIn):
@@ -125,6 +128,9 @@ class RegistrationEditIn(RegistrationIn):
 class RegistrationReceivedOut(BaseModel):
     status: str
     message: str
+    # Only when the form said photo=true: the signed form to post the photo to, and a token to finish it.
+    photo_upload: dict | None = None
+    photo_token: str | None = None
 
 
 class RegistrationOut(BaseModel):
@@ -152,6 +158,7 @@ class RegistrationOut(BaseModel):
     course_ids: list[str] = []
     course_names: list[str] = []
     status: str
+    avatar_url: str = ""
     created_at: str = ""
     decided_by: str = ""
     decided_at: str = ""
@@ -454,3 +461,16 @@ class ReminderIn(BaseModel):
 
 class WelcomeIn(BaseModel):
     emails: Any = None
+
+
+class PhotoDoneIn(BaseModel):
+    """Finishing a registration photo (token) or an admin's photo for a student (key)."""
+
+    email: Any = None
+    token: Any = None
+    key: Any = None
+
+
+class StudentPhotoStartIn(BaseModel):
+    filename: Any = None
+    size: Any = None

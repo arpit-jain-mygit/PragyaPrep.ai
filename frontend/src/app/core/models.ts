@@ -71,6 +71,7 @@ export interface Registration {
   decided_by: string;
   decided_at: string;
   reason: string;
+  avatar_url?: string;
   edited_by?: string;
   edited_at?: string;
   previous_email?: string;
@@ -99,6 +100,8 @@ export interface Member {
   last_name: string;
   role: 'student' | 'tenant_admin' | 'platform_admin';
   status: string;
+  /** A short-lived link to their photo, or empty. */
+  avatar_url?: string;
 }
 
 export interface Session {
@@ -720,6 +723,7 @@ export interface ProgressRow {
   /** Items overdue: coursework and tests together. */
   overdue: number;
   last_active: string | null;
+  avatar_url?: string;
 }
 
 export interface CourseProgress {
@@ -747,7 +751,7 @@ export interface CourseStuck {
 
 export interface StudentProgress {
   course: { id: string; name: string };
-  student: { email: string; name: string };
+  student: { email: string; name: string; avatar_url?: string };
   row: ProgressRow;
   coursework: StudentCourse | null;
   overdue_items: { title: string; topic: string; subject: string; due: string; days_late: number }[];
@@ -820,6 +824,8 @@ export interface ImportRow {
   message: string;
   /** The mistakes in this row, by column heading. */
   problems: Record<string, string>;
+  /** The row names a photo file. */
+  photo?: boolean;
 }
 
 export interface StudentImport {
@@ -834,4 +840,20 @@ export interface WelcomeResult {
   sent: number;
   failed: number;
   skipped: number;
+}
+
+// ---- Photos ----
+
+/** What registering can send back when the student said they have a photo. */
+export interface RegistrationReceived {
+  status: string;
+  message: string;
+  photo_upload?: UploadForm;
+  photo_token?: string;
+}
+
+export interface StudentPhotoStart {
+  id: string;
+  name: string;
+  upload: UploadForm;
 }

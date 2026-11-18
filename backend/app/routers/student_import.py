@@ -1,12 +1,13 @@
 """Bulk onboarding for the institute's admin: the Excel template, a preview or import of a filled-in sheet, and the welcome emails."""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from app import student_import
+from app import avatars, student_import
 from app.config import Settings
-from app.deps import TENANT_ADMIN, get_mailer, get_settings, get_tenant, get_tenant_repo, require_roles
+from app.deps import TENANT_ADMIN, get_mailer, get_settings, get_storage, get_tenant, get_tenant_repo, require_roles
 from app.mailer import Mailer
 from app.repo import TenantRepo
-from app.schemas import WelcomeIn
+from app.schemas import StudentPhotoStartIn, WelcomeIn
+from app.storage import ContentStorage
 from app.tenants import ValidationError
 
 router = APIRouter(tags=["student import"], dependencies=[Depends(require_roles(TENANT_ADMIN))])
@@ -70,3 +71,33 @@ def welcome(
         return student_import.welcome(scoped, tenant, settings, mailer, body.emails)
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+# ---- Photos for a bulk import: sent first, by file name, then matched to the sheet's Photo column ----
+
+@router.post("/api/admin/student-photos", status_code=201)
+def start_photo(
+    body: StudentPhotoStartIn,
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    storage: ContentStorage = Depends(get_storage),
+    settings: Settings = Depends(get_settings),
+    admin: dict = Depends(require_roles(TENANT_ADMIN)),
+):
+    """A signed form to post one photo (a small JPEG of up to 300 KB) to. Then call complete."""
+    try:
+        photo, upload = avatars.start_photo_upload(scoped, storage, settings, body.filename, body.size, admin["email"])
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"id": photo["id"], "name": photo["name"], "upload": upload}
+
+
+@router.post("/api/admin/student-photos/{photo_id}/complete")
+def finish_photo(photo_id: str, scoped: TenantRepo = Depends(get_tenant_repo), storage: ContentStorage = Depends(get_storage)):
+    """Check the photo that arrived. Only a real JPEG of the right size is kept."""
+    try:
+        photo = avatars.finish_photo_upload(scoped, storage, photo_id)
+    except avatars.PhotoNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that photo.")
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"id": photo["id"], "name": photo["name"]}

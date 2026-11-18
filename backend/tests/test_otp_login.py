@@ -112,6 +112,7 @@ def test_the_right_code_signs_the_person_in(client, mailer, school):
         "last_name": "Rao",
         "role": "student",
         "status": "approved",
+        "avatar_url": "",
     }
 
 

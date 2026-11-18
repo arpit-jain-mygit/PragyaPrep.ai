@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { describe, expect, it, vi } from 'vitest';
+import { UploadService } from '../core/upload.service';
+import { PhotoPicker } from '../ui/photo-picker';
 import { API, all, clickButton, el, registration, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { AdminRegistrations, searchText } from './admin-registrations';
 
@@ -226,6 +229,86 @@ describe('Registrations: tiles', () => {
     await settle(fixture);
     expect(all(fixture, '#tiles > article').length).toBe(0);
     expect(all(fixture, '#no-match').length).toBe(1);
+  });
+});
+
+describe('Registrations: photos', () => {
+  const WITH = registration({ email: 'meera@example.com', avatar_url: 'https://files.example/meera.jpg' });
+  const WITHOUT = registration({ email: 'rahul@example.com', first_name: 'Rahul', last_name: 'Bansal', avatar_url: '' });
+  const tile = (fixture: Parameters<typeof el>[0], email: string) => el(fixture, `[data-email="${email}"]`);
+
+  async function editing(email = 'rahul@example.com') {
+    const env = await open([WITH, WITHOUT]);
+    const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue(undefined);
+    el(env.fixture, `[data-email="${email}"] button[title="Edit"]`).click();
+    env.http.expectOne(`${API}/api/admin/courses`).flush([]);
+    await settle(env.fixture);
+    return { ...env, send };
+  }
+
+  const picker = (fixture: Parameters<typeof el>[0], email: string) => fixture.debugElement.query(By.css(`[data-email="${email}"] app-photo-picker`)).injector.get(PhotoPicker);
+
+  it('shows the photo on a tile as a round image, and initials where there is none', async () => {
+    const { fixture } = await open([WITH, WITHOUT]);
+    expect(tile(fixture, 'meera@example.com').querySelector('img.avatar')!.getAttribute('src')).toBe('https://files.example/meera.jpg');
+    expect(tile(fixture, 'rahul@example.com').querySelector('img')).toBeNull();
+    expect(tile(fixture, 'rahul@example.com').querySelector('span.avatar')!.textContent!.trim()).toBe('RB');
+  });
+
+  it('shows a photo step in the edit form, with their current photo', async () => {
+    const { fixture } = await editing('meera@example.com');
+    const field = el(fixture, '[data-photo="meera@example.com"]');
+    expect(field.querySelector('img.avatar')!.getAttribute('src')).toBe('https://files.example/meera.jpg');
+    expect(field.textContent).toContain('Change photo');
+  });
+
+  it('saves a new photo: gets a form, sends it, finishes, and shows it on the tile', async () => {
+    const { fixture, http, send } = await editing();
+    picker(fixture, 'rahul@example.com').photo.emit(new Blob(['jpeg'], { type: 'image/jpeg' }));
+    const start = http.expectOne(`${API}/api/admin/registrations/rahul%40example.com/photo`);
+    expect(start.request.method).toBe('POST');
+    const upload = { url: 'https://s3.example', fields: { key: 'demo/avatars/new.jpg' } };
+    start.flush({ upload, key: 'demo/avatars/new.jpg' });
+    await settle(fixture);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0]).toEqual(upload);
+    expect((send.mock.calls[0][1] as File).type).toBe('image/jpeg');
+    const finish = http.expectOne(`${API}/api/admin/registrations/rahul%40example.com/photo/complete`);
+    expect(finish.request.body).toEqual({ key: 'demo/avatars/new.jpg' });
+    finish.flush({ ...WITHOUT, avatar_url: 'https://files.example/rahul.jpg' });
+    await settle(fixture);
+    expect(tile(fixture, 'rahul@example.com').querySelector('img.avatar')!.getAttribute('src')).toBe('https://files.example/rahul.jpg');
+    expect(all(fixture, '#photo-save-error').length).toBe(0);
+  });
+
+  it('removes a photo and goes back to initials on the tile', async () => {
+    const { fixture, http } = await editing('meera@example.com');
+    picker(fixture, 'meera@example.com').photo.emit(null);
+    const request = http.expectOne(`${API}/api/admin/registrations/meera%40example.com/photo`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush({ ...WITH, avatar_url: '' });
+    await settle(fixture);
+    expect(tile(fixture, 'meera@example.com').querySelector('img')).toBeNull();
+    expect(tile(fixture, 'meera@example.com').querySelector('span.avatar')).not.toBeNull();
+  });
+
+  it('shows why a photo could not be saved and keeps the old one', async () => {
+    const { fixture, http } = await editing('meera@example.com');
+    picker(fixture, 'meera@example.com').photo.emit(new Blob(['x'], { type: 'image/jpeg' }));
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/photo`).flush({ detail: 'We couldn\'t find that registration.' }, { status: 404, statusText: 'x' });
+    await settle(fixture);
+    expect(el(fixture, '#photo-save-error').textContent).toContain("We couldn't find that registration.");
+    expect(tile(fixture, 'meera@example.com').querySelector('img.avatar')!.getAttribute('src')).toBe('https://files.example/meera.jpg');
+  });
+
+  it('shows why the upload itself failed', async () => {
+    const { fixture, http, send } = await editing();
+    send.mockRejectedValue({ status: 403, detail: 'The upload was refused. Please try again.' });
+    picker(fixture, 'rahul@example.com').photo.emit(new Blob(['x'], { type: 'image/jpeg' }));
+    http.expectOne(`${API}/api/admin/registrations/rahul%40example.com/photo`).flush({ upload: { url: 'u', fields: {} }, key: 'k' });
+    await settle(fixture);
+    expect(el(fixture, '#photo-save-error').textContent).toContain('The upload was refused.');
+    http.expectNone(`${API}/api/admin/registrations/rahul%40example.com/photo/complete`);
   });
 });
 

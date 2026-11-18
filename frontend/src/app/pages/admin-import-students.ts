@@ -1,9 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { ApiError, ImportRow, StudentImport } from '../core/models';
+import { PhotoService } from '../core/photo.service';
 import { TenantService } from '../core/tenant.service';
+import { UploadService } from '../core/upload.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
@@ -34,6 +36,25 @@ const LABELS: Record<ImportRow['status'], string> = { ready: 'Ready', skipped: '
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
     @if (!result()) {
+      <div class="form-panel" id="photos-step">
+        <div class="field">
+          <label for="photos">Photos (optional)
+            <app-info text="Choose all the students' pictures together, or one zip of them. Each is cut to a square and made small right here, then matched to the Photo column of your Excel file by file name (for example asha.jpg). Do this first, then choose the Excel file." />
+          </label>
+          <input id="photos" name="photos" type="file" multiple accept=".zip,.jpg,.jpeg,.png,.webp,application/zip,image/jpeg,image/png,image/webp" (change)="photosChosen($event)" [disabled]="busy() || photosBusy()" />
+        </div>
+        @if (photoProgress(); as p) {
+          <p class="soft" id="photo-status" role="status">
+            @if (p.working) { Preparing photos… {{ p.done + p.failed.length }} of {{ p.total }} }
+            @else { {{ p.done }} {{ p.done === 1 ? 'photo' : 'photos' }} ready@if (p.failed.length) { , {{ p.failed.length }} could not be used }. }
+          </p>
+          @if (!p.working && p.failed.length) {
+            <ul class="plain-list" id="photo-failures">
+              @for (f of p.failed; track f.name) { <li class="soft"><strong>{{ f.name }}:</strong> {{ f.reason }}</li> }
+            </ul>
+          }
+        }
+      </div>
       <div class="form-panel">
         <div class="field">
           <label for="file">Excel file <app-info text="The filled-in template (.xlsx), up to 500 students." /></label>
@@ -83,7 +104,7 @@ const LABELS: Record<ImportRow['status'], string> = { ready: 'Ready', skipped: '
             @for (item of visible(); track item.row) {
               <tr [attr.data-row]="item.row">
                 <td class="soft">{{ item.row }}</td>
-                <td><strong>{{ item.name || '-' }}</strong><div class="soft">{{ item.email }}</div></td>
+                <td><strong>{{ item.name || '-' }}</strong>@if (item.photo) { <app-icon name="image" [size]="14" /> }<div class="soft">{{ item.email }}</div></td>
                 <td class="soft hide-sm">{{ item.courses.join(', ') }}</td>
                 <td>
                   <span class="status" [class.ok]="item.status === 'ready' || item.status === 'created'" [class.bad]="item.status === 'error'">{{ label(item.status) }}</span>
@@ -106,12 +127,16 @@ const LABELS: Record<ImportRow['status'], string> = { ready: 'Ready', skipped: '
 })
 export class AdminImportStudents {
   private readonly api = inject(ApiService);
+  private readonly photos = inject(PhotoService);
+  private readonly uploader = inject(UploadService);
   readonly tenants = inject(TenantService);
 
   readonly busy = signal(false);
   readonly error = signal<ApiError | null>(null);
   readonly preview = signal<StudentImport | null>(null);
   readonly result = signal<StudentImport | null>(null);
+  readonly photoProgress = signal<{ total: number; done: number; working: boolean; failed: { name: string; reason: string }[] } | null>(null);
+  readonly photosBusy = computed(() => this.photoProgress()?.working ?? false);
   readonly welcomeProgress = signal<{ total: number; sent: number; failed: number; done: boolean } | null>(null);
   private file: File | null = null;
 
@@ -149,6 +174,84 @@ export class AdminImportStudents {
       URL.revokeObjectURL(link.href);
     } catch (error) {
       this.error.set(error as ApiError);
+    }
+  }
+
+  /** The admin chose pictures (or a zip of them): make each a small square, send it under its file name, then re-check the sheet. */
+  async photosChosen(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    input.value = '';
+    if (!picked.length || this.photosBusy()) return;
+    this.error.set(null);
+    let files: { name: string; file: Blob }[];
+    try {
+      files = await this.collectPhotos(picked);
+    } catch (error) {
+      this.error.set(error as ApiError);
+      return;
+    }
+    if (!files.length) {
+      this.error.set({ status: 0, detail: 'Nothing to upload. Choose JPG, PNG or WebP pictures, or a zip of them.' });
+      return;
+    }
+    const progress = { total: files.length, done: 0, working: true, failed: [] as { name: string; reason: string }[] };
+    this.photoProgress.set({ ...progress });
+    const queue = [...files];
+    const worker = async (): Promise<void> => {
+      for (let item = queue.shift(); item; item = queue.shift()) {
+        try {
+          const small = await this.photos.centerSquare(item.file);
+          const start = await this.api.startBulkPhoto(item.name, small.size);
+          await this.uploader.send(start.upload, new File([small], item.name, { type: 'image/jpeg' }), () => undefined);
+          await this.api.finishBulkPhoto(start.id);
+          progress.done += 1;
+        } catch (error) {
+          progress.failed.push({ name: item.name, reason: (error as ApiError).detail ?? "Couldn't be sent." });
+        }
+        this.photoProgress.set({ ...progress });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    this.photoProgress.set({ ...progress, working: false });
+    if (this.file) await this.recheck();
+  }
+
+  /** Sort what was chosen into pictures. A zip is opened, and the pictures inside are taken. */
+  private async collectPhotos(picked: File[]): Promise<{ name: string; file: Blob }[]> {
+    const isPicture = (name: string) => /\.(jpe?g|png|webp)$/i.test(name);
+    const out: { name: string; file: Blob }[] = [];
+    for (const file of picked) {
+      if (/\.zip$/i.test(file.name)) {
+        let zip;
+        try {
+          const { default: JSZip } = await import('jszip');
+          zip = await JSZip.loadAsync(file);
+        } catch {
+          throw { status: 0, detail: `${file.name} couldn't be opened as a zip.` } as ApiError;
+        }
+        for (const entry of Object.values(zip.files)) {
+          const base = entry.name.split('/').pop() ?? entry.name;
+          if (entry.dir || entry.name.includes('__MACOSX/') || base.startsWith('.') || !isPicture(base)) continue;
+          out.push({ name: base.toLowerCase(), file: await entry.async('blob') });
+        }
+      } else if (isPicture(file.name)) {
+        out.push({ name: file.name.toLowerCase(), file });
+      }
+    }
+    return out;
+  }
+
+  /** Check the chosen sheet again, now that photos are in place. */
+  private async recheck(): Promise<void> {
+    if (!this.file) return;
+    this.busy.set(true);
+    try {
+      this.preview.set(await this.api.importStudents(this.file, false));
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.busy.set(false);
     }
   }
 

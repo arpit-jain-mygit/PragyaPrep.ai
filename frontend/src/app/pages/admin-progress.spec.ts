@@ -255,6 +255,15 @@ describe('Admin progress: reminders', () => {
   });
 });
 
+describe('Admin progress: photos', () => {
+  it('shows each student\'s photo or initials beside their name', async () => {
+    const { fixture } = await open(progress([row({ avatar_url: 'https://files.example/asha.jpg' }), row({ email: 'ravi@example.com', name: 'Ravi Nair', avatar_url: '' })]));
+    expect(el(fixture, '[data-student="asha@example.com"] img.avatar').getAttribute('src')).toBe('https://files.example/asha.jpg');
+    expect(all(fixture, '[data-student="ravi@example.com"] img').length).toBe(0);
+    expect(el(fixture, '[data-student="ravi@example.com"] span.avatar').textContent!.trim()).toBe('RN');
+  });
+});
+
 describe('timeAgo', () => {
   const now = new Date('2027-01-15T12:00:00+05:30').getTime();
   it.each([

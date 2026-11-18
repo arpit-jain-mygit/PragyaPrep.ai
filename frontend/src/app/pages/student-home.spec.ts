@@ -35,6 +35,22 @@ async function openHome(replies: { tests?: object[] | number; results?: object |
 const num = (fixture: unknown, selector: string) => el(fixture as never, selector).textContent!.trim();
 
 describe('Student home', () => {
+  it('shows the student\'s photo beside the greeting', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(StudentHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush({ ...me, avatar_url: 'https://files.example/asha.jpg' });
+    await settle(fixture);
+    expect(el(fixture, '.greeting img.avatar').getAttribute('src')).toBe('https://files.example/asha.jpg');
+  });
+
+  it('shows initials beside the greeting when there is no photo', async () => {
+    const { fixture } = await openHome();
+    expect(all(fixture, '.greeting img').length).toBe(0);
+    expect(el(fixture, '.greeting span.avatar').textContent!.trim()).toBe('AR');
+  });
+
   it('greets the student and shows tiles for My Learning and results', async () => {
     const { fixture } = await openHome();
     expect(text(fixture)).toContain('Welcome, Asha');

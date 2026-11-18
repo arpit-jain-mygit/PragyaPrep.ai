@@ -135,4 +135,10 @@ describe('Admin progress: one student', () => {
     const { fixture } = await open({ ...base, row: { ...base.row, status: 'on_track', overdue: 0 } });
     expect(all(fixture, '#remind').length).toBe(0);
   });
+
+  it('shows the student\'s photo in the heading', async () => {
+    const base = detail();
+    const { fixture } = await open({ ...base, student: { ...base.student, avatar_url: 'https://files.example/asha.jpg' } });
+    expect(el(fixture, 'h1 img.avatar').getAttribute('src')).toBe('https://files.example/asha.jpg');
+  });
 });

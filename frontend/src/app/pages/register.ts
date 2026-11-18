@@ -5,17 +5,20 @@ import { ApiService } from '../core/api.service';
 import { todayIso } from '../core/format';
 import { ApiError, Course, RegistrationForm } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { UploadService } from '../core/upload.service';
 import { InfoTip } from '../ui/info-tip';
+import { PhotoPicker } from '../ui/photo-picker';
 
 /** The registration form. Mistakes are shown next to the field they belong to, all at once. */
 @Component({
   selector: 'app-register',
-  imports: [FormsModule, RouterLink, InfoTip],
+  imports: [FormsModule, RouterLink, InfoTip, PhotoPicker],
   template: `
     @if (done()) {
       <div class="card narrow" style="margin-inline: auto">
         <h1>Thank you, {{ form.first_name }}!</h1>
         <div class="alert ok" role="status">{{ doneMessage() }}</div>
+        @if (photoNote(); as note) { <div class="alert warn" role="status" id="photo-note">{{ note }}</div> }
         <h2>What happens next</h2>
         <ol>
           <li>{{ tenants.info()?.branding?.display_name }} reviews your registration.</li>
@@ -55,6 +58,10 @@ import { InfoTip } from '../ui/info-tip';
                      [attr.aria-invalid]="errors()['email'] ? 'true' : null" aria-describedby="email-error" />
               @if (errors()['email']) { <div class="error-text" id="email-error">{{ errors()['email'] }}</div> }
               <div class="hint">You will use this email to log in.</div>
+            </div>
+
+            <div class="field" id="photo-field">
+              <app-photo-picker [first]="form.first_name" [last]="form.last_name" [email]="form.email" [disabled]="busy()" (photo)="photo = $event" />
             </div>
 
             <div class="grid-2">
@@ -172,6 +179,10 @@ export class Register implements OnInit {
   readonly errors = signal<Record<string, string>>({});
   readonly banner = signal<ApiError | null>(null);
   readonly busy = signal(false);
+  private readonly uploader = inject(UploadService);
+  /** The photo the student made, sent once the registration has been saved. */
+  photo: Blob | null = null;
+  readonly photoNote = signal('');
   readonly done = signal(false);
   readonly doneMessage = signal('');
 
@@ -199,15 +210,27 @@ export class Register implements OnInit {
     if (Object.keys(rest).length === 0 && this.banner()?.status === 422) this.banner.set(null);
   }
 
+  /** Send the photo after the registration is saved. If that fails, the registration still stands. */
+  private async sendPhoto(upload: Parameters<UploadService['send']>[0] | undefined, token: string | undefined): Promise<void> {
+    if (!this.photo || !upload || !token) return;
+    try {
+      await this.uploader.send(upload, new File([this.photo], 'photo.jpg', { type: 'image/jpeg' }), () => undefined);
+      await this.api.finishRegistrationPhoto(this.form.email.trim().toLowerCase(), token);
+    } catch {
+      this.photoNote.set("Your registration was received, but your photo couldn't be uploaded. The institute can add it for you.");
+    }
+  }
+
   async submit(): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
     this.banner.set(null);
     this.errors.set({});
     try {
-      const result = await this.api.register(this.form);
+      const result = await this.api.register(this.form, !!this.photo);
       this.doneMessage.set(result.message);
       this.done.set(true);
+      await this.sendPhoto(result.photo_upload, result.photo_token);
     } catch (error) {
       const problem = error as ApiError;
       if (problem.status === 422 && problem.errors) {

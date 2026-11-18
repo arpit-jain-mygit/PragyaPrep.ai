@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
+import { PhotoService } from '../core/photo.service';
+import { UploadService } from '../core/upload.service';
 import { API, all, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { AdminImportStudents, WELCOME_CHUNK } from './admin-import-students';
 
@@ -212,5 +214,141 @@ describe('Import students page', () => {
     await settle(env.fixture);
     expect(all(env.fixture, '#summary').length).toBe(0);
     expect(all(env.fixture, '#file').length).toBe(1);
+  });
+});
+
+describe('Import students: photos step', () => {
+  const PHOTO = `${API}/api/admin/student-photos`;
+
+  async function stepReady() {
+    const env = await open();
+    const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue(undefined);
+    const centerSquare = vi.spyOn(TestBed.inject(PhotoService), 'centerSquare').mockImplementation(async () => new Blob(['small-jpeg'], { type: 'image/jpeg' }));
+    return { ...env, send, centerSquare };
+  }
+
+  function choosePhotos(fixture: Parameters<typeof el>[0], files: File[]) {
+    const input = el<HTMLInputElement>(fixture, '#photos');
+    Object.defineProperty(input, 'files', { value: files, configurable: true });
+    input.dispatchEvent(new Event('change'));
+  }
+
+  /** Answer every photo's start and finish, whatever order the three workers ask in. */
+  async function answerAll(env: Awaited<ReturnType<typeof stepReady>>, names: string[], failName?: string) {
+    for (let round = 0; round < 40; round++) {
+      await settle(env.fixture);
+      const starts = env.http.match((r) => r.url === PHOTO && r.method === 'POST');
+      const finishes = env.http.match((r) => r.url.startsWith(`${PHOTO}/`) && r.url.endsWith('/complete'));
+      for (const s of starts) {
+        const name = (s.request.body as { filename: string }).filename;
+        if (name === failName) s.flush({ detail: 'A photo can be up to 300 KB once it has been made small.' }, { status: 422, statusText: 'x' });
+        else s.flush({ id: `id-${name}`, name, upload: { url: 'https://s3.example', fields: { key: `demo/avatars/${name}` } } });
+      }
+      for (const f of finishes) f.flush({ id: f.request.url.split('/').slice(-2)[0], name: 'x' });
+      if (!starts.length && !finishes.length && env.fixture.nativeElement.querySelector('#photo-status')?.textContent.includes('ready')) break;
+    }
+    await settle(env.fixture);
+  }
+
+  it('has a Photos step before the Excel file, accepting pictures and a zip', async () => {
+    const { fixture } = await open();
+    expect(all(fixture, '#photos-step #photos').length).toBe(1);
+    expect(el<HTMLInputElement>(fixture, '#photos').multiple).toBe(true);
+    expect(el<HTMLInputElement>(fixture, '#photos').accept).toContain('.zip');
+    expect(all(fixture, '#photo-status').length).toBe(0);
+  });
+
+  it('makes each picture a small square, sends it under its lower-case file name, and counts them', async () => {
+    const env = await stepReady();
+    choosePhotos(env.fixture, [new File(['a'], 'Asha.JPG'), new File(['b'], 'ravi.png'), new File(['c'], 'notes.txt')]);
+    await answerAll(env, ['asha.jpg', 'ravi.png']);
+    expect(env.centerSquare).toHaveBeenCalledTimes(2);
+    expect(env.send).toHaveBeenCalledTimes(2);
+    expect(env.send.mock.calls.map((c) => (c[1] as File).name).sort()).toEqual(['asha.jpg', 'ravi.png']);
+    expect(el(env.fixture, '#photo-status').textContent!.replace(/\s+/g, ' ')).toContain('2 photos ready');
+  });
+
+  it('sends the size of the small photo, not the original', async () => {
+    const env = await stepReady();
+    choosePhotos(env.fixture, [new File(['a-very-long-original-file-content'], 'asha.jpg')]);
+    await settle(env.fixture);
+    const start = env.http.expectOne(PHOTO);
+    expect(start.request.body).toEqual({ filename: 'asha.jpg', size: 'small-jpeg'.length });
+    start.flush({ id: 'p1', name: 'asha.jpg', upload: { url: 'u', fields: {} } });
+    await settle(env.fixture);
+    env.http.expectOne(`${PHOTO}/p1/complete`).flush({ id: 'p1', name: 'asha.jpg' });
+    await settle(env.fixture);
+    expect(el(env.fixture, '#photo-status').textContent).toContain('1 photo ready');
+  });
+
+  it('lists the photos that could not be used and carries on with the rest', async () => {
+    const env = await stepReady();
+    choosePhotos(env.fixture, [new File(['a'], 'good.jpg'), new File(['b'], 'huge.jpg')]);
+    await answerAll(env, ['good.jpg', 'huge.jpg'], 'huge.jpg');
+    const status = el(env.fixture, '#photo-status').textContent!.replace(/\s+/g, ' ');
+    expect(status).toContain('1 photo ready');
+    expect(status).toContain('1 could not be used');
+    expect(el(env.fixture, '#photo-failures').textContent).toContain('huge.jpg');
+    expect(el(env.fixture, '#photo-failures').textContent).toContain('300 KB');
+  });
+
+  it('reports a picture that cannot be read, and a failed upload', async () => {
+    const env = await stepReady();
+    env.centerSquare.mockRejectedValueOnce({ status: 0, detail: "That file couldn't be read as a picture. Choose a JPG, PNG or WebP." });
+    env.send.mockRejectedValueOnce({ status: 403, detail: 'The upload was refused. Please try again.' });
+    choosePhotos(env.fixture, [new File(['a'], 'bad.jpg'), new File(['b'], 'refused.jpg')]);
+    await answerAll(env, ['refused.jpg']);
+    const failures = el(env.fixture, '#photo-failures').textContent!;
+    expect(failures).toContain("couldn't be read as a picture");
+    expect(failures).toContain('The upload was refused.');
+  });
+
+  it('opens a zip and takes only the pictures inside, leaving out hidden and system files', async () => {
+    const env = await stepReady();
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    zip.file('students/Asha.jpg', 'a');
+    zip.file('students/ravi.PNG', 'b');
+    zip.file('students/.hidden.jpg', 'c');
+    zip.file('__MACOSX/students/._asha.jpg', 'd');
+    zip.file('students/notes.txt', 'e');
+    const bytes = await zip.generateAsync({ type: 'blob' });
+    choosePhotos(env.fixture, [new File([bytes], 'photos.zip', { type: 'application/zip' })]);
+    await new Promise((resolve) => setTimeout(resolve, 40)); // unzipping takes a few real moments
+    await answerAll(env, ['asha.jpg', 'ravi.png']);
+    expect(env.send.mock.calls.map((c) => (c[1] as File).name).sort()).toEqual(['asha.jpg', 'ravi.png']);
+  });
+
+  it('says when a zip cannot be opened and when there is nothing to use', async () => {
+    const env = await stepReady();
+    choosePhotos(env.fixture, [new File(['not a zip'], 'photos.zip')]);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    await settle(env.fixture);
+    expect(text(env.fixture)).toContain("photos.zip couldn't be opened as a zip.");
+    choosePhotos(env.fixture, [new File(['x'], 'notes.txt')]);
+    await settle(env.fixture);
+    expect(text(env.fixture)).toContain('Nothing to upload');
+    env.http.expectNone(PHOTO);
+  });
+
+  it('checks the Excel file again after photos are added, so photo problems clear', async () => {
+    const env = await stepReady();
+    pick(env.fixture);
+    env.http.expectOne(`${IMPORT}?confirm=false`).flush(preview([row({ status: 'error', problems: { Photo: "The photo 'asha.jpg' wasn't uploaded. Choose it in the Photos step." } })]));
+    await settle(env.fixture);
+    expect(el(env.fixture, '[data-problem="Photo"]').textContent).toContain("wasn't uploaded");
+    choosePhotos(env.fixture, [new File(['a'], 'asha.jpg')]);
+    await answerAll(env, ['asha.jpg']);
+    const again = env.http.expectOne(`${IMPORT}?confirm=false`);
+    again.flush(preview([row({ photo: true })]));
+    await settle(env.fixture);
+    expect(all(env.fixture, '[data-problem="Photo"]').length).toBe(0);
+    expect(num(env.fixture, '#s-ready')).toBe('1');
+  });
+
+  it('marks a row that has a photo', async () => {
+    const env = await previewed([row({ photo: true }), row({ row: 3, email: 'b@example.com', name: 'B C' })]);
+    expect(el(env.fixture, '[data-row="2"] app-icon')).not.toBeNull();
+    expect(all(env.fixture, '[data-row="3"] app-icon').length).toBe(0);
   });
 });

@@ -240,7 +240,7 @@ def test_a_student_page_has_the_status_coursework_overdue_items_and_tests(client
     response = client.get(f"{PROGRESS}/{cid}/students/asha@example.com", headers=admin)
     assert response.status_code == 200, response.text
     data = response.json()
-    assert data["student"] == {"email": "asha@example.com", "name": "Asha Rao"} and data["course"]["name"] == "CAT"
+    assert data["student"] == {"email": "asha@example.com", "name": "Asha Rao", "avatar_url": ""} and data["course"]["name"] == "CAT"
     assert data["row"]["status"] == "behind" and data["row"]["cw_done"] == 1 and "done_ids" not in data["row"]
     assert [(i["title"], i["due"], i["days_late"]) for i in data["overdue_items"]] == [("Examples", PAST, 5)]
     topics = data["coursework"]["subjects"][0]["topics"]

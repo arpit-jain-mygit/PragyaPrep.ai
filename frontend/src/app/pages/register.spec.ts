@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { By } from '@angular/platform-browser';
+import { describe, expect, it, vi } from 'vitest';
+import { UploadService } from '../core/upload.service';
+import { PhotoPicker } from '../ui/photo-picker';
 import { API, all, clickButton, el, settle, setupTestBed, text, type } from '../testing';
 import { Register } from './register';
 
@@ -257,5 +260,102 @@ describe('Register page: fixing mistakes', () => {
     el<HTMLInputElement>(fixture, '#course-c1').click();
     await settle(fixture);
     expect(el(fixture, '#courses').textContent).not.toContain('Choose at least one course.');
+  });
+});
+
+describe('Register page: photo', () => {
+  async function ready() {
+    const env = await open();
+    const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue(undefined);
+    fillValidForm(env.fixture);
+    await settle(env.fixture);
+    return { ...env, send };
+  }
+
+  const photoOf = (fixture: Parameters<typeof el>[0]) => (fixture.debugElement.query(By.directive(PhotoPicker)).componentInstance as PhotoPicker);
+  const MADE = () => new Blob(['jpeg-bytes'], { type: 'image/jpeg' });
+  const submit = (fixture: Parameters<typeof el>[0]) => el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
+
+  it('has an optional photo step on the form', async () => {
+    const { fixture } = await open();
+    expect(all(fixture, '#photo-field app-photo-picker').length).toBe(1);
+    expect(el(fixture, '#photo-field .photo-choose').textContent).toContain('Add photo');
+  });
+
+  it('registers as usual, with no photo request, when no photo was chosen', async () => {
+    const { fixture, http, send } = await ready();
+    submit(fixture);
+    const request = http.expectOne(`${API}/api/register`);
+    expect(request.request.body.photo).toBeUndefined();
+    request.flush({ status: 'pending', message: 'Thank you.' });
+    await settle(fixture);
+    http.expectNone(`${API}/api/register/photo`);
+    expect(send).not.toHaveBeenCalled();
+    expect(all(fixture, '#photo-note').length).toBe(0);
+  });
+
+  it('says it has a photo, then sends it with the permission it gets back and finishes with the token', async () => {
+    const { fixture, http, send } = await ready();
+    photoOf(fixture).photo.emit(MADE());
+    submit(fixture);
+    const request = http.expectOne(`${API}/api/register`);
+    expect(request.request.body.photo).toBe(true);
+    const upload = { url: 'https://s3.example/upload', fields: { key: 'demo/avatars/x.jpg' } };
+    request.flush({ status: 'pending', message: 'Thank you.', photo_upload: upload, photo_token: 'token-1' });
+    await settle(fixture);
+    expect(send).toHaveBeenCalledTimes(1);
+    const [form, file] = send.mock.calls[0];
+    expect(form).toEqual(upload);
+    expect((file as File).name).toBe('photo.jpg');
+    expect((file as File).type).toBe('image/jpeg');
+    const finish = http.expectOne(`${API}/api/register/photo`);
+    expect(finish.request.body).toEqual({ email: 'meera@example.com', token: 'token-1' });
+    finish.flush({ ok: true });
+    await settle(fixture);
+    expect(text(fixture)).toContain('Thank you, Meera!');
+    expect(all(fixture, '#photo-note').length).toBe(0);
+  });
+
+  it('keeps the registration and says the photo could not be uploaded when sending fails', async () => {
+    const { fixture, http, send } = await ready();
+    send.mockRejectedValue({ status: 0, detail: 'The upload failed.' });
+    photoOf(fixture).photo.emit(MADE());
+    submit(fixture);
+    http.expectOne(`${API}/api/register`).flush({ status: 'pending', message: 'Thank you.', photo_upload: { url: 'u', fields: {} }, photo_token: 't' });
+    await settle(fixture);
+    http.expectNone(`${API}/api/register/photo`);
+    expect(text(fixture)).toContain('Thank you, Meera!');
+    expect(el(fixture, '#photo-note').textContent).toContain("photo couldn't be uploaded");
+  });
+
+  it('says the same when finishing is refused', async () => {
+    const { fixture, http } = await ready();
+    photoOf(fixture).photo.emit(MADE());
+    submit(fixture);
+    http.expectOne(`${API}/api/register`).flush({ status: 'pending', message: 'Thank you.', photo_upload: { url: 'u', fields: {} }, photo_token: 't' });
+    await settle(fixture);
+    http.expectOne(`${API}/api/register/photo`).flush({ detail: 'expired' }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    expect(text(fixture)).toContain('Thank you, Meera!');
+    expect(all(fixture, '#photo-note').length).toBe(1);
+  });
+
+  it('sends no photo when the registration is refused', async () => {
+    const { fixture, http, send } = await ready();
+    photoOf(fixture).photo.emit(MADE());
+    submit(fixture);
+    http.expectOne(`${API}/api/register`).flush({ detail: 'Please correct the marked fields.', errors: { email: 'Enter a valid email address.' } }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    expect(send).not.toHaveBeenCalled();
+    http.expectNone(`${API}/api/register/photo`);
+    expect(all(fixture, '#photo-note').length).toBe(0);
+  });
+
+  it('forgets a removed photo', async () => {
+    const { fixture, http } = await ready();
+    photoOf(fixture).photo.emit(MADE());
+    photoOf(fixture).photo.emit(null);
+    submit(fixture);
+    expect(http.expectOne(`${API}/api/register`).request.body.photo).toBeUndefined();
   });
 });

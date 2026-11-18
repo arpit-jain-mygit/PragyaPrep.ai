@@ -13,7 +13,7 @@ It is worked out when asked, reading each student's records in parallel, which s
 from concurrent.futures import ThreadPoolExecutor
 from statistics import mean
 
-from app import attempts as attempts_module, clock, content, coursework, student_coursework
+from app import attempts as attempts_module, avatars, clock, content, coursework, student_coursework
 from app.repo import TenantRepo
 
 STATUS_ORDER = {"behind": 0, "not_started": 1, "on_track": 2}
@@ -81,16 +81,16 @@ def _gather(scoped: TenantRepo, course_id: str, only: list[str] | None = None) -
             "tests_taken": len(best), "tests_available": sum(1 for t in tests if window[t["id"]] != "upcoming"), "tests_overdue": tests_overdue,
             "avg_percent": round(mean(best.values()), 1) if best else None,
             "overdue": overdue, "last_active": max(stamps) if stamps else None,
-            "done_ids": done_ids,
+            "done_ids": done_ids, "avatar_key": member.get("avatar_key") or "",
         })
     return {"plan": plan, "subs": subs, "tests": tests, "students": students}
 
 
-def students(scoped: TenantRepo, course_id: str) -> dict:
+def students(scoped: TenantRepo, course_id: str, storage=None) -> dict:
     """One row per student with access to the course, those needing attention first, with counts for the top of the page."""
     data = _gather(scoped, course_id)
     rows = sorted(data["students"], key=lambda r: (STATUS_ORDER[r["status"]], -r["overdue"], r["name"].lower()))
-    rows = [{k: v for k, v in r.items() if k != "done_ids"} for r in rows]
+    rows = [{**{k: v for k, v in r.items() if k not in ("done_ids", "avatar_key")}, "avatar_url": avatars.url_for(storage, r) if storage else ""} for r in rows]
     count = lambda status: sum(1 for r in rows if r["status"] == status)
     return {
         "course": data["plan"]["course"],
@@ -112,13 +112,14 @@ def stuck(scoped: TenantRepo, course_id: str) -> dict:
     return {"course": data["plan"]["course"], "students": total, "subtopics": items}
 
 
-def student(scoped: TenantRepo, course_id: str, email: str) -> dict:
+def student(scoped: TenantRepo, course_id: str, email: str, storage=None) -> dict:
     """One student in one course: their status, their coursework by subject and topic, what is overdue, and their tests."""
     member = scoped.get_member(email)
     data = _gather(scoped, course_id, only=[email]) if member else {"students": []}
     if not data["students"]:
         raise StudentNotInCourse()
-    row = {k: v for k, v in data["students"][0].items() if k != "done_ids"}
+    full = data["students"][0]
+    row = {k: v for k, v in full.items() if k not in ("done_ids", "avatar_key")}
     mine = next((c for c in student_coursework.tree(scoped, member)["courses"] if c["id"] == course_id), None)
     overdue_items = []
     for subject in (mine or {}).get("subjects", []):
@@ -135,6 +136,6 @@ def student(scoped: TenantRepo, course_id: str, email: str) -> dict:
             "max_attempts": card["max_attempts"], "best": card["best"],
         })
     return {
-        "course": data["plan"]["course"], "student": {"email": member["email"], "name": _name(member)}, "row": row,
+        "course": data["plan"]["course"], "student": {"email": member["email"], "name": _name(member), "avatar_url": avatars.url_for(storage, full) if storage else ""}, "row": row,
         "coursework": mine, "overdue_items": overdue_items, "tests": tests,
     }

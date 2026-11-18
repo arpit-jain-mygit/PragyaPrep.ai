@@ -6,6 +6,7 @@ import { toCsv } from '../core/csv';
 import { shortDate, timeAgo } from '../core/format';
 import { AdminCourse, ApiError, CourseProgress, CourseStuck, ProgressRow, ProgressStatus, ReminderResult } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { Avatar } from '../ui/avatar';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
@@ -14,7 +15,7 @@ export const STATUS_LABELS: Record<ProgressStatus, string> = { behind: 'Behind',
 /** For one course: who is behind, and which sub-topics students are not finishing. */
 @Component({
   selector: 'app-admin-progress',
-  imports: [FormsModule, RouterLink, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Avatar, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>
@@ -79,8 +80,13 @@ export const STATUS_LABELS: Record<ProgressStatus, string> = { behind: 'Behind',
               @for (row of shown(); track row.email) {
                 <tr [attr.data-student]="row.email">
                   <td>
-                    <a [routerLink]="['/', tenants.slug(), 'admin', 'progress', courseId(), row.email]"><strong>{{ row.name }}</strong></a>
-                    <div class="soft">{{ row.email }}</div>
+                    <span class="person-cell">
+                      <app-avatar [url]="row.avatar_url" [first]="row.name.split(' ')[0]" [last]="row.name.split(' ')[1] ?? ''" [email]="row.email" [size]="34" />
+                      <span>
+                        <a [routerLink]="['/', tenants.slug(), 'admin', 'progress', courseId(), row.email]"><strong>{{ row.name }}</strong></a>
+                        <div class="soft">{{ row.email }}</div>
+                      </span>
+                    </span>
                   </td>
                   <td>
                     <span class="cw-bar"><i [style.width.%]="percent(row.cw_done, row.cw_total)"></i></span>

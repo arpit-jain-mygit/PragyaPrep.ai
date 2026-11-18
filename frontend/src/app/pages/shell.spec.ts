@@ -100,6 +100,39 @@ describe('Institute page frame', () => {
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 
+  it('shows a signed-in student\'s photo in the top bar, asking for their own link', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    env.http.expectOne(`${API}/api/auth/me`).flush({ ...sessionFor('student').member, avatar_url: 'https://files.example/asha.jpg' });
+    await settle(fixture);
+    expect(el(fixture, '.nav img.avatar').getAttribute('src')).toBe('https://files.example/asha.jpg');
+  });
+
+  it('shows initials in the top bar when there is no photo, and for an admin too', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/auth/me`).flush({ ...sessionFor('tenant_admin').member, avatar_url: '' });
+    await settle(fixture);
+    expect(all(fixture, '.nav img.avatar').length).toBe(0);
+    expect(el(fixture, '.nav span.avatar').textContent!.trim().length).toBeGreaterThan(0);
+  });
+
+  it('keeps the initials when the photo link cannot be fetched', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/auth/me`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(all(fixture, '.nav img.avatar').length).toBe(0);
+    expect(all(fixture, '.nav span.avatar').length).toBe(1);
+  });
+
   it('signs the person out and goes to the login page', async () => {
     const env = setupTestBed();
     env.sessions.save(sessionFor('student'));

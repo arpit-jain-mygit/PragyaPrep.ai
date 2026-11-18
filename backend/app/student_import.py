@@ -7,6 +7,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from io import BytesIO
+from pathlib import PurePosixPath
 from uuid import uuid4
 from zipfile import BadZipFile
 
@@ -27,7 +28,7 @@ MAX_BYTES = 2 * 1024 * 1024
 MAX_WELCOME = 25  # welcome emails per request, so a request stays well inside its time limit
 SHEET = "Students"
 REQUIRED = ["Email", "First name", "Last name", "Mobile", "Courses"]
-OPTIONAL = ["Birth date", "Gender", "WhatsApp", "Address", "City", "PIN code"]
+OPTIONAL = ["Birth date", "Gender", "WhatsApp", "Address", "City", "PIN code", "Photo"]
 COLUMNS = REQUIRED + OPTIONAL
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 GENDER_WORDS = {"male": "male", "m": "male", "female": "female", "f": "female", "other": "other", "prefer not to say": "prefer_not_to_say", "prefer_not_to_say": "prefer_not_to_say"}
@@ -46,7 +47,7 @@ def build_template(course_names: list[str]) -> bytes:
         cell.alignment = Alignment(vertical="center", wrap_text=True)
         sheet.column_dimensions[get_column_letter(index)].width = 32 if name in ("Email", "Address", "Courses") else 16
     sheet.freeze_panes = "A2"
-    for column in "DG":  # mobile and WhatsApp numbers are text, so a leading zero or +91 is kept
+    for column in "DH":  # mobile and WhatsApp numbers are text, so a leading zero or +91 is kept
         for row in range(2, MAX_ROWS + 2):
             sheet[f"{column}{row}"].number_format = "@"
     check = DataValidation(type="list", formula1='"male,female,other,prefer not to say"', allow_blank=True, showErrorMessage=True, errorTitle="Not allowed", error="Choose from the list.")
@@ -67,6 +68,7 @@ def build_template(course_names: list[str]) -> bytes:
         "Courses: the course names from the Courses sheet, exactly as written. Put several in one cell, separated by ; for example  CAT; CLAT",
         "Birth date: YYYY-MM-DD, for example 2005-03-21. Gender: male, female, other or prefer not to say.",
         "WhatsApp: leave empty to use the mobile number. Address, City and PIN code (6 digits) are optional.",
+        "Photo: the file name of the student's picture, for example asha.jpg. Choose all the pictures together in the Photos step of the Import page first; they are matched by this name. A picture can go with one student only.",
         f"At most {MAX_ROWS} students in one file. Students already registered with this institute are left as they are.",
         "Each student is approved at once and given their courses. They log in with a code sent to their email.",
     ], start=1):
@@ -225,14 +227,26 @@ def read(content_bytes: bytes, scoped: TenantRepo, admin_email: str) -> dict:
     checked = [(number, row, *_check(row, open_courses, today, admin_email)) for number, row in parsed]
 
     emails = [record["email"] for _, _, record, _ in checked if "email" in record]
+    names = sorted({PurePosixPath(row["Photo"].replace("\\", "/")).name.lower() for _, row, _, _ in checked if row["Photo"]})
     with ThreadPoolExecutor(max_workers=16) as pool:
         known = dict(zip(emails, pool.map(scoped.get_member, emails)))
+        photos = dict(zip(names, pool.map(scoped.find_loose_photo, names)))
 
     seen: dict[str, int] = {}
+    photo_rows: dict[str, int] = {}
     rows, ready = [], []
     for number, row, record, problems in checked:
+        photo_name = PurePosixPath(row["Photo"].replace("\\", "/")).name.lower() if row["Photo"] else ""
+        if photo_name:
+            if photos.get(photo_name) is None:
+                problems = {**problems, "Photo": f"The photo '{photo_name}' wasn't uploaded. Choose it in the Photos step."}
+            elif photo_name in photo_rows:
+                problems = {**problems, "Photo": f"The same photo is used on row {photo_rows[photo_name]}."}
+            else:
+                photo_rows[photo_name] = number
+                record["_photo"] = photos[photo_name]
         email = record.get("email")
-        shown = {"row": number, "email": email or row["Email"], "name": " ".join(p for p in (record.get("first_name"), record.get("last_name")) if p), "courses": record.get("course_names", []), "status": "ready", "message": "", "problems": problems}
+        shown = {"photo": bool(photo_name), "row": number, "email": email or row["Email"], "name": " ".join(p for p in (record.get("first_name"), record.get("last_name")) if p), "courses": record.get("course_names", []), "status": "ready", "message": "", "problems": problems}
         if email and email in seen:
             shown["problems"] = {**problems, "Email": f"The same email as row {seen[email]}."}
         elif email:
@@ -254,12 +268,18 @@ def create(scoped: TenantRepo, admin_email: str, records: list[dict]) -> dict:
     batch, stamp = uuid4().hex, now_iso()
 
     def one(record: dict) -> dict:
+        record = dict(record)
+        photo = record.pop("_photo", None)
         member = {
             **record, "role": "student", "status": "approved", "course_id": record["course_ids"][0], "course_name": record["course_names"][0],
             "created_at": stamp, "decided_by": admin_email, "decided_at": stamp, "source": "import", "import_batch": batch,
         }
+        if photo:
+            member["avatar_key"] = photo["key"]
         try:
             scoped.create_member(member)
+            if photo:
+                scoped.attach_photo(photo["id"], record["email"])
         except ConflictError:
             return {"email": record["email"], "result": "skipped", "message": "Registered a moment ago, so left as it is.", "access_failed": []}
         failed = []
