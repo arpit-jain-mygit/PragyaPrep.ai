@@ -8,13 +8,13 @@ import { InfoTip } from '../ui/info-tip';
 
 interface Draft {
   email: string; first_name: string; last_name: string; birth_date: string; gender: string; mobile: string;
-  same: boolean; whatsapp: string; address: string; city: string; pin_code: string; course_id: string;
+  same: boolean; whatsapp: string; address: string; city: string; pin_code: string; course_ids: string[];
 }
 
 function emptyDraft(): Draft {
   return {
     email: '', first_name: '', last_name: '', birth_date: '', gender: 'female', mobile: '',
-    same: true, whatsapp: '', address: '', city: '', pin_code: '', course_id: '',
+    same: true, whatsapp: '', address: '', city: '', pin_code: '', course_ids: [],
   };
 }
 
@@ -57,7 +57,7 @@ interface Notice {
           <div>
             <div class="item-title">{{ person.first_name }} {{ person.last_name }}</div>
             <div class="muted small">{{ person.email }}</div>
-            <div class="small">{{ person.course_name }} &middot; registered {{ when(person.created_at) }}</div>
+            <div class="small">{{ person.course_names.join(', ') }} &middot; registered {{ when(person.created_at) }}</div>
           </div>
           <span class="status" [class.ok]="person.status === 'approved'" [class.warn]="person.status === 'pending'" [class.bad]="person.status === 'rejected'">{{ person.status }}</span>
         </div>
@@ -106,6 +106,14 @@ interface Notice {
                 </select>
                 <button class="btn small" type="button" [disabled]="!giveCourse || busy() === person.email" (click)="give(person)">Give or renew access</button>
               </div>
+              @if (person.course_names.length) {
+                <div class="row" style="margin-top: 0.5rem">
+                  <button class="btn secondary small" type="button" id="give-requested" [disabled]="busy() === person.email" (click)="giveRequested(person)">
+                    <app-icon name="check" [size]="16" /> Give access to all chosen courses
+                  </button>
+                  <span class="soft">{{ person.course_names.join(', ') }}</span>
+                </div>
+              }
             </div>
           }
         }
@@ -183,14 +191,17 @@ interface Notice {
                 @if (fieldErrors()['pin_code']) { <div class="error-text">{{ fieldErrors()['pin_code'] }}</div> }
               </div>
             </div>
-            <div class="field">
-              <label for="e-course_id">Course</label>
-              <select id="e-course_id" name="course_id" [(ngModel)]="draft.course_id" (change)="clearError('course_id')">
-                @for (course of courses(); track course.id) {
-                  <option [value]="course.id">{{ course.name }}</option>
+            <div class="field" id="e-courses" role="group" aria-label="Courses">
+              <span class="label">Courses <app-info text="The courses the student chose. Ticking does not give access: use Course access for that." /></span>
+              <div class="row">
+                @for (course of editableCourses(person); track course.id) {
+                  <label class="check" style="margin: 0 1rem 0.3rem 0">
+                    <input type="checkbox" [id]="'e-course-' + course.id" [name]="'e-course-' + course.id" [checked]="draft.course_ids.includes(course.id)" (change)="toggleCourse(course.id, $any($event.target).checked)" />
+                    {{ course.name }}
+                  </label>
                 }
-              </select>
-              @if (fieldErrors()['course_id']) { <div class="error-text">{{ fieldErrors()['course_id'] }}</div> }
+              </div>
+              @if (fieldErrors()['course_ids']) { <div class="error-text">{{ fieldErrors()['course_ids'] }}</div> }
             </div>
             <div class="actions">
               <button class="btn small" type="submit" [disabled]="busy() === person.email"><app-icon name="check" [size]="16" /> {{ emailChanged(person) ? 'Save and change email' : 'Save' }}</button>
@@ -318,6 +329,26 @@ export class AdminRegistrations implements OnInit {
     this.giveCourse = '';
   }
 
+  /** Give the student every course they chose, each for its own length. */
+  async giveRequested(person: Registration): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(person.email);
+    this.accessNotice.set(null);
+    try {
+      const result = await this.api.giveRequestedAccess(person.email);
+      const given = await this.api.studentAccess(person.email);
+      this.access.update((all) => ({ ...all, [person.email]: given }));
+      const names = result.granted.map((item) => item.course_name);
+      const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] ?? 'no courses';
+      const skipped = result.skipped.length ? ` Skipped ${result.skipped.join(', ')}: no longer a course.` : '';
+      this.accessNotice.set({ email: person.email, kind: result.skipped.length ? 'error' : 'ok', text: `Gave ${person.first_name} access to ${list}.${skipped}` });
+    } catch (error) {
+      this.accessNotice.set({ email: person.email, kind: 'error', text: (error as ApiError).detail });
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
   async takeAway(person: Registration, item: CourseAccess): Promise<void> {
     if (this.busy()) return;
     await this.changeAccess(person, `Removed ${item.course_name} from ${person.first_name}.`, () => this.api.revokeAccess(person.email, item.course_id));
@@ -383,7 +414,7 @@ export class AdminRegistrations implements OnInit {
     this.draft = {
       email: person.email, first_name: person.first_name, last_name: person.last_name, birth_date: person.birth_date,
       gender: person.gender, mobile: person.mobile, same: person.whatsapp === person.mobile, whatsapp: person.whatsapp,
-      address: person.address, city: person.city, pin_code: person.pin_code, course_id: person.course_id,
+      address: person.address, city: person.city, pin_code: person.pin_code, course_ids: [...person.course_ids],
     };
     try {
       await this.ensureCourses();
@@ -392,6 +423,16 @@ export class AdminRegistrations implements OnInit {
       return;
     }
     this.editing.set(person.email);
+  }
+
+  /** The courses that can be ticked: those open for registration, and any the student already has even if hidden since. */
+  editableCourses(person: Registration): AdminCourse[] {
+    return this.courses().filter((course) => course.active || person.course_ids.includes(course.id));
+  }
+
+  toggleCourse(id: string, on: boolean): void {
+    this.draft.course_ids = on ? [...this.draft.course_ids.filter((item) => item !== id), id] : this.draft.course_ids.filter((item) => item !== id);
+    this.clearError('course_ids');
   }
 
   emailChanged(person: Registration): boolean {
@@ -412,9 +453,10 @@ export class AdminRegistrations implements OnInit {
     const changes: RegistrationEdit = {};
     const trimmed = (value: string) => value.trim();
     if (this.emailChanged(person)) changes.email = trimmed(draft.email);
-    for (const field of ['first_name', 'last_name', 'birth_date', 'gender', 'mobile', 'address', 'city', 'pin_code', 'course_id'] as const) {
+    for (const field of ['first_name', 'last_name', 'birth_date', 'gender', 'mobile', 'address', 'city', 'pin_code'] as const) {
       if (trimmed(draft[field]) !== person[field]) changes[field] = trimmed(draft[field]);
     }
+    if (draft.course_ids.length !== person.course_ids.length || draft.course_ids.some((id) => !person.course_ids.includes(id))) changes.course_ids = [...draft.course_ids];
     if (draft.same) {
       if (person.whatsapp !== person.mobile || changes.mobile !== undefined) changes.whatsapp_same_as_mobile = true;
     } else if (trimmed(draft.whatsapp) !== person.whatsapp) {

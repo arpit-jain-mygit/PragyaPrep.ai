@@ -29,7 +29,7 @@ export function registration(overrides: Partial<Registration> = {}): Registratio
   return {
     email: 'meera@example.com', first_name: 'Meera', last_name: 'Kapoor', birth_date: '2004-08-21', gender: 'female',
     mobile: '9876543210', whatsapp: '9876543210', address: 'B-14, Sector 62', city: 'Noida', pin_code: '201309',
-    course_id: 'c1', course_name: 'CLAT', status: 'pending', created_at: '2027-01-15T08:00:00+00:00',
+    course_id: 'c1', course_name: 'CLAT', course_ids: ['c1'], course_names: ['CLAT'], status: 'pending', created_at: '2027-01-15T08:00:00+00:00',
     decided_by: '', decided_at: '', reason: '', ...overrides,
   };
 }

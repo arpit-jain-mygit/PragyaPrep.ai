@@ -5,11 +5,12 @@ import { ApiService } from '../core/api.service';
 import { todayIso } from '../core/format';
 import { ApiError, Course, RegistrationForm } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { InfoTip } from '../ui/info-tip';
 
 /** The registration form. Mistakes are shown next to the field they belong to, all at once. */
 @Component({
   selector: 'app-register',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, InfoTip],
   template: `
     @if (done()) {
       <div class="card narrow" style="margin-inline: auto">
@@ -133,16 +134,18 @@ import { TenantService } from '../core/tenant.service';
               </div>
             </div>
 
-            <div class="field">
-              <label for="course_id">Course <span class="req">*</span></label>
-              <select id="course_id" name="course_id" [(ngModel)]="form.course_id" (change)="clear('course_id')"
-                      [attr.aria-invalid]="errors()['course_id'] ? 'true' : null">
-                <option value="">Choose a course…</option>
+            <div class="field" id="courses" role="group" aria-labelledby="courses-label">
+              <span class="label" id="courses-label">Courses <span class="req">*</span> <app-info text="Choose one or more." /></span>
+              <div class="row">
                 @for (course of courses(); track course.id) {
-                  <option [value]="course.id">{{ course.name }}</option>
+                  <label class="check" style="margin: 0 1rem 0.3rem 0">
+                    <input type="checkbox" [id]="'course-' + course.id" [name]="'course-' + course.id" [checked]="form.course_ids.includes(course.id)"
+                           [attr.aria-invalid]="errors()['course_ids'] ? 'true' : null" (change)="toggleCourse(course.id, $any($event.target).checked)" />
+                    {{ course.name }}
+                  </label>
                 }
-              </select>
-              @if (errors()['course_id']) { <div class="error-text">{{ errors()['course_id'] }}</div> }
+              </div>
+              @if (errors()['course_ids']) { <div class="error-text">{{ errors()['course_ids'] }}</div> }
             </div>
 
             <button class="btn" type="submit" [disabled]="busy()">{{ busy() ? 'Registering…' : 'Register' }}</button>
@@ -161,7 +164,7 @@ export class Register implements OnInit {
 
   form: RegistrationForm = {
     email: '', first_name: '', last_name: '', birth_date: '', gender: '', mobile: '',
-    whatsapp_same_as_mobile: true, whatsapp: '', address: '', city: '', pin_code: '', course_id: '',
+    whatsapp_same_as_mobile: true, whatsapp: '', address: '', city: '', pin_code: '', course_ids: [],
   };
 
   readonly courses = signal<Course[] | null>(null);
@@ -181,6 +184,11 @@ export class Register implements OnInit {
       this.loadError.set(error as ApiError);
       this.courses.set([]);
     }
+  }
+
+  toggleCourse(id: string, on: boolean): void {
+    this.form.course_ids = on ? [...this.form.course_ids.filter((item) => item !== id), id] : this.form.course_ids.filter((item) => item !== id);
+    this.clear('course_ids');
   }
 
   /** Once a person edits a field, its mistake message is out of date. When none are left, the summary goes too. */

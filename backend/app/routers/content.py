@@ -12,6 +12,7 @@ from app.schemas import (
     FileOut,
     FileStartIn,
     FileStartOut,
+    GrantRequestedOut,
     MyCourseOut,
 )
 from app.storage import ContentStorage
@@ -116,6 +117,19 @@ def give_access(
         raise HTTPException(status_code=404, detail=NO_STUDENT)
     except content.CourseNotFound:
         raise HTTPException(status_code=404, detail=NO_COURSE)
+    except content.AccessRefused as error:
+        raise HTTPException(status_code=409, detail=error.message)
+
+
+@router.post("/api/admin/registrations/{email}/access/requested", status_code=201, response_model=GrantRequestedOut)
+def give_requested_access(
+    email: str, scoped: TenantRepo = Depends(get_tenant_repo), admin: dict = Depends(require_roles(TENANT_ADMIN))
+):
+    """Give an approved student every course they chose at registration, each for its own length."""
+    try:
+        return content.grant_requested(scoped, email, admin["email"])
+    except content.StudentNotFound:
+        raise HTTPException(status_code=404, detail=NO_STUDENT)
     except content.AccessRefused as error:
         raise HTTPException(status_code=409, detail=error.message)
 

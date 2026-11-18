@@ -27,19 +27,20 @@ function fillValidForm(fixture: ReturnType<typeof TestBed.createComponent<Regist
   type(fixture, '#address', 'B-14, Sector 62');
   type(fixture, '#city', 'Noida');
   type(fixture, '#pin_code', '201309');
-  type(fixture, '#course_id', 'c1');
+  el<HTMLInputElement>(fixture, '#course-c1').click();
 }
 
 describe('Register page', () => {
   it('lists the institute\'s courses by name, without fees', async () => {
     const { fixture } = await open();
-    const options = all<HTMLOptionElement>(fixture, '#course_id option').map((o) => o.textContent?.trim());
-    expect(options).toEqual(['Choose a course…', 'CLAT', 'IPMAT']);
+    const names = all(fixture, '#courses label').map((l) => l.textContent?.trim());
+    expect(names).toEqual(['CLAT', 'IPMAT']);
+    expect(all(fixture, '#courses input[type=checkbox]').length).toBe(2);
   });
 
   it('asks for every field the institute needs', async () => {
     const { fixture } = await open();
-    for (const id of ['email', 'first_name', 'last_name', 'birth_date', 'gender', 'mobile', 'address', 'city', 'pin_code', 'course_id']) {
+    for (const id of ['email', 'first_name', 'last_name', 'birth_date', 'gender', 'mobile', 'address', 'city', 'pin_code', 'course-c1', 'course-c2']) {
       expect(el(fixture, `#${id}`), id).toBeTruthy();
     }
     expect(all(fixture, 'select#gender option').map((o) => o.textContent?.trim())).toEqual([
@@ -74,7 +75,7 @@ describe('Register page', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toMatchObject({
       email: 'meera@example.com', first_name: 'Meera', last_name: 'Kapoor', birth_date: '2004-08-21', gender: 'female',
-      mobile: '98765 43210', whatsapp_same_as_mobile: true, city: 'Noida', pin_code: '201309', course_id: 'c1',
+      mobile: '98765 43210', whatsapp_same_as_mobile: true, city: 'Noida', pin_code: '201309', course_ids: ['c1'],
     });
     request.flush({ status: 'pending', message: "Thank you. Your registration is waiting for approval. We'll email you once it's approved." });
     await settle(fixture);
@@ -221,5 +222,40 @@ describe('Register page: fixing mistakes', () => {
     type(fixture, '#gender', 'female');
     await settle(fixture);
     expect(text(fixture)).not.toContain('Choose a gender from the list.');
+  });
+
+  it('lets a student tick several courses and sends them in the order ticked', async () => {
+    const { fixture, http } = await open();
+    fillValidForm(fixture);
+    el<HTMLInputElement>(fixture, '#course-c2').click();
+    await settle(fixture);
+    expect(el<HTMLInputElement>(fixture, '#course-c1').checked).toBe(true);
+    expect(el<HTMLInputElement>(fixture, '#course-c2').checked).toBe(true);
+    el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
+    expect(http.expectOne(`${API}/api/register`).request.body.course_ids).toEqual(['c1', 'c2']);
+  });
+
+  it('lets a course be unticked again', async () => {
+    const { fixture, http } = await open();
+    fillValidForm(fixture);
+    el<HTMLInputElement>(fixture, '#course-c2').click();
+    el<HTMLInputElement>(fixture, '#course-c1').click();
+    await settle(fixture);
+    el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
+    expect(http.expectOne(`${API}/api/register`).request.body.course_ids).toEqual(['c2']);
+  });
+
+  it('shows the message next to the courses when none is ticked, and clears it when one is', async () => {
+    const { fixture, http } = await open();
+    el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
+    const request = http.expectOne(`${API}/api/register`);
+    expect(request.request.body.course_ids).toEqual([]);
+    request.flush({ detail: 'Please correct the marked fields.', errors: { course_ids: 'Choose at least one course.' } }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    expect(el(fixture, '#courses').textContent).toContain('Choose at least one course.');
+    expect(el(fixture, '#course-c1').getAttribute('aria-invalid')).toBe('true');
+    el<HTMLInputElement>(fixture, '#course-c1').click();
+    await settle(fixture);
+    expect(el(fixture, '#courses').textContent).not.toContain('Choose at least one course.');
   });
 });

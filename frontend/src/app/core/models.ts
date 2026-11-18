@@ -43,7 +43,8 @@ export interface RegistrationForm {
   address: string;
   city: string;
   pin_code: string;
-  course_id: string;
+  /** The courses the student chose (one or more). */
+  course_ids: string[];
 }
 
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
@@ -59,8 +60,12 @@ export interface Registration {
   address: string;
   city: string;
   pin_code: string;
+  /** The first course chosen, kept for anything that reads a single course. */
   course_id: string;
   course_name: string;
+  /** Every course the student chose. A registration made with one course shows it here as a list of one. */
+  course_ids: string[];
+  course_names: string[];
   status: RegistrationStatus;
   created_at: string;
   decided_by: string;
@@ -550,4 +555,11 @@ export interface MyResults {
   attempts: MyResultRow[];
   /** Weakest first. */
   subjects: SubjectResult[];
+}
+
+/** What giving a student all the courses they chose did. */
+export interface GrantRequestedResult {
+  granted: CourseAccess[];
+  /** Chosen courses that no longer exist, by name. */
+  skipped: string[];
 }

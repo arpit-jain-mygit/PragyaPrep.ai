@@ -14,6 +14,7 @@ import {
   DecisionResult,
   FileLink,
   FileStart,
+  GrantRequestedResult,
   Institute,
   InstituteCreate,
   InstituteResult,
@@ -184,6 +185,11 @@ export class ApiService {
 
   giveAccess(email: string, courseId: string): Promise<CourseAccess> {
     return this.post(`/api/admin/registrations/${encodeURIComponent(email)}/access`, { course_id: courseId });
+  }
+
+  /** Give an approved student every course they chose, each for its own length. */
+  giveRequestedAccess(email: string): Promise<GrantRequestedResult> {
+    return this.post(`/api/admin/registrations/${encodeURIComponent(email)}/access/requested`);
   }
 
   revokeAccess(email: string, courseId: string): Promise<void> {

@@ -141,12 +141,19 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
     else:
         errors["pin_code"] = "Enter a 6-digit PIN code."
 
+    wanted = form.get("course_ids")
+    if wanted is None:  # an older caller that sends one course
+        wanted = [form["course_id"]] if form.get("course_id") else []
     if not open_courses:
-        errors["course_id"] = "No courses are open for registration yet."
-    elif form.get("course_id") in open_courses:
-        clean["course_id"] = form["course_id"]
+        errors["course_ids"] = "No courses are open for registration yet."
+    elif not isinstance(wanted, list) or not all(isinstance(item, str) for item in wanted):
+        errors["course_ids"] = "Choose the courses from the list."
+    elif not wanted:
+        errors["course_ids"] = "Choose at least one course."
+    elif any(item not in open_courses for item in wanted):
+        errors["course_ids"] = "Choose the courses from the list."
     else:
-        errors["course_id"] = "Choose a course from the list."
+        clean["course_ids"] = list(dict.fromkeys(wanted))
 
     if errors:
         raise FormErrors(errors)
@@ -154,6 +161,21 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
 
 
 # ---- Emails ----
+
+def courses_of(person: dict) -> tuple[list[str], list[str]]:
+    """A student's chosen courses as (ids, names). Older registrations hold a single course; that is their one choice."""
+    if person.get("course_ids"):
+        return list(person["course_ids"]), list(person.get("course_names") or [])
+    if person.get("course_id"):
+        return [person["course_id"]], [person.get("course_name") or ""]
+    return [], []
+
+
+def _course_phrase(record: dict) -> str:
+    """'CAT', 'CAT and CLAT' or 'CAT, CLAT and IPMAT', for emails."""
+    names = [name for name in courses_of(record)[1] if name]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1] if names else "your course"
+
 
 def _received_email(tenant: dict, record: dict) -> Email:
     name = tenant["branding"]["display_name"]
@@ -163,7 +185,7 @@ def _received_email(tenant: dict, record: dict) -> Email:
         subject=f"We received your registration with {name}",
         body=(
             f"Hello {record['first_name']},\n\n"
-            f"Thank you for registering with {name} for {record['course_name']}.\n"
+            f"Thank you for registering with {name} for {_course_phrase(record)}.\n"
             "Your registration is waiting for approval. We'll email you once it's approved.\n\n"
             "You can check where it stands at any time by trying to log in with this email address."
         ),
@@ -180,7 +202,7 @@ def _approved_email(tenant: dict, record: dict) -> Email:
             f"Hello {record['first_name']},\n\n"
             f"Good news: your registration with {name} has been approved.\n"
             "You can now log in with this email address. We'll send you a 6-digit code each time you log in.\n"
-            f"After you log in, you'll see how to pay and get access to {record['course_name']}."
+            f"After you log in, you'll see how to pay and get access to {_course_phrase(record)}."
         ),
     )
 
@@ -223,7 +245,10 @@ def register(settings: Settings, repo: Repo, tenant: dict, form: dict, ip: str, 
         **clean,
         "role": "student",
         "status": "pending",
-        "course_name": open_courses[clean["course_id"]]["name"],
+        "course_names": [open_courses[course_id]["name"] for course_id in clean["course_ids"]],
+        # The first choice is also kept as a single course, for anything that still reads one.
+        "course_id": clean["course_ids"][0],
+        "course_name": open_courses[clean["course_ids"][0]]["name"],
         "created_at": now_iso(),
     }
 
@@ -287,7 +312,7 @@ def decide(
 
 # ---- Corrections by the admin ----
 
-EDITABLE = ("email", "first_name", "last_name", "birth_date", "gender", "mobile", "whatsapp", "address", "city", "pin_code", "course_id")
+EDITABLE = ("email", "first_name", "last_name", "birth_date", "gender", "mobile", "whatsapp", "address", "city", "pin_code", "course_ids")
 
 
 def _email_changed_email(tenant: dict, record: dict) -> Email:
@@ -317,14 +342,18 @@ def edit(
     if person is None or person.get("role") != "student":
         raise RegistrationNotFound()
 
+    if "course_id" in changes and "course_ids" not in changes and changes["course_id"]:
+        changes = {**changes, "course_ids": [changes["course_id"]]}  # an older caller that sends one course
     changes = {name: value for name, value in changes.items() if name in EDITABLE + ("whatsapp_same_as_mobile",) and value is not None}
     same = changes.get(
         "whatsapp_same_as_mobile", "whatsapp" not in changes and person.get("whatsapp") == person.get("mobile")
     )
-    form = {**person, **changes, "whatsapp_same_as_mobile": same}
+    current_ids, _ = courses_of(person)
+    form = {**person, "course_ids": current_ids, **changes, "whatsapp_same_as_mobile": same}
+    form.pop("course_id", None)
 
-    # The student's own course is always allowed, even if the institute has since hidden it.
-    courses = {course["id"]: course for course in scoped.list_courses() if course.get("active", True) or course["id"] == person.get("course_id")}
+    # The student's own courses are always allowed, even if the institute has since hidden one.
+    courses = {course["id"]: course for course in scoped.list_courses() if course.get("active", True) or course["id"] in current_ids}
     taken = "Someone at this institute is already registered with that email."
     try:
         clean = validate_form(form, courses, clock.today_india())
@@ -336,9 +365,12 @@ def edit(
         raise
 
     new_email = clean["email"]
-    fields = {name: clean[name] for name in EDITABLE[1:] if clean.get(name) != person.get(name)}
-    if "course_id" in fields:
-        fields["course_name"] = courses[clean["course_id"]]["name"]
+    fields = {name: clean[name] for name in EDITABLE[1:-1] if clean.get(name) != person.get(name)}
+    if clean["course_ids"] != current_ids:
+        fields["course_ids"] = clean["course_ids"]
+        fields["course_names"] = [courses[course_id]["name"] for course_id in clean["course_ids"]]
+        fields["course_id"] = clean["course_ids"][0]
+        fields["course_name"] = courses[clean["course_ids"][0]]["name"]
 
     if new_email == email and not fields:
         return person, False

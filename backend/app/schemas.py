@@ -1,7 +1,7 @@
 """Request and response shapes. FastAPI uses these to validate input and hide internal fields."""
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import model_validator, BaseModel
 
 
 class BrandingOut(BaseModel):
@@ -113,6 +113,8 @@ class RegistrationIn(BaseModel):
     address: str | None = None
     city: str | None = None
     pin_code: str | None = None
+    # The courses chosen (ids). course_id is still accepted from an older caller and means one course.
+    course_ids: Any = None
     course_id: str | None = None
 
 
@@ -126,6 +128,14 @@ class RegistrationReceivedOut(BaseModel):
 
 
 class RegistrationOut(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def _one_course_becomes_a_list(cls, data):
+        """A registration made before several courses were allowed holds one course; show it as a list of one."""
+        if isinstance(data, dict) and not data.get("course_ids") and data.get("course_id"):
+            data = {**data, "course_ids": [data["course_id"]], "course_names": [data.get("course_name") or ""]}
+        return data
+
     email: str
     first_name: str = ""
     last_name: str = ""
@@ -138,6 +148,9 @@ class RegistrationOut(BaseModel):
     pin_code: str = ""
     course_id: str = ""
     course_name: str = ""
+    # Every course the student chose. An older registration with one course shows it here too.
+    course_ids: list[str] = []
+    course_names: list[str] = []
     status: str
     created_at: str = ""
     decided_by: str = ""
@@ -231,6 +244,12 @@ class FileStartOut(BaseModel):
 
 class AccessGrantIn(BaseModel):
     course_id: str
+
+
+class GrantRequestedOut(BaseModel):
+    granted: list["AccessOut"]
+    # Chosen courses that no longer exist, by name.
+    skipped: list[str] = []
 
 
 class AccessOut(BaseModel):

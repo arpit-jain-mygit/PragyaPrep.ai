@@ -177,6 +177,26 @@ def grant_access(scoped: TenantRepo, email: str, course_id: str, admin_email: st
     return with_state(access)
 
 
+def grant_requested(scoped: TenantRepo, email: str, admin_email: str) -> dict:
+    """Give an approved student every course they chose, each for its own access length. A chosen course that no longer
+    exists is skipped and named. Doing it again renews them all."""
+    from app.registrations import courses_of
+
+    person = scoped.get_member(email)
+    if person is None or person.get("role") != "student":
+        raise StudentNotFound()
+    if person["status"] != "approved":
+        raise AccessRefused(f"You can only give access to an approved student, and this one is {person['status']}.")
+    ids, names = courses_of(person)
+    granted, skipped = [], []
+    for position, course_id in enumerate(ids):
+        try:
+            granted.append(grant_access(scoped, email, course_id, admin_email))
+        except CourseNotFound:
+            skipped.append(names[position] if position < len(names) and names[position] else course_id)
+    return {"granted": granted, "skipped": skipped}
+
+
 def revoke_access(scoped: TenantRepo, email: str, course_id: str) -> None:
     person = scoped.get_member(email)
     if person is None or person.get("role") != "student":

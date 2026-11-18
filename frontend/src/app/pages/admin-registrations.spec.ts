@@ -19,10 +19,15 @@ function answerReload(http: ReturnType<typeof setupTestBed>['http'], status: str
 }
 
 describe('Admin registrations page', () => {
+  it('shows every course a student chose on their card', async () => {
+    const { fixture } = await open([registration({ course_ids: ['c1', 'c2'], course_names: ['CLAT', 'CAT'] })]);
+    expect(el(fixture, '.item-head div.small:not(.muted)').textContent).toContain('CLAT, CAT');
+  });
+
   it('shows each pending registration with who, which course and its status', async () => {
     const { fixture } = await open([
       registration(),
-      registration({ email: 'pooja@example.com', first_name: 'Pooja', last_name: 'Shah', course_name: 'CAT' }),
+      registration({ email: 'pooja@example.com', first_name: 'Pooja', last_name: 'Shah', course_ids: ['c2'], course_names: ['CAT'], course_name: 'CAT' }),
     ]);
     const content = text(fixture);
     expect(content).toContain('Meera Kapoor');
@@ -224,7 +229,9 @@ describe('Admin registrations: editing a student', () => {
     expect(el<HTMLInputElement>(fixture, '#e-first_name').value).toBe('Meera');
     expect(el<HTMLInputElement>(fixture, '#e-city').value).toBe('Noida');
     expect(el<HTMLInputElement>(fixture, '#e-same').checked).toBe(true);
-    expect(all(fixture, '#e-course_id option').map((o) => o.textContent?.trim())).toEqual(['CLAT', 'CAT']);
+    expect(all(fixture, '#e-courses label').map((l) => l.textContent?.trim())).toEqual(['CLAT', 'CAT']);
+    expect(el<HTMLInputElement>(fixture, '#e-course-c1').checked).toBe(true);
+    expect(el<HTMLInputElement>(fixture, '#e-course-c2').checked).toBe(false);
   });
 
   it('fetches the course list only the first time', async () => {
@@ -323,11 +330,50 @@ describe('Admin registrations: editing a student', () => {
     expect(http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).request.body).toEqual({ whatsapp: '9000000001' });
   });
 
-  it('changes the course', async () => {
+  it('changes the courses and sends the new list', async () => {
     const { fixture, http } = await openEdit();
-    type(fixture, '#e-course_id', 'c2');
+    el<HTMLInputElement>(fixture, '#e-course-c2').click();
+    await settle(fixture);
     clickButton(fixture, 'Save');
-    expect(http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).request.body).toEqual({ course_id: 'c2' });
+    expect(http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).request.body).toEqual({ course_ids: ['c1', 'c2'] });
+  });
+
+  it('can untick a course, and sends nothing about courses when they are left alone', async () => {
+    const { fixture, http } = await openEdit();
+    el<HTMLInputElement>(fixture, '#e-course-c2').click();
+    el<HTMLInputElement>(fixture, '#e-course-c1').click();
+    await settle(fixture);
+    type(fixture, '#e-city', 'Delhi');
+    clickButton(fixture, 'Save');
+    expect(http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).request.body).toEqual({ city: 'Delhi', course_ids: ['c2'] });
+  });
+
+  it('shows the message next to the courses when the server refuses the choice', async () => {
+    const { fixture, http } = await openEdit();
+    el<HTMLInputElement>(fixture, '#e-course-c1').click();
+    await settle(fixture);
+    clickButton(fixture, 'Save');
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com`).flush(
+      { detail: 'Please correct the marked fields.', errors: { course_ids: 'Choose at least one course.' } }, { status: 422, statusText: 'x' },
+    );
+    await settle(fixture);
+    expect(el(fixture, '#e-courses').textContent).toContain('Choose at least one course.');
+  });
+
+  it('offers a course the student already has even if it is hidden now, and hides other hidden courses', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminRegistrations);
+    fixture.detectChanges();
+    env.http.expectOne((r) => r.url === `${API}/api/admin/registrations`).flush([registration({ course_ids: ['c1', 'c3'], course_names: ['CLAT', 'Old'] })]);
+    await settle(fixture);
+    clickButton(fixture, 'Edit');
+    env.http.expectOne(`${API}/api/admin/courses`).flush([
+      ...COURSES, { id: 'c3', name: 'Old', fee: 0, access: { type: 'unlimited' }, active: false, created_at: '' },
+      { id: 'c4', name: 'Hidden', fee: 0, access: { type: 'unlimited' }, active: false, created_at: '' },
+    ]);
+    await settle(fixture);
+    expect(all(fixture, '#e-courses label').map((l) => l.textContent?.trim())).toEqual(['CLAT', 'CAT', 'Old']);
   });
 
   it('closes the form on Cancel without saving', async () => {
@@ -432,5 +478,70 @@ describe('Admin registrations: course access', () => {
     );
     await settle(fixture);
     expect(text(fixture)).toContain("end date has passed");
+  });
+});
+
+describe('Admin registrations: giving access to all chosen courses', () => {
+  const OPEN = { course_id: 'c1', course_name: 'CLAT', granted_at: '2027-01-15T08:00:00+00:00', granted_by: 'ritesh@example.com', source: 'manual', expires_at: null, active: true };
+  const OPEN2 = { ...OPEN, course_id: 'c2', course_name: 'CAT' };
+
+  async function openChosen(names = ['CLAT', 'CAT']) {
+    const env = await open([registration({ status: 'approved', course_ids: names.map((_, i) => `c${i + 1}`), course_names: names, course_id: 'c1', course_name: names[0] })]);
+    clickButton(env.fixture, 'Show details');
+    env.http.expectOne(`${API}/api/admin/courses`).flush(COURSES);
+    await settle(env.fixture);
+    env.http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush([]);
+    await settle(env.fixture);
+    return env;
+  }
+
+  it('shows the chosen courses beside a button that gives access to all of them', async () => {
+    const { fixture } = await openChosen();
+    expect(el(fixture, '#give-requested').textContent).toContain('Give access to all chosen courses');
+    expect(el(fixture, '.access').textContent).toContain('CLAT, CAT');
+    expect(el<HTMLButtonElement>(fixture, '.access .btn:not(.danger)').textContent).toContain('Give or renew access'); // the single-course button stays first
+  });
+
+  it('gives all the chosen courses at once and says which', async () => {
+    const { fixture, http } = await openChosen();
+    el<HTMLButtonElement>(fixture, '#give-requested').click();
+    const request = http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access/requested`);
+    expect(request.request.method).toBe('POST');
+    request.flush({ granted: [OPEN, OPEN2], skipped: [] });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush([OPEN, OPEN2]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Gave Meera access to CLAT and CAT.');
+    expect(all(fixture, '.access .status.ok').length).toBe(2);
+  });
+
+  it('names three courses with commas and one course on its own', async () => {
+    const env = await openChosen(['CLAT', 'CAT', 'IPMAT']);
+    el<HTMLButtonElement>(env.fixture, '#give-requested').click();
+    env.http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access/requested`).flush({ granted: [OPEN, OPEN2, { ...OPEN, course_id: 'c3', course_name: 'IPMAT' }], skipped: [] });
+    await settle(env.fixture);
+    env.http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush([]);
+    await settle(env.fixture);
+    expect(text(env.fixture)).toContain('Gave Meera access to CLAT, CAT and IPMAT.');
+  });
+
+  it('says which chosen courses were skipped because they no longer exist', async () => {
+    const { fixture, http } = await openChosen();
+    el<HTMLButtonElement>(fixture, '#give-requested').click();
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access/requested`).flush({ granted: [OPEN], skipped: ['Vanished'] });
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access`).flush([OPEN]);
+    await settle(fixture);
+    expect(text(fixture)).toContain('Gave Meera access to CLAT. Skipped Vanished: no longer a course.');
+    expect(el(fixture, '.access .alert').className).toContain('error');
+  });
+
+  it("shows the server's reason when access cannot be given", async () => {
+    const { fixture, http } = await openChosen();
+    el<HTMLButtonElement>(fixture, '#give-requested').click();
+    http.expectOne(`${API}/api/admin/registrations/meera%40example.com/access/requested`).flush({ detail: 'You can only give access to an approved student, and this one is suspended.' }, { status: 409, statusText: 'x' });
+    await settle(fixture);
+    expect(text(fixture)).toContain('You can only give access to an approved student');
+    expect(el<HTMLButtonElement>(fixture, '#give-requested').disabled).toBe(false);
   });
 });

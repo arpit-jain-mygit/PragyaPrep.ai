@@ -117,7 +117,7 @@ def test_an_empty_form_reports_every_field_together(client, school):
     assert response.json()["detail"] == "Please correct the marked fields."
     assert set(response.json()["errors"]) == {
         "email", "first_name", "last_name", "birth_date", "gender", "mobile", "whatsapp",
-        "address", "city", "pin_code", "course_id",
+        "address", "city", "pin_code", "course_ids",
     }
 
 
@@ -180,29 +180,31 @@ def test_too_short_or_too_long_text_is_refused(client, school):
 # ---- The course ----
 
 def test_an_unknown_or_missing_course_is_refused(client, school):
-    for course in ["not-a-course", "", None]:
+    response = register(client, "aaptprep", valid_form(school["id"], course_id="not-a-course"))
+    assert response.json()["errors"]["course_ids"] == "Choose the courses from the list."
+    for course in ["", None]:
         response = register(client, "aaptprep", valid_form(school["id"], course_id=course))
-        assert response.json()["errors"]["course_id"] == "Choose a course from the list."
+        assert response.json()["errors"]["course_ids"] == "Choose at least one course."
 
 
 def test_a_hidden_course_cannot_be_chosen(client, school, add_course):
     hidden = add_course("aaptprep", "CUET", active=False)
     response = register(client, "aaptprep", valid_form(school["id"], course_id=hidden["id"]))
-    assert response.json()["errors"]["course_id"] == "Choose a course from the list."
+    assert response.json()["errors"]["course_ids"] == "Choose the courses from the list."
 
 
 def test_another_institutes_course_cannot_be_chosen(client, school, make_tenant, add_course):
     make_tenant("otherinst")
     other = add_course("otherinst", "CAT")
     response = register(client, "aaptprep", valid_form(school["id"], course_id=other["id"]))
-    assert response.json()["errors"]["course_id"] == "Choose a course from the list."
+    assert response.json()["errors"]["course_ids"] == "Choose the courses from the list."
 
 
 def test_an_institute_with_no_open_courses_cannot_take_registrations(client, make_tenant):
     make_tenant("aaptprep")
     response = register(client, "aaptprep", valid_form("anything"))
     assert response.status_code == 422
-    assert response.json()["errors"]["course_id"] == "No courses are open for registration yet."
+    assert response.json()["errors"]["course_ids"] == "No courses are open for registration yet."
 
 
 # ---- Already registered ----
