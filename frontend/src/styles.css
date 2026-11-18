@@ -402,8 +402,22 @@ body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
 .schedule-head.overdue { color: var(--danger); }
 .due.urgent strong { color: var(--warn); }
 .due.late strong { color: var(--danger); }
-.schedule-list { list-style: none; margin: 0.6rem 0 0; padding: 0; }
-.schedule-list li { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.45rem 0; border-top: 1px solid var(--line); }
-.schedule-list li:first-child { border-top: 0; }
-.schedule-list a { font-weight: 600; text-decoration: none; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
-.schedule-card .alert { display: flex; align-items: center; gap: 0.4rem; margin: 0.6rem 0 0; }
+
+/* Home as action tiles: solid, loud colours, a huge count, as little text as possible. */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; max-width: 46rem; margin: 0 auto; }
+@media (max-width: 40rem) { .tiles { grid-template-columns: 1fr; } }
+.tile { --from: #2563eb; --to: #7c3aed; display: flex; flex-direction: column; gap: 0.3rem; min-height: 9.5rem; justify-content: space-between; padding: 1.1rem 1.25rem; border-radius: 16px; color: #fff; text-decoration: none; background: linear-gradient(135deg, var(--from), var(--to)); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16); transition: transform 0.15s, box-shadow 0.15s, filter 0.15s; }
+.tile:hover, .tile:focus-visible { transform: translateY(-3px) scale(1.01); box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24); filter: saturate(1.15); outline: none; }
+.tile:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+#tile-tests { --from: #1d4ed8; --to: #7c3aed; }
+#tile-tests.alert-tile { --from: #dc2626; --to: #f97316; }
+#tile-continue { --from: #d97706; --to: #dc2626; }
+#tile-courses { --from: #ea580c; --to: #db2777; }
+#tile-results { --from: #059669; --to: #0891b2; }
+#tile-weak { --from: #a21caf; --to: #e11d48; }
+.tile-head { display: flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 1.05rem; letter-spacing: 0.01em; text-transform: uppercase; opacity: 0.95; }
+.tile-num { font-size: 4.5rem; font-weight: 900; line-height: 1; letter-spacing: -0.03em; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15); }
+.tchips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tchip { font-size: 0.85rem; font-weight: 800; border-radius: 999px; padding: 0.15rem 0.7rem; background: rgba(255, 255, 255, 0.26); color: #fff; }
+.tchip.bad { background: #fff; color: #b91c1c; }
+

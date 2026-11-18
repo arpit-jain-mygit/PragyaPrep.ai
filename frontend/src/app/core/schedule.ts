@@ -54,3 +54,41 @@ export function dueLabel(test: StudentTestCard): string {
   if (test.minutes_left != null) return `Closes in ${countdown(test.minutes_left)}`;
   return 'Open any time';
 }
+
+/** A week, in minutes. */
+export const WEEK = 7 * 1440;
+
+export interface ToTake {
+  /** Closed without ever being taken. */
+  overdue: number;
+  /** Not yet attempted and closing, or opening, within the next 7 days. */
+  thisWeek: number;
+  /** Not yet attempted and further off, or with no closing date. */
+  later: number;
+  /** The not-yet-attempted test that needs the student first. */
+  next: StudentTestCard | null;
+}
+
+/** Counts for the "Tests to take" tile. A test counts once: overdue, or not yet attempted and open or upcoming. */
+export function toTake(tests: StudentTestCard[]): ToTake {
+  const out: ToTake = { overdue: 0, thisWeek: 0, later: 0, next: null };
+  let nextMinutes = Number.MAX_SAFE_INTEGER;
+  for (const test of tests) {
+    if (test.overdue) {
+      out.overdue += 1;
+      continue;
+    }
+    if (test.attempts_used > 0 || test.state === 'ended') continue;
+    const minutes = test.state === 'upcoming' ? test.opens_in_minutes : test.minutes_left;
+    if (minutes != null && minutes <= WEEK) out.thisWeek += 1;
+    else out.later += 1;
+    // The next test is the one that closes soonest among open ones, else the one that opens first.
+    // Open tests with a closing time rank first, then open ones that never close, then upcoming ones by when they open.
+    const rank = test.state === 'open' ? (minutes ?? 90_000_000) : 100_000_000 + (minutes ?? 80_000_000);
+    if (!out.next || rank < nextMinutes) {
+      out.next = test;
+      nextMinutes = rank;
+    }
+  }
+  return out;
+}
