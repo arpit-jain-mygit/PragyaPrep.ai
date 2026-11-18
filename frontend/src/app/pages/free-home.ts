@@ -41,7 +41,7 @@ import { Icon } from '../ui/icon';
                 @for (f of x.files; track f.file_id) {
                   <li>
                     <button class="btn small secondary" type="button" [attr.data-file]="f.file_id" [disabled]="opening() === f.file_id" (click)="openFile(f.file_id)">
-                      <app-icon [name]="f.kind === 'video' ? 'play' : 'file'" [size]="16" /> {{ opening() === f.file_id ? 'Opening…' : f.title }}
+                      <app-icon [name]="f.kind === 'mp4' ? 'play' : 'file'" [size]="16" /> {{ opening() === f.file_id ? 'Opening…' : f.title }}
                     </button>
                   </li>
                 }
