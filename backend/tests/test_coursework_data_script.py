@@ -156,7 +156,7 @@ def test_the_planned_courses_show_in_the_admin_page_data(client, repo, storage, 
 def test_status_counts_what_the_script_made(repo, storage, school, capsys):
     run(repo, storage)
     info = seed.status(repo, "aaptprep", BATCH)
-    assert info == {"courses": 2, "files": 4, "topics": 8, "subtopics": 24}
+    assert info == {"courses": 2, "files": 4, "topics": 8, "subtopics": 24, "completions": 0}
     assert "Demo coursework" in capsys.readouterr().out
     assert seed.status(repo, "aaptprep", "other")["courses"] == 0
 
@@ -184,7 +184,7 @@ def test_remove_deletes_the_plan_files_and_stored_copies_but_not_hand_made_thing
 
 def test_removing_another_batch_touches_nothing(repo, storage, school):
     run(repo, storage)
-    assert seed.remove(repo, storage, "aaptprep", "not-this-one") == {"nodes": 0, "files": 0}
+    assert seed.remove(repo, storage, "aaptprep", "not-this-one") == {"nodes": 0, "files": 0, "completions": 0}
     assert seed.status(repo, "aaptprep", BATCH)["topics"] == 8
 
 
@@ -217,3 +217,69 @@ def test_dates_are_the_same_wherever_the_subject_sits_in_the_course(school):
     first = seed.outline({**school["cat"], "papers": ["quantitative-ability"]}, 1, 2, 7)[0]
     last = seed.outline({**school["cat"], "papers": ["legal-reasoning", "logical-reasoning", "quantitative-ability"]}, 3, 2, 7)[2]
     assert first == last
+
+
+# ---- Student progress ----
+
+@pytest.fixture
+def demo_students(repo, school, scoped):
+    """Twelve approved students tagged as demo students, all with access to CAT, and one real student who is not tagged."""
+    from app import content
+
+    for i in range(12):
+        email = f"demo{i}@example.com"
+        scoped.create_member({"email": email, "role": "student", "status": "approved", "first_name": f"D{i}", "last_name": "Demo", "demo_seed": "demo-students-v1"})
+        content.grant_access(scoped, email, school["cat"]["id"], "ritesh@example.com")
+    scoped.create_member({"email": "real@example.com", "role": "student", "status": "approved", "first_name": "Real", "last_name": "Person"})
+    content.grant_access(scoped, "real@example.com", school["cat"]["id"], "ritesh@example.com")
+
+
+def test_progress_marks_sub_topics_for_demo_students_only_in_a_spread(client, repo, storage, school, scoped, demo_students):
+    run(repo, storage, subjects=2, topics=2)
+    result = seed.progress(repo, "aaptprep", BATCH, 7, log=lambda *_: None)
+    assert result["marked"] > 0 and 0 < result["students"] < 12  # some are left untouched
+    counts = [len([d for d in scoped.list_done(f"demo{i}@example.com")]) for i in range(12)]
+    assert min(counts) == 0 and max(counts) > min(counts) and max(counts) <= 12  # 12 published-or-not sub-topics at most
+    assert scoped.list_done("real@example.com") == []
+
+
+def test_progress_rows_are_real_completions_of_published_subtopics_in_the_past(client, repo, storage, school, scoped, demo_students):
+    from datetime import datetime, timezone
+
+    run(repo, storage, subjects=2, topics=2)
+    seed.progress(repo, "aaptprep", BATCH, 7, log=lambda *_: None)
+    published = {s["id"] for s in subtopics(coursework.tree(scoped, school["cat"]["id"])) if s["status"] == "published"}
+    rows = [d for i in range(12) for d in scoped.list_done(f"demo{i}@example.com")]
+    assert rows and all(d["subtopic_id"] in published and d["demo_seed"] == BATCH for d in rows)
+    now = datetime.now(timezone.utc)
+    assert all(0 < (now - datetime.fromisoformat(d["done_at"])).total_seconds() <= 21 * 86400 for d in rows)
+
+
+def test_progress_is_the_same_for_a_seed_and_never_repeats_a_completion(client, repo, storage, school, scoped, demo_students):
+    run(repo, storage, subjects=2, topics=2)
+    first = seed.progress(repo, "aaptprep", BATCH, 7, log=lambda *_: None)
+    ids = sorted((d["course_id"], d["subtopic_id"]) for i in range(12) for d in scoped.list_done(f"demo{i}@example.com"))
+    again = seed.progress(repo, "aaptprep", BATCH, 7, log=lambda *_: None)
+    assert again["marked"] == 0 and first["marked"] == len(ids)
+    assert sorted((d["course_id"], d["subtopic_id"]) for i in range(12) for d in scoped.list_done(f"demo{i}@example.com")) == ids
+
+
+def test_status_and_remove_count_and_delete_the_completions(client, repo, storage, school, scoped, demo_students, capsys):
+    run(repo, storage, subjects=2, topics=2)
+    seed.progress(repo, "aaptprep", BATCH, 7, log=lambda *_: None)
+    total = sum(len(scoped.list_done(f"demo{i}@example.com")) for i in range(12))
+    assert seed.status(repo, "aaptprep", BATCH)["completions"] == total > 0
+    scoped.put_done("real@example.com", school["cat"]["id"], "x", "2027-01-01T00:00:00+00:00")  # the student's own, untagged
+    assert seed.remove(repo, storage, "aaptprep", BATCH, dry_run=True)["completions"] == total
+    assert sum(len(scoped.list_done(f"demo{i}@example.com")) for i in range(12)) == total
+    assert seed.remove(repo, storage, "aaptprep", BATCH)["completions"] == total
+    assert sum(len(scoped.list_done(f"demo{i}@example.com")) for i in range(12)) == 0
+    assert len(scoped.list_done("real@example.com")) == 1
+
+
+def test_the_command_line_runs_progress(repo, storage, school, demo_students, monkeypatch, capsys):
+    monkeypatch.setattr(seed, "make_video", lambda use_ffmpeg=True: b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom\x00\x00\x00\x08free")
+    base = ["--slug", "aaptprep", "--batch", BATCH]
+    seed.main(["create", *base, "--subjects", "2", "--topics", "2"], repo=repo, storage=storage)
+    assert seed.main(["progress", *base], repo=repo, storage=storage) == 0
+    assert "demo students" in capsys.readouterr().out

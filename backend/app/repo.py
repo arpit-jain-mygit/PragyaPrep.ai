@@ -193,6 +193,19 @@ class TenantRepo:
         )
         return [_plain(item) for item in response["Items"]]
 
+    def all_members_by_status(self, status: str) -> list[dict]:
+        """Everyone with this status, following the pages of results to the end."""
+        items, start = [], None
+        while True:
+            args = {"IndexName": "GSI1", "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}MEMBERS#{status}")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
     def transition_member(self, email: str, allowed_from: list[str], to_status: str, **fields) -> bool:
         """Move a person to a new status, but only if they are in one of the allowed statuses right now.
 
@@ -336,8 +349,8 @@ class TenantRepo:
     def _done_key(self, email: str, course_id: str, subtopic_id: str) -> dict:
         return {"PK": self._member_key(email)["PK"], "SK": f"DONE#{course_id}#{subtopic_id}"}
 
-    def put_done(self, email: str, course_id: str, subtopic_id: str, done_at: str) -> None:
-        self.table.put_item(Item={**self._done_key(email, course_id, subtopic_id), "course_id": course_id, "subtopic_id": subtopic_id, "done_at": done_at})
+    def put_done(self, email: str, course_id: str, subtopic_id: str, done_at: str, **extra) -> None:
+        self.table.put_item(Item={**self._done_key(email, course_id, subtopic_id), "course_id": course_id, "subtopic_id": subtopic_id, "done_at": done_at, **extra})
 
     def get_done(self, email: str, course_id: str, subtopic_id: str) -> dict | None:
         return _plain(self.table.get_item(Key=self._done_key(email, course_id, subtopic_id)).get("Item"))

@@ -9,6 +9,9 @@ import {
   CourseAccess,
   CourseFile,
   CopyChoice,
+  CourseProgress,
+  CourseStuck,
+  StudentProgress,
   StudentCoursework,
   CopyResult,
   CourseworkPlan,
@@ -213,6 +216,20 @@ export class ApiService {
 
   markNotDone(courseId: string, subtopicId: string): Promise<StudentCoursework> {
     return this.call(firstValueFrom(this.http.delete<StudentCoursework>(`${this.base}/api/my/coursework/${encodeURIComponent(courseId)}/${encodeURIComponent(subtopicId)}/done`)));
+  }
+
+  // ---- Progress (admin) ----
+
+  courseProgress(courseId: string): Promise<CourseProgress> {
+    return this.get(`/api/admin/progress/${encodeURIComponent(courseId)}`);
+  }
+
+  courseStuck(courseId: string): Promise<CourseStuck> {
+    return this.get(`/api/admin/progress/${encodeURIComponent(courseId)}/stuck`);
+  }
+
+  studentProgress(courseId: string, email: string): Promise<StudentProgress> {
+    return this.get(`/api/admin/progress/${encodeURIComponent(courseId)}/students/${encodeURIComponent(email)}`);
   }
 
   courseFiles(courseId: string): Promise<CourseFile[]> {

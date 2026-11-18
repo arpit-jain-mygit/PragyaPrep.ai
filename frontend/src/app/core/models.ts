@@ -686,3 +686,55 @@ export interface StudentCoursework {
   summary: { total: number; done: number; left: number; overdue: number; this_week: number };
   courses: StudentCourse[];
 }
+
+// ---- Progress (admin) ----
+
+export type ProgressStatus = 'behind' | 'not_started' | 'on_track';
+
+export interface ProgressRow {
+  email: string;
+  name: string;
+  status: ProgressStatus;
+  cw_done: number;
+  cw_total: number;
+  cw_overdue: number;
+  tests_taken: number;
+  tests_available: number;
+  tests_overdue: number;
+  avg_percent: number | null;
+  /** Items overdue: coursework and tests together. */
+  overdue: number;
+  last_active: string | null;
+}
+
+export interface CourseProgress {
+  course: { id: string; name: string };
+  summary: { students: number; behind: number; not_started: number; on_track: number; subtopics: number; tests: number };
+  students: ProgressRow[];
+}
+
+export interface StuckItem {
+  id: string;
+  title: string;
+  topic: string;
+  subject: string;
+  due: string | null;
+  done: number;
+  students: number;
+  percent: number;
+}
+
+export interface CourseStuck {
+  course: { id: string; name: string };
+  students: number;
+  subtopics: StuckItem[];
+}
+
+export interface StudentProgress {
+  course: { id: string; name: string };
+  student: { email: string; name: string };
+  row: ProgressRow;
+  coursework: StudentCourse | null;
+  overdue_items: { title: string; topic: string; subject: string; due: string; days_late: number }[];
+  tests: { id: string; title: string; state: 'upcoming' | 'open' | 'ended'; overdue: boolean; attempts_used: number; max_attempts: number; best: { marks: string; percentage: string; passed: boolean } | null }[];
+}

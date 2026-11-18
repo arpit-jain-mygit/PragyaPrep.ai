@@ -1,0 +1,140 @@
+"""Progress for the admin: for one course, how far each student is with the coursework and the tests, who is behind, and
+which sub-topics students are not finishing.
+
+Everything comes from what is already stored: sub-topics students marked complete, their test attempts, and who has access.
+It is worked out when asked, reading each student's records in parallel, which suits a few hundred students per course.
+(For thousands, running totals would be stored instead.)
+
+  Behind       something is overdue: a finish-by date passed on a sub-topic not marked complete, or a test whose window
+               closed without a single attempt.
+  Not started  nothing marked complete and no test submitted yet.
+  On track     everything else.
+"""
+from concurrent.futures import ThreadPoolExecutor
+from statistics import mean
+
+from app import attempts as attempts_module, clock, content, coursework, student_coursework
+from app.repo import TenantRepo
+
+STATUS_ORDER = {"behind": 0, "not_started": 1, "on_track": 2}
+
+
+class StudentNotInCourse(Exception):
+    pass
+
+
+def _name(member: dict) -> str:
+    return " ".join(p for p in (member.get("first_name"), member.get("last_name")) if p) or member["email"]
+
+
+def _published(plan: dict) -> list[dict]:
+    """Every published sub-topic of the plan, flat, with where it sits."""
+    out = []
+    for subject in plan["subjects"]:
+        for topic in subject["topics"]:
+            for sub in topic["subtopics"]:
+                if sub["status"] == "published":
+                    out.append({"id": sub["id"], "title": sub["title"], "topic": topic["title"], "subject": subject["name"], "due": sub["effective_due"]})
+    return out
+
+
+def _gather(scoped: TenantRepo, course_id: str, only: list[str] | None = None) -> dict:
+    """The plan, the course's tests and each student's records. `only` limits it to some students (by email)."""
+    plan = coursework.tree(scoped, course_id)
+    subs = _published(plan)
+    now, today = clock.now(), clock.today_india().isoformat()
+    tests = [t for t in scoped.list_tests() if t.get("status") == "published" and course_id in (t.get("courses") or [])]
+    window = {t["id"]: attempts_module._window(t, now) for t in tests}
+    members = [m for m in scoped.all_members_by_status("approved") if m.get("role") == "student"]
+    if only is not None:
+        members = [m for m in members if m["email"] in only]
+
+    def load(member: dict):
+        access = scoped.get_access(member["email"], course_id)
+        if access is None or not content.is_active(access):
+            return None
+        done = {d["subtopic_id"]: d["done_at"] for d in scoped.list_done(member["email"]) if d["course_id"] == course_id}
+        return member, done, scoped.list_attempts(member["email"])
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        loaded = [x for x in pool.map(load, members) if x is not None]
+
+    published_ids = {s["id"] for s in subs}
+    test_ids = {t["id"] for t in tests}
+    students = []
+    for member, done, all_attempts in loaded:
+        done_ids = set(done) & published_ids
+        mine = [a for a in all_attempts if a["test_id"] in test_ids]
+        submitted = [a for a in mine if a["status"] == "submitted"]
+        best: dict[str, float] = {}
+        for a in submitted:
+            best[a["test_id"]] = max(best.get(a["test_id"], 0.0), float(a["percentage"]))
+        cw_overdue = sum(1 for s in subs if s["due"] and s["due"] < today and s["id"] not in done_ids)
+        attempted = {a["test_id"] for a in mine}
+        tests_overdue = sum(1 for t in tests if window[t["id"]] == "ended" and t["id"] not in attempted)
+        overdue = cw_overdue + tests_overdue
+        stamps = [done[i] for i in done_ids] + [a["submitted_at"] for a in submitted if a.get("submitted_at")]
+        status = "behind" if overdue else "not_started" if not done_ids and not best else "on_track"
+        students.append({
+            "email": member["email"], "name": _name(member), "status": status,
+            "cw_done": len(done_ids), "cw_total": len(subs), "cw_overdue": cw_overdue,
+            "tests_taken": len(best), "tests_available": sum(1 for t in tests if window[t["id"]] != "upcoming"), "tests_overdue": tests_overdue,
+            "avg_percent": round(mean(best.values()), 1) if best else None,
+            "overdue": overdue, "last_active": max(stamps) if stamps else None,
+            "done_ids": done_ids,
+        })
+    return {"plan": plan, "subs": subs, "tests": tests, "students": students}
+
+
+def students(scoped: TenantRepo, course_id: str) -> dict:
+    """One row per student with access to the course, those needing attention first, with counts for the top of the page."""
+    data = _gather(scoped, course_id)
+    rows = sorted(data["students"], key=lambda r: (STATUS_ORDER[r["status"]], -r["overdue"], r["name"].lower()))
+    rows = [{k: v for k, v in r.items() if k != "done_ids"} for r in rows]
+    count = lambda status: sum(1 for r in rows if r["status"] == status)
+    return {
+        "course": data["plan"]["course"],
+        "summary": {"students": len(rows), "behind": count("behind"), "not_started": count("not_started"), "on_track": count("on_track"),
+                    "subtopics": len(data["subs"]), "tests": len(data["tests"])},
+        "students": rows,
+    }
+
+
+def stuck(scoped: TenantRepo, course_id: str) -> dict:
+    """Each published sub-topic with how many of the course's students have marked it complete, the least finished first."""
+    data = _gather(scoped, course_id)
+    total = len(data["students"])
+    items = []
+    for sub in data["subs"]:
+        finished = sum(1 for s in data["students"] if sub["id"] in s["done_ids"])
+        items.append({**sub, "done": finished, "students": total, "percent": round(100 * finished / total) if total else 0})
+    items.sort(key=lambda i: (i["percent"], i["due"] or "9999", i["subject"], i["topic"], i["title"]))
+    return {"course": data["plan"]["course"], "students": total, "subtopics": items}
+
+
+def student(scoped: TenantRepo, course_id: str, email: str) -> dict:
+    """One student in one course: their status, their coursework by subject and topic, what is overdue, and their tests."""
+    member = scoped.get_member(email)
+    data = _gather(scoped, course_id, only=[email]) if member else {"students": []}
+    if not data["students"]:
+        raise StudentNotInCourse()
+    row = {k: v for k, v in data["students"][0].items() if k != "done_ids"}
+    mine = next((c for c in student_coursework.tree(scoped, member)["courses"] if c["id"] == course_id), None)
+    overdue_items = []
+    for subject in (mine or {}).get("subjects", []):
+        for topic in subject["topics"]:
+            for sub in topic["subtopics"]:
+                if sub["overdue"]:
+                    overdue_items.append({"title": sub["title"], "topic": topic["title"], "subject": subject["name"], "due": sub["due"], "days_late": -sub["days_left"]})
+    overdue_items.sort(key=lambda i: i["due"])
+    tests = []
+    for test in sorted(data["tests"], key=lambda t: t["title"].lower()):
+        card = attempts_module.test_card(scoped, member, test)
+        tests.append({
+            "id": test["id"], "title": test["title"], "state": card["state"], "overdue": card["overdue"], "attempts_used": card["attempts_used"],
+            "max_attempts": card["max_attempts"], "best": card["best"],
+        })
+    return {
+        "course": data["plan"]["course"], "student": {"email": member["email"], "name": _name(member)}, "row": row,
+        "coursework": mine, "overdue_items": overdue_items, "tests": tests,
+    }

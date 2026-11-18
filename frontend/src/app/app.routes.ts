@@ -50,6 +50,16 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-coursework').then((m) => m.AdminCoursework),
       },
       {
+        path: 'admin/progress',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-progress').then((m) => m.AdminProgress),
+      },
+      {
+        path: 'admin/progress/:course/:email',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-progress-student').then((m) => m.AdminProgressStudent),
+      },
+      {
         path: 'admin/tests',
         canActivate: [signedInGuard, adminGuard],
         loadComponent: () => import('./pages/admin-tests').then((m) => m.AdminTests),

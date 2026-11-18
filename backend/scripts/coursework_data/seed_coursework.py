@@ -18,6 +18,11 @@ Run from the backend folder, with AWS credentials in the environment. For the de
   --seed 2026           the same seed gives the same plan
   --batch demo-coursework-v1   the tag put on everything this run writes
 
+  .venv/bin/python scripts/coursework_data/seed_coursework.py progress --slug aaptprep
+
+`progress` marks some sub-topics complete for the demo students (those made by scripts/student_data), most of the way through
+for some, barely started for others, and untouched for a few, so the admin's Progress page has something to show.
+
 A course that already has a plan is left alone. The sample video needs ffmpeg; without it a tiny stand-in file is used.
 """
 import argparse
@@ -26,7 +31,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -212,6 +217,39 @@ def create(repo: Repo, storage: ContentStorage, slug: str, subjects: int, topics
     return result
 
 
+# ---- Student progress ----
+
+LEVELS = [0, 0, 0.1, 0.25, 0.5, 0.75, 0.95]  # how far through its coursework a student is, picked at random for each
+
+
+def progress(repo: Repo, slug: str, batch: str, seed: int, log=print) -> dict:
+    """Mark sub-topics complete for the demo students, in plan order with the odd one skipped, at times over the last 3 weeks."""
+    scoped = _scoped(repo, slug)
+    now = datetime.now(timezone.utc)
+    result = {"students": 0, "marked": 0}
+    for member in scoped.all_members_by_status("approved"):
+        if not member.get("demo_seed"):
+            continue
+        rng = random.Random(f"{seed}:progress:{member['email']}")
+        level = rng.choice(LEVELS)
+        touched = False
+        for access in scoped.list_access(member["email"]):
+            if not content.is_active(access):
+                continue
+            plan = coursework.tree(scoped, access["course_id"])
+            published = [sub["id"] for subject in plan["subjects"] for topic in subject["topics"] for sub in topic["subtopics"] if sub["status"] == "published"]
+            for sub_id in published[: round(level * len(published))]:
+                if rng.random() < 0.1 or scoped.get_done(member["email"], access["course_id"], sub_id):
+                    continue
+                at = (now - timedelta(days=rng.uniform(0.2, 21))).isoformat()
+                scoped.put_done(member["email"], access["course_id"], sub_id, at, demo_seed=batch)
+                result["marked"] += 1
+                touched = True
+        result["students"] += touched
+    log(f"Marked {result['marked']} sub-topics complete for {result['students']} demo students.")
+    return result
+
+
 # ---- Status and removing ----
 
 def _tagged_nodes(scoped: TenantRepo, course_id: str, batch: str) -> list[dict]:
@@ -220,7 +258,9 @@ def _tagged_nodes(scoped: TenantRepo, course_id: str, batch: str) -> list[dict]:
 
 def status(repo: Repo, slug: str, batch: str) -> dict:
     scoped = _scoped(repo, slug)
-    info = {"courses": 0, "files": 0, "topics": 0, "subtopics": 0}
+    info = {"courses": 0, "files": 0, "topics": 0, "subtopics": 0, "completions": 0}
+    for member in scoped.all_members_by_status("approved"):
+        info["completions"] += sum(1 for d in scoped.list_done(member["email"]) if d.get("demo_seed") == batch)
     for course in scoped.list_courses():
         nodes = _tagged_nodes(scoped, course["id"], batch)
         files = _tagged_files(scoped, course["id"], batch)
@@ -229,14 +269,20 @@ def status(repo: Repo, slug: str, batch: str) -> dict:
         info["files"] += len(files)
         info["topics"] += sum(1 for n in nodes if n["kind"] == "topic")
         info["subtopics"] += sum(1 for n in nodes if n["kind"] == "subtopic")
-    print(f"Demo coursework ({batch}): {info['courses']} courses, {info['topics']} topics, {info['subtopics']} sub-topics, {info['files']} files")
+    print(f"Demo coursework ({batch}): {info['courses']} courses, {info['topics']} topics, {info['subtopics']} sub-topics, {info['files']} files, {info['completions']} completions")
     return info
 
 
 def remove(repo: Repo, storage: ContentStorage, slug: str, batch: str, dry_run: bool = False) -> dict:
     """Delete the tagged plan nodes and sample files (their stored copies too). Anything the admin added by hand stays."""
     scoped = _scoped(repo, slug)
-    info = {"nodes": 0, "files": 0}
+    info = {"nodes": 0, "files": 0, "completions": 0}
+    for member in scoped.all_members_by_status("approved"):
+        for done in scoped.list_done(member["email"]):
+            if done.get("demo_seed") == batch:
+                info["completions"] += 1
+                if not dry_run:
+                    scoped.delete_done(member["email"], done["course_id"], done["subtopic_id"])
     for course in scoped.list_courses():
         nodes = _tagged_nodes(scoped, course["id"], batch)
         files = _tagged_files(scoped, course["id"], batch)
@@ -251,7 +297,7 @@ def remove(repo: Repo, storage: ContentStorage, slug: str, batch: str, dry_run: 
             if not content.key_in_use(scoped, file["key"]):  # a copy in another course may still use the stored file
                 storage.delete(file["key"])
     verb = "Would remove" if dry_run else "Removed"
-    print(f"{verb} {info['nodes']} plan items and {info['files']} files.")
+    print(f"{verb} {info['nodes']} plan items, {info['files']} files and {info['completions']} completions.")
     return info
 
 
@@ -259,7 +305,7 @@ def remove(repo: Repo, storage: ContentStorage, slug: str, batch: str, dry_run: 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Demo coursework for each course.")
-    parser.add_argument("command", choices=["plan", "create", "status", "remove"])
+    parser.add_argument("command", choices=["plan", "create", "progress", "status", "remove"])
     parser.add_argument("--slug", required=True, help="the institute, for example aaptprep")
     parser.add_argument("--subjects", type=int, default=4)
     parser.add_argument("--topics", type=int, default=3)
@@ -279,6 +325,8 @@ def main(argv: list[str] | None = None, repo: Repo | None = None, storage: Conte
     elif args.command == "create":
         result = create(repo, storage, args.slug, args.subjects, args.topics, args.seed, args.batch)
         print(f"Added to {result['courses']} courses ({result['skipped']} already had a plan): {result['topics']} topics, {result['subtopics']} sub-topics, {result['files']} files.")
+    elif args.command == "progress":
+        progress(repo, args.slug, args.batch, args.seed)
     elif args.command == "status":
         status(repo, args.slug, args.batch)
     elif args.command == "remove":

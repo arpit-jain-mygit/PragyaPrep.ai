@@ -85,3 +85,17 @@ export function shortDate(value: string | null): string {
   const date = new Date(`${value}T00:00:00`);
   return isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/** "3 days ago", "5 hours ago", "just now" from an ISO time; "never" when there is none. */
+export function timeAgo(value: string | null, now: number = Date.now()): string {
+  if (!value) return 'never';
+  const then = new Date(value).getTime();
+  if (isNaN(then)) return value;
+  const minutes = Math.max(0, Math.round((now - then) / 60000));
+  if (minutes < 2) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
