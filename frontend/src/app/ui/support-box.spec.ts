@@ -4,16 +4,17 @@ import { PhotoService } from '../core/photo.service';
 import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { SupportBox } from './support-box';
 
-async function open() {
+async function open(page: string | null = null) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('student'));
   const shrink = vi.spyOn(TestBed.inject(PhotoService), 'screenshotText').mockResolvedValue('QkFTRTY0');
+  const shot = vi.spyOn(TestBed.inject(PhotoService), 'pageScreenshot').mockResolvedValue(page);
   const fixture = TestBed.createComponent(SupportBox);
   const closed = vi.fn();
   fixture.componentInstance.close.subscribe(closed);
   fixture.detectChanges();
   await settle(fixture);
-  return { ...env, fixture, shrink, closed };
+  return { ...env, fixture, shrink, closed, shot };
 }
 
 function choose(fixture: Parameters<typeof el>[0], name = 'shot.png') {
@@ -87,5 +88,31 @@ describe('Support box', () => {
     el(fixture, 'button[title="Close"]').click();
     el(fixture, '.support-backdrop').click();
     expect(closed).toHaveBeenCalledTimes(2);
+  });
+
+  it('takes a screenshot of the page when it opens, shows it, and sends it with the message', async () => {
+    const { fixture, http, shot } = await open('UEFHRQ==');
+    expect(shot).toHaveBeenCalledTimes(1);
+    expect(el(fixture, '#support-picture').textContent).toContain('Screenshot of this page');
+    expect(el<HTMLImageElement>(fixture, '#support-preview').getAttribute('src')).toBe('data:image/jpeg;base64,UEFHRQ==');
+    type(fixture, '#support-message', 'Look at this');
+    el(fixture, 'form').dispatchEvent(new Event('submit'));
+    expect(http.expectOne(`${API}/api/support`).request.body).toEqual({ message: 'Look at this', page: '/', screenshot: 'UEFHRQ==' });
+  });
+
+  it('lets the person remove the automatic screenshot, and carries on without it when it cannot be taken', async () => {
+    const { fixture, http } = await open('UEFHRQ==');
+    el(fixture, 'button[title="Remove screenshot"]').click();
+    await settle(fixture);
+    expect(all(fixture, '#support-preview').length).toBe(0);
+    type(fixture, '#support-message', 'No picture');
+    el(fixture, 'form').dispatchEvent(new Event('submit'));
+    expect(http.expectOne(`${API}/api/support`).request.body.screenshot).toBeUndefined();
+  });
+
+  it('keeps the form out of its own screenshot', async () => {
+    const { fixture } = await open();
+    expect(el(fixture, '#support-box').classList.contains('no-shot')).toBe(true);
+    expect(el(fixture, '.support-backdrop').classList.contains('no-shot')).toBe(true);
   });
 });

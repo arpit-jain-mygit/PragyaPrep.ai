@@ -82,4 +82,24 @@ export class PhotoService {
       reader.readAsDataURL(blob);
     });
   }
+
+  /**
+   * A picture of the page the person is on (only the page itself, never the address bar), as base64 JPEG text, or null when it can't
+   * be taken. Anything inside `.no-shot` is left out, so the support form does not photograph itself.
+   */
+  async pageScreenshot(): Promise<string | null> {
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const scale = Math.min(1, 1400 / Math.max(window.innerWidth, 1));
+      const canvas = await html2canvas(document.body, {
+        scale, useCORS: true, logging: false, backgroundColor: '#ffffff', width: window.innerWidth, height: window.innerHeight,
+        x: window.scrollX, y: window.scrollY, windowWidth: window.innerWidth, windowHeight: window.innerHeight,
+        ignoreElements: (node) => node.classList?.contains('no-shot') ?? false,
+      });
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+      return blob ? await this.screenshotText(blob) : null;
+    } catch {
+      return null;
+    }
+  }
 }

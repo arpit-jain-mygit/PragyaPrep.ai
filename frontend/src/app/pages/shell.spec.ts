@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
+import { PhotoService } from '../core/photo.service';
 import { API, DEMO, all, clickButton, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { Landing } from './landing';
 import { NotFound } from './not-found';
@@ -41,6 +42,7 @@ describe('Institute page frame', () => {
   it('gives admins and students a Contact support button that opens the form, but not the platform admin', async () => {
     for (const role of ['tenant_admin', 'student'] as const) {
       const env = setupTestBed();
+      vi.spyOn(TestBed.inject(PhotoService), 'pageScreenshot').mockResolvedValue(null);
       env.sessions.save(sessionFor(role));
       const fixture = TestBed.createComponent(TenantShell);
       await settle(fixture);
