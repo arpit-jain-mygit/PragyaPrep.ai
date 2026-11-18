@@ -1015,3 +1015,23 @@ export interface FreeSample {
   links: { title: string; url: string }[];
   more_in_paid: number;
 }
+
+/** A student's or parent's own profile (the part they keep themselves). Fields of the other role are absent. */
+export interface MyProfile {
+  role: 'student' | 'parent';
+  email: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string;
+  mobile: string;
+  birth_date?: string;
+  target_exams?: string[];
+  exam_date?: string;
+  weekly_goal_hours?: number;
+  notify?: { announcements: boolean; tests: boolean; live_classes: boolean };
+  relation?: string;
+  summary?: string;
+  consent?: boolean;
+  deletion_requested: boolean;
+  linked: { name: string; email: string }[];
+}

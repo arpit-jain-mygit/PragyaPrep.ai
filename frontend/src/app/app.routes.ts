@@ -53,6 +53,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-parents').then((m) => m.AdminParents),
       },
       {
+        path: 'profile',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/my-profile').then((m) => m.MyProfilePage),
+      },
+      {
         path: 'parent',
         canActivate: [signedInGuard, parentGuard],
         loadComponent: () => import('./pages/parent-home').then((m) => m.ParentHome),

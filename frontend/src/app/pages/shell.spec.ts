@@ -32,10 +32,11 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('parent'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['My children']);
-    expect(all<HTMLAnchorElement>(fixture, 'nav a')[0].getAttribute('href')).toBe('/demo/parent');
+    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['My children']);
+    expect(all<HTMLAnchorElement>(fixture, 'nav a:not(.avatar-link)')[0].getAttribute('href')).toBe('/demo/parent');
     expect(all<HTMLAnchorElement>(fixture, 'a.brand-name')[0].getAttribute('href')).toBe('/demo/parent');
     expect(all(fixture, '#support-open').length).toBe(1);
+    expect(all<HTMLAnchorElement>(fixture, '#profile-link')[0].getAttribute('href')).toBe('/demo/profile');
   });
 
   it('gives admins and students a Contact support button that opens the form, but not the platform admin', async () => {
@@ -86,7 +87,7 @@ describe('Institute page frame', () => {
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My Learning', 'Notices']);
+    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'My Learning', 'Notices']);
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 
@@ -130,7 +131,7 @@ describe('Institute page frame', () => {
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
     await settle(fixture);
-    expect(all(fixture, 'nav a').length).toBe(3);
+    expect(all(fixture, 'nav a:not(.avatar-link)').length).toBe(3);
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 

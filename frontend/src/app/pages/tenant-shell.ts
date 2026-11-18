@@ -60,7 +60,11 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
                 <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link" data-tone="news"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
               }
-              <app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" />
+              @if (member()!.role === 'student' || member()!.role === 'parent') {
+                <a class="avatar-link" id="profile-link" [routerLink]="['/', info.slug, 'profile']" routerLinkActive="active" title="My profile" aria-label="My profile"><app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" /></a>
+              } @else {
+                <app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" />
+              }
               @if (!isPlatformAdmin()) {
                 <button class="icon-btn" type="button" id="support-open" title="Contact support" (click)="support.set(true)"><app-icon name="help" /><span class="sr-only">Contact support</span></button>
               }
@@ -92,7 +96,7 @@ export class TenantShell {
       const role = this.member()?.role;
       if (role === 'student') void this.notices.refresh();
       else this.notices.clear();
-      if (role === 'student' || role === 'tenant_admin') void this.profile.refresh();
+      if (role === 'student' || role === 'parent' || role === 'tenant_admin') void this.profile.refresh();
       else this.profile.clear();
     });
   }

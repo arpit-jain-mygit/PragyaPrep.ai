@@ -7,6 +7,7 @@ import {
   FreeState,
   SignupForm,
   Access,
+  MyProfile,
   StudentPhotoStart,
   RegistrationReceived,
   AdminCourse,
@@ -142,6 +143,40 @@ export class ApiService {
   /** The student's photo has been sent: attach it to their registration. */
   finishRegistrationPhoto(email: string, token: string): Promise<{ ok: boolean }> {
     return this.post('/api/register/photo', { email, token });
+  }
+
+  // ---- My profile (student and parent) ----
+
+  myProfile(): Promise<MyProfile> {
+    return this.get('/api/me/profile');
+  }
+
+  saveMyProfile(fields: Partial<MyProfile>): Promise<MyProfile> {
+    return this.call(firstValueFrom(this.http.put<MyProfile>(`${this.base}/api/me/profile`, fields)));
+  }
+
+  startMyPhoto(): Promise<{ upload: UploadForm; key: string }> {
+    return this.post('/api/me/photo');
+  }
+
+  finishMyPhoto(key: string): Promise<MyProfile> {
+    return this.post('/api/me/photo/complete', { key });
+  }
+
+  removeMyPhoto(): Promise<MyProfile> {
+    return this.call(firstValueFrom(this.http.delete<MyProfile>(`${this.base}/api/me/photo`)));
+  }
+
+  myData(): Promise<unknown> {
+    return this.get('/api/me/export');
+  }
+
+  askDeletion(): Promise<{ message: string }> {
+    return this.post('/api/me/delete-request');
+  }
+
+  cancelDeletion(): Promise<void> {
+    return this.delete('/api/me/delete-request');
   }
 
   // ---- Photos (admin) ----

@@ -80,7 +80,7 @@ def set_photo(scoped: TenantRepo, storage: ContentStorage, email: str, key: str)
     if not key.startswith(f"{scoped.slug}/avatars/"):
         raise ValidationError("That photo isn't one of this institute's.")
     member = scoped.get_member(email)
-    if member is None or member.get("role") != "student":
+    if member is None or member.get("role") not in ("student", "parent"):
         raise PhotoNotFound()
     _check_arrived(storage, key)
     old = member.get("avatar_key")
@@ -92,7 +92,7 @@ def set_photo(scoped: TenantRepo, storage: ContentStorage, email: str, key: str)
 
 def remove_photo(scoped: TenantRepo, storage: ContentStorage, email: str) -> None:
     member = scoped.get_member(email)
-    if member is None or member.get("role") != "student":
+    if member is None or member.get("role") not in ("student", "parent"):
         raise PhotoNotFound()
     old = member.get("avatar_key")
     if old:
