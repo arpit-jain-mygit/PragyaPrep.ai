@@ -45,7 +45,10 @@ interface Notice {
   template: `
     <div class="page-head">
       <h1>Registrations <app-info text="Review who has registered, and decide who may log in." /></h1>
-      <a class="btn secondary small" id="import-link" [routerLink]="['/', tenants.slug(), 'admin', 'import-students']"><app-icon name="upload" [size]="16" /> Import</a>
+      <span class="row">
+        <button class="btn secondary small" type="button" id="template" title="Excel template for importing many students" (click)="downloadTemplate()"><app-icon name="download" [size]="16" /> Template</button>
+        <a class="btn secondary small" id="import-link" [routerLink]="['/', tenants.slug(), 'admin', 'import-students']"><app-icon name="upload" [size]="16" /> Import</a>
+      </span>
     </div>
 
     <div class="tabs" role="tablist" aria-label="Registration status">
@@ -306,6 +309,21 @@ export class AdminRegistrations implements OnInit {
     const wanted = this.route.snapshot.queryParamMap.get('status');
     if (wanted && (TABS as readonly string[]).includes(wanted)) this.active.set(wanted);
     void this.load();
+  }
+
+  /** The Excel template for importing many students, saved straight from this page. */
+  async downloadTemplate(): Promise<void> {
+    this.loadError.set(null);
+    try {
+      const blob = await this.api.studentImportTemplate();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'student-import-template.xlsx';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      this.loadError.set(error as ApiError);
+    }
   }
 
   async show(tab: string): Promise<void> {

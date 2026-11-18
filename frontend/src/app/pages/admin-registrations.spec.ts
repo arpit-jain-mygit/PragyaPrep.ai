@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { API, all, clickButton, el, registration, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { AdminRegistrations, searchText } from './admin-registrations';
 
@@ -129,6 +129,32 @@ describe('Registrations: import link', () => {
     const link = el<HTMLAnchorElement>(fixture, '#import-link');
     expect(link.getAttribute('href')).toBe('/demo/admin/import-students');
     expect(link.textContent).toContain('Import');
+  });
+});
+
+describe('Registrations: template download', () => {
+  it('has a Template button next to Import that saves the Excel template', async () => {
+    const { fixture, http } = await open([]);
+    expect(el(fixture, '#template').textContent).toContain('Template');
+    const link = { href: '', download: '', click: vi.fn() } as unknown as HTMLAnchorElement;
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(link);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    el(fixture, '#template').click();
+    const request = http.expectOne(`${API}/api/admin/students/import/template`);
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['x']));
+    await settle(fixture);
+    expect(link.download).toBe('student-import-template.xlsx');
+    expect(link.click).toHaveBeenCalled();
+  });
+
+  it('shows why the template could not be downloaded', async () => {
+    const { fixture, http } = await open([]);
+    el(fixture, '#template').click();
+    http.expectOne(`${API}/api/admin/students/import/template`).flush(new Blob(['{}']), { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(all(fixture, '.alert.error').length).toBe(1);
   });
 });
 
