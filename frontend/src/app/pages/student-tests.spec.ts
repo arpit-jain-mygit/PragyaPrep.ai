@@ -32,10 +32,11 @@ describe('Student tests list', () => {
   });
 
   it('lists each test with its size, marking window, attempts and best score', async () => {
-    const { fixture } = await openList([card({ attempts_used: 1, attempts_left: 2, best: { marks: '33', percentage: '55', passed: true } })]);
+    const { fixture } = await openList([card({ minutes_left: 3000, attempts_used: 1, attempts_left: 2, best: { marks: '33', percentage: '55', passed: true } })]);
     const row = el(fixture, '[data-test="CAT Mock 1"]').textContent!.replace(/\s+/g, ' ');
     expect(row).toContain('20 questions · 60 marks · 60 min · pass 40%');
-    expect(row).toContain('Open until');
+    expect(row).toContain('Closes in 2 days');
+    expect(row).toContain('until');
     expect(row).toContain('Attempts 1 of 3');
     expect(row).toContain('best 55%');
     expect(row).toContain('passed');
@@ -43,7 +44,7 @@ describe('Student tests list', () => {
     expect(row).toContain('Open');
   });
 
-  it('shows Resume for a test in progress, and puts it first, then open, upcoming and ended', async () => {
+  it('shows Resume for a test in progress, and puts it first, then open, upcoming and finished', async () => {
     const { fixture } = await openList([
       card({ id: 'e', title: 'Ended one', state: 'ended' }),
       card({ id: 'u', title: 'Upcoming one', state: 'upcoming', start_at: '2027-03-01T09:00' }),
@@ -56,6 +57,37 @@ describe('Student tests list', () => {
     expect(el(fixture, '[data-test="Upcoming one"]').textContent).toContain('Opens');
     expect(el(fixture, '[data-test="Upcoming one"]').textContent).not.toContain('Start');
     expect(el(fixture, '[data-test="Ended one"]').textContent).toContain('Ended');
+  });
+
+  it('groups tests as Overdue, Open now, Coming up and Finished, soonest first', async () => {
+    const { fixture } = await openList([
+      card({ id: 'f', title: 'Finished one', state: 'ended', attempts_used: 1, end_at: '2027-01-05T18:00' }),
+      card({ id: 'u2', title: 'Later one', state: 'upcoming', opens_in_minutes: 9000, start_at: '2027-02-01T09:00' }),
+      card({ id: 'u1', title: 'Next one', state: 'upcoming', opens_in_minutes: 300, start_at: '2027-01-16T09:00' }),
+      card({ id: 'o2', title: 'Slow one', minutes_left: 5000 }),
+      card({ id: 'o1', title: 'Urgent one', minutes_left: 90 }),
+      card({ id: 'x', title: 'Missed one', state: 'ended', overdue: true, end_at: '2027-01-14T18:00' }),
+    ]);
+    expect(all(fixture, '[data-group]').map((h) => h.getAttribute('data-group'))).toEqual(['overdue', 'open', 'upcoming', 'finished']);
+    expect(all(fixture, '[data-group]').map((h) => h.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Overdue 1', 'Open now 2', 'Coming up 2', 'Finished 1']);
+    expect(all(fixture, '[data-test]').map((r) => r.getAttribute('data-test'))).toEqual(['Missed one', 'Urgent one', 'Slow one', 'Next one', 'Later one', 'Finished one']);
+  });
+
+  it('says how long is left, and shows an overdue test in red without a Start button', async () => {
+    const { fixture } = await openList([
+      card({ id: 'o1', title: 'Urgent one', minutes_left: 90 }),
+      card({ id: 'u1', title: 'Next one', state: 'upcoming', opens_in_minutes: 300, start_at: '2027-01-16T09:00' }),
+      card({ id: 'x', title: 'Missed one', state: 'ended', overdue: true, end_at: '2027-01-14T18:00' }),
+    ]);
+    const urgent = el(fixture, '[data-test="Urgent one"]');
+    expect(urgent.textContent).toContain('Closes in 1 h 30 min');
+    expect(urgent.querySelector('.due.urgent')).not.toBeNull();
+    expect(el(fixture, '[data-test="Next one"]').textContent).toContain('Opens in 5 h');
+    const missed = el(fixture, '[data-test="Missed one"]');
+    expect(missed.textContent).toContain('Overdue');
+    expect(missed.textContent).toContain('closed');
+    expect(missed.querySelector('.status.bad')).not.toBeNull();
+    expect(missed.textContent).not.toContain('Start');
   });
 
   it('shows Done and no Start when all attempts are used', async () => {
@@ -215,5 +247,15 @@ describe('Student attempt page', () => {
     env.http.expectOne(`${API}/api/my/tests/t1/attempts/9`).flush({ detail: "We couldn't find that attempt." }, { status: 404, statusText: 'x' });
     await settle(fixture);
     expect(text(fixture)).toContain("We couldn't find that attempt.");
+  });
+});
+
+
+describe('Schedule helpers', () => {
+  it('writes a countdown in days, hours or minutes', async () => {
+    const { countdown } = await import('../core/schedule');
+    expect([countdown(1), countdown(45), countdown(60), countdown(320), countdown(1440), countdown(3000), countdown(10080)]).toEqual(
+      ['1 min', '45 min', '1 h', '5 h 20 min', '1 day', '2 days', '7 days'],
+    );
   });
 });

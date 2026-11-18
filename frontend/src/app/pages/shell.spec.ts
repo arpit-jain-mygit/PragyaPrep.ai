@@ -132,9 +132,48 @@ describe('Student home page', () => {
     fixture.detectChanges();
     env.http.expectOne(`${API}/api/auth/me`).flush({ email: 'asha@example.com', first_name: 'Asha', last_name: 'Rao', role: 'student', status: 'approved' });
     await settle(fixture);
+    env.http.expectOne(`${API}/api/my/tests`).flush([]);
+    await settle(fixture);
     expect(text(fixture)).toContain('Welcome, Asha');
     expect(text(fixture)).toContain('asha@example.com');
     expect(text(fixture)).toContain('is approved');
+    expect(text(fixture)).not.toContain('Your tests');
+  });
+
+  it('shows the test schedule on the home page: overdue first, then what closes soon, then what opens next', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(StudentHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush({ email: 'asha@example.com', first_name: 'Asha', last_name: 'Rao', role: 'student', status: 'approved' });
+    await settle(fixture);
+    const base = { description: '', start_at: null, end_at: null, duration_minutes: 30, max_attempts: 2, pass_percentage: 40, marks_correct: '1', marks_incorrect: '0', show_answers: true, question_count: 5, total_marks: '5', attempts_used: 0, attempts_left: 2, in_progress: null, best: null, attempts: [] };
+    env.http.expectOne(`${API}/api/my/tests`).flush([
+      { ...base, id: 'a', title: 'Slow', state: 'open', minutes_left: 5000 },
+      { ...base, id: 'b', title: 'Urgent', state: 'open', minutes_left: 120 },
+      { ...base, id: 'c', title: 'Missed', state: 'ended', overdue: true, end_at: '2027-01-14T18:00' },
+      { ...base, id: 'd', title: 'Later', state: 'upcoming', opens_in_minutes: 4000 },
+      { ...base, id: 'e', title: 'Old', state: 'ended', attempts_used: 1 },
+    ]);
+    await settle(fixture);
+    expect(all(fixture, '.schedule-list li').map((li) => li.getAttribute('data-test'))).toEqual(['Missed', 'Urgent', 'Slow', 'Later']);
+    expect(text(fixture)).toContain('1 test is overdue');
+    expect(text(fixture)).toContain('Closes in 2 h');
+    expect(text(fixture)).toContain('Opens in 2 days');
+    expect(el(fixture, '.schedule-card a.btn').getAttribute('href')).toBe('/demo/tests');
+  });
+
+  it('leaves the schedule out if the tests cannot be loaded', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(StudentHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush({ email: 'asha@example.com', first_name: 'Asha', last_name: 'Rao', role: 'student', status: 'approved' });
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/tests`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(text(fixture)).toContain('Welcome, Asha');
+    expect(text(fixture)).not.toContain('Your tests');
   });
 
   it('shows a message if the session cannot be checked', async () => {

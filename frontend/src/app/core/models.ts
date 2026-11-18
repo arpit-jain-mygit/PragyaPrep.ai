@@ -387,6 +387,12 @@ export interface StudentTestCard {
   question_count: number;
   total_marks: string;
   state: 'upcoming' | 'open' | 'ended';
+  /** The window has closed and the student never took the test. */
+  overdue?: boolean;
+  /** Minutes until an open test closes (null if it never closes). */
+  minutes_left?: number | null;
+  /** Minutes until an upcoming test opens. */
+  opens_in_minutes?: number | null;
   attempts_used: number;
   attempts_left: number;
   /** The number of the attempt in progress, if there is one. */

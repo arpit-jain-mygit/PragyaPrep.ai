@@ -61,6 +61,27 @@ def _window(test: dict, now: float) -> str:
     return "open"
 
 
+def _schedule(test: dict, now: float, taken: bool) -> dict:
+    """Where the test stands on the calendar, for the student's schedule.
+
+    minutes_left: minutes until an open test closes (None if it never closes);
+    opens_in_minutes: minutes until an upcoming test opens;
+    overdue: the window has closed and the student never took the test.
+    """
+    state = _window(test, now)
+    here = datetime.fromtimestamp(now, tz=clock.INDIA).replace(tzinfo=None)
+
+    def minutes(until: str, extra: int = 0) -> int:
+        gap = datetime.strptime(until, "%Y-%m-%dT%H:%M") - here
+        return max(0, -(-(int(gap.total_seconds()) + extra) // 60))
+
+    return {
+        "overdue": state == "ended" and not taken,
+        "minutes_left": minutes(test["end_at"], 60) if state == "open" and test.get("end_at") else None,
+        "opens_in_minutes": minutes(test["start_at"]) if state == "upcoming" and test.get("start_at") else None,
+    }
+
+
 def _visible(scoped: TenantRepo, member: dict, test: dict | None) -> bool:
     return bool(test) and test.get("status") == "published" and bool(set(test.get("courses") or []) & _active_courses(scoped, member))
 
@@ -275,6 +296,7 @@ def test_card(scoped: TenantRepo, member: dict, test: dict) -> dict:
         "pass_percentage": test["pass_percentage"], "marks_correct": test["marks_correct"], "marks_incorrect": test["marks_incorrect"],
         "show_answers": test["show_answers"], "question_count": count, "total_marks": _fmt(total),
         "state": _window(test, clock.now()),
+        **_schedule(test, clock.now(), bool(attempts)),
         "attempts_used": len(attempts), "attempts_left": max(0, test["max_attempts"] - len(attempts)),
         "in_progress": running["number"] if running else None,
         "best": {"marks": best["marks"], "percentage": best["percentage"], "passed": best["passed"]} if best else None,

@@ -395,3 +395,15 @@ body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
 @keyframes busy-turn { to { transform: rotate(360deg); } }
 @keyframes busy-turn-back { to { transform: rotate(-360deg); } }
 @media (prefers-reduced-motion: reduce) { .busy-cursor .busy-spin, .busy-cursor .busy-label { animation: none; } }
+
+/* Student test schedule: group headings, countdown lines, the home card. */
+.schedule-head { display: flex; align-items: center; gap: 0.45rem; font-size: 1rem; margin: 1.4rem 0 0.5rem; color: var(--ink); }
+.schedule-head .count { font-size: 0.8rem; font-weight: 600; color: var(--muted); background: var(--page); border: 1px solid var(--line); border-radius: 999px; padding: 0 0.5rem; }
+.schedule-head.overdue { color: var(--danger); }
+.due.urgent strong { color: var(--warn); }
+.due.late strong { color: var(--danger); }
+.schedule-list { list-style: none; margin: 0.6rem 0 0; padding: 0; }
+.schedule-list li { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.45rem 0; border-top: 1px solid var(--line); }
+.schedule-list li:first-child { border-top: 0; }
+.schedule-list a { font-weight: 600; text-decoration: none; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.schedule-card .alert { display: flex; align-items: center; gap: 0.4rem; margin: 0.6rem 0 0; }

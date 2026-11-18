@@ -408,3 +408,60 @@ def test_an_unknown_attempt_is_404(client, asha, basic):
     assert client.get(f"{URL}/{basic['id']}/attempts/9", headers=asha).status_code == 404
     assert answer(client, asha, basic["id"], 9, {"x": 1}).status_code == 404
     assert submit(client, asha, basic["id"], 9).status_code == 404
+
+
+# ---- The schedule: closing soon, opening soon, overdue ----
+
+def test_the_card_says_how_long_an_open_test_has_left_and_how_soon_an_upcoming_one_opens(client, school, admin, asha, basic, fake_clock):
+    make_test(client, admin, school, basic["question_ids"], title="Soon", start_at="2027-01-16 09:00", end_at="2027-02-28 18:00")
+    make_test(client, admin, school, basic["question_ids"], title="Any time", start_at="", end_at="")
+    from datetime import datetime
+    from math import ceil
+
+    from app import clock
+
+    now = datetime.fromtimestamp(fake_clock.time, tz=clock.INDIA).replace(tzinfo=None)
+    until = lambda stamp, extra=0: ceil(((datetime.strptime(stamp, "%Y-%m-%d %H:%M") - now).total_seconds() + extra) / 60)
+    cards = {t["title"]: t for t in client.get(URL, headers=asha).json()}
+    # The closing minute counts, so a test ending at 23:59 has until midnight.
+    assert cards["Mock 1"]["minutes_left"] == until("2027-01-31 23:59", 60) and cards["Mock 1"]["opens_in_minutes"] is None
+    assert cards["Soon"]["opens_in_minutes"] == until("2027-01-16 09:00") and cards["Soon"]["minutes_left"] is None
+    assert cards["Any time"]["minutes_left"] is None and cards["Any time"]["opens_in_minutes"] is None
+    assert not any(c["overdue"] for c in cards.values())
+
+
+def test_the_last_minute_still_counts_as_open(client, school, admin, asha, basic, fake_clock):
+    from datetime import datetime
+
+    from app import clock
+
+    now = datetime.fromtimestamp(fake_clock.time, tz=clock.INDIA).replace(tzinfo=None)
+    make_test(client, admin, school, basic["question_ids"], title="Last", start_at="", end_at=now.strftime("%Y-%m-%d %H:%M"))
+    card = next(t for t in client.get(URL, headers=asha).json() if t["title"] == "Last")
+    assert card["state"] == "open" and card["minutes_left"] == 1
+    fake_clock.advance(60)
+    card = next(t for t in client.get(URL, headers=asha).json() if t["title"] == "Last")
+    assert card["state"] == "ended" and card["minutes_left"] is None
+
+
+def test_a_closed_test_the_student_never_took_is_overdue(client, school, admin, asha, basic, fake_clock):
+    gone = make_test(client, admin, school, basic["question_ids"], title="Gone", start_at="2027-01-01 09:00", end_at="2027-01-14 18:00")
+    card = next(t for t in client.get(URL, headers=asha).json() if t["id"] == gone["id"])
+    assert card["state"] == "ended" and card["overdue"] is True
+
+
+def test_a_closed_test_the_student_took_is_not_overdue(client, school, admin, asha, basic, fake_clock):
+    window = make_test(client, admin, school, basic["question_ids"], title="Window", start_at="2027-01-10 09:00", end_at="2027-01-15 14:00")
+    number = start(client, asha, window["id"]).json()["number"]
+    submit(client, asha, window["id"], number)
+    fake_clock.advance(3 * 3600)
+    card = next(t for t in client.get(URL, headers=asha).json() if t["id"] == window["id"])
+    assert card["state"] == "ended" and card["overdue"] is False
+
+
+def test_a_test_left_running_past_the_window_counts_as_taken(client, school, admin, asha, basic, fake_clock):
+    window = make_test(client, admin, school, basic["question_ids"], title="Window", start_at="2027-01-10 09:00", end_at="2027-01-15 14:00")
+    start(client, asha, window["id"])
+    fake_clock.advance(5 * 3600)
+    card = next(t for t in client.get(URL, headers=asha).json() if t["id"] == window["id"])
+    assert card["state"] == "ended" and card["overdue"] is False

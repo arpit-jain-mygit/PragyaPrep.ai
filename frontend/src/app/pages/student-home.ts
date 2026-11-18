@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { ApiError, Member } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { StudentScheduleCard } from './student-schedule-card';
 
 /** A student's home page, with a way into their courses. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
-  imports: [RouterLink],
+  imports: [RouterLink, StudentScheduleCard],
   template: `
     <div class="card narrow" style="margin-inline: auto">
       @if (error(); as problem) {
@@ -25,6 +26,7 @@ import { TenantService } from '../core/tenant.service';
         <p class="muted">Loading…</p>
       }
     </div>
+    @if (member()) { <app-student-schedule-card /> }
   `,
 })
 export class StudentHome implements OnInit {
