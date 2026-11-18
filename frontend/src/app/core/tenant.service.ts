@@ -49,6 +49,12 @@ export class TenantService {
     }
   }
 
+  /** Take new details (for example after the admin changed the name or colour) without a reload. */
+  update(info: TenantInfo): void {
+    this.info.set(info);
+    this.applyBranding(info);
+  }
+
   private applyBranding(info: TenantInfo): void {
     const root = document.documentElement.style;
     root.setProperty('--brand', info.branding.primary_color);

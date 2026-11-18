@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { API, all, el, sessionFor, settle, setupTestBed, text } from '../testing';
+import { TenantService } from '../core/tenant.service';
 import { StudentHome } from './student-home';
 
 const base = {
@@ -171,4 +172,30 @@ describe('Student home', () => {
     expect(text(fixture)).toContain('Sign in first.');
     expect(all(fixture, 'a.tile').length).toBe(0);
   });
+
+  it('shows no contact card when the institute has filled in nothing', async () => {
+    const { fixture } = await openHome();
+    expect(fixture.nativeElement.querySelector('#contact-institute')).toBeNull();
+  });
+
+  it('shows how to contact the institute when it has filled in its details', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    TestBed.inject(TenantService).update({
+      slug: 'demo', name: 'Demo', branding: { display_name: 'Demo', primary_color: '#2563eb', logo_url: null },
+      profile: { description: 'Law coaching', city: 'Noida', contact_email: 'hi@demo.example', contact_phone: '9876543210', website: 'https://demo.example', exam_categories: ['CLAT'] },
+    });
+    const fixture = TestBed.createComponent(StudentHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/auth/me`).flush(me);
+    await settle(fixture);
+    for (const url of ['/api/my/tests', '/api/my/coursework', '/api/my/notices', '/api/my/results']) env.http.expectOne(`${API}${url}`).flush(url === '/api/my/coursework' ? NO_WORK : url === '/api/my/notices' ? { unread: 0, action_unread: 0, notices: [] } : url === '/api/my/results' ? { summary, trend: [], attempts: [], subjects: [] } : []);
+    await settle(fixture);
+    const card = el(fixture, '#contact-institute');
+    expect(card.textContent).toContain('Law coaching');
+    expect(card.textContent).toContain('CLAT');
+    expect(el<HTMLAnchorElement>(fixture, '#contact-institute a[href^="mailto:"]').getAttribute('href')).toBe('mailto:hi@demo.example');
+    expect(el<HTMLAnchorElement>(fixture, '#contact-institute a[href^="tel:"]').getAttribute('href')).toBe('tel:9876543210');
+  });
 });
+

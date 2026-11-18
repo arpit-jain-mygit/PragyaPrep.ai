@@ -6,10 +6,32 @@ export interface Branding {
   logo_url: string | null;
 }
 
+/** What an institute chose to show everyone. */
+export interface InstituteProfile {
+  description: string;
+  city: string;
+  contact_email: string;
+  contact_phone: string;
+  website: string;
+  exam_categories: string[];
+}
+
 export interface TenantInfo {
   slug: string;
   name: string;
   branding: Branding;
+  profile?: InstituteProfile;
+}
+
+/** The institute admin's My institute page. */
+export interface MyInstitute {
+  slug: string;
+  name: string;
+  primary_color: string;
+  logo_url: string | null;
+  plan: string;
+  profile: InstituteProfile;
+  admin: { email: string; first_name: string; last_name: string; mobile: string; avatar_url: string };
 }
 
 export interface Course {

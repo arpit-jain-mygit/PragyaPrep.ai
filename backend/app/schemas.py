@@ -16,6 +16,8 @@ class TenantPublicOut(BaseModel):
     slug: str
     name: str
     branding: BrandingOut
+    # What the institute chose to show everyone: description, city, contact email and phone, website, exam categories.
+    profile: dict = {}
 
 
 # ---- Login by emailed code ----

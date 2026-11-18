@@ -12,7 +12,7 @@ describe('Institute page frame', () => {
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     expect(text(fixture)).toContain('Demo Institute');
-    const links = all(fixture, 'nav a').map((a) => a.textContent?.trim());
+    const links = all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim());
     expect(links).toEqual(['Register', 'Log in']);
     expect(text(fixture)).toContain('Powered by PragyaPrep');
   });
@@ -22,7 +22,8 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Question bank', 'Tests', 'Progress', 'Announcements']);
+    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Question bank', 'Tests', 'Progress', 'Announcements']);
+    expect(all<HTMLAnchorElement>(fixture, '#institute-link')[0].getAttribute('href')).toBe('/demo/admin/institute');
     expect(all(fixture, '.who').length).toBe(0);
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });

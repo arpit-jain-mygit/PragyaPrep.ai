@@ -62,6 +62,8 @@ import { TenantService } from '../core/tenant.service';
               }
               @if (member()!.role === 'student' || member()!.role === 'parent') {
                 <a class="avatar-link" id="profile-link" [routerLink]="['/', info.slug, 'profile']" routerLinkActive="active" title="My profile" aria-label="My profile"><app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" /></a>
+              } @else if (isAdmin()) {
+                <a class="avatar-link" id="institute-link" [routerLink]="['/', info.slug, 'admin', 'institute']" routerLinkActive="active" title="My institute" aria-label="My institute"><app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" /></a>
               } @else {
                 <app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" />
               }

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
-from app import logos
+from app import institute_profile, logos
 from app.deps import get_repo, get_storage, get_tenant
 from app.repo import Repo
 from app.schemas import TenantPublicOut
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api", tags=["tenant"])
 
 @router.get("/tenant", response_model=TenantPublicOut)
 def tenant_info(tenant: dict = Depends(get_tenant)):
-    return {**tenant, "branding": {**tenant["branding"], "logo_url": logo_url(tenant)}}
+    return {**tenant, "branding": {**tenant["branding"], "logo_url": logo_url(tenant)}, "profile": institute_profile.public_profile(tenant)}
 
 
 @router.get("/logo/{slug}", include_in_schema=True)

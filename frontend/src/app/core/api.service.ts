@@ -8,6 +8,7 @@ import {
   FreeState,
   SignupForm,
   Access,
+  MyInstitute,
   MyProfile,
   StudentPhotoStart,
   RegistrationReceived,
@@ -145,6 +146,40 @@ export class ApiService {
   /** The student's photo has been sent: attach it to their registration. */
   finishRegistrationPhoto(email: string, token: string): Promise<{ ok: boolean }> {
     return this.post('/api/register/photo', { email, token });
+  }
+
+  // ---- My institute (the institute admin) ----
+
+  myInstitute(): Promise<MyInstitute> {
+    return this.get('/api/admin/institute');
+  }
+
+  saveMyInstitute(fields: Record<string, unknown>): Promise<MyInstitute> {
+    return this.call(firstValueFrom(this.http.put<MyInstitute>(`${this.base}/api/admin/institute`, fields)));
+  }
+
+  startInstituteLogo(file: { filename: string; size: number }): Promise<{ upload: UploadForm }> {
+    return this.post('/api/admin/institute/logo', file);
+  }
+
+  finishInstituteLogo(): Promise<MyInstitute> {
+    return this.post('/api/admin/institute/logo/complete');
+  }
+
+  removeInstituteLogo(): Promise<MyInstitute> {
+    return this.post('/api/admin/institute/logo/remove');
+  }
+
+  startAdminPhoto(): Promise<{ upload: UploadForm; key: string }> {
+    return this.post('/api/admin/institute/photo');
+  }
+
+  finishAdminPhoto(key: string): Promise<MyInstitute> {
+    return this.post('/api/admin/institute/photo/complete', { key });
+  }
+
+  removeAdminPhoto(): Promise<MyInstitute> {
+    return this.call(firstValueFrom(this.http.delete<MyInstitute>(`${this.base}/api/admin/institute/photo`)));
   }
 
   // ---- My profile (student and parent) ----

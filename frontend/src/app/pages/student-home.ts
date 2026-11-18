@@ -1,15 +1,16 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { ApiError, Member } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Avatar } from '../ui/avatar';
+import { Icon } from '../ui/icon';
 import { FreeHome } from './free-home';
 import { StudentTiles } from './student-tiles';
 
 /** A student's home page: a greeting and action tiles. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
-  imports: [Avatar, StudentTiles, FreeHome],
+  imports: [Avatar, Icon, StudentTiles, FreeHome],
   template: `
     @if (error(); as problem) {
       <div class="alert error" role="alert">{{ problem.detail }}</div>
@@ -22,6 +23,19 @@ import { StudentTiles } from './student-tiles';
         <span class="muted small">{{ m.email }}</span>
       </div>
       <app-student-tiles />
+      @if (contact(); as c) {
+        <section class="card" id="contact-institute">
+          <h2><app-icon name="building" [size]="18" /> Contact your institute</h2>
+          @if (c.description) { <p class="muted">{{ c.description }}</p> }
+          @if (c.exam_categories.length) { <p class="row">@for (x of c.exam_categories; track x) { <span class="chip approved">{{ x }}</span> }</p> }
+          <ul class="plain-list">
+            @if (c.city) { <li><app-icon name="flag" [size]="16" /> {{ c.city }}</li> }
+            @if (c.contact_phone) { <li><app-icon name="clock" [size]="16" /> <a [href]="'tel:' + c.contact_phone">{{ c.contact_phone }}</a></li> }
+            @if (c.contact_email) { <li><app-icon name="mail" [size]="16" /> <a [href]="'mailto:' + c.contact_email">{{ c.contact_email }}</a></li> }
+            @if (c.website) { <li><app-icon name="link" [size]="16" /> <a [href]="c.website" target="_blank" rel="noopener noreferrer">{{ c.website }}</a></li> }
+          </ul>
+        </section>
+      }
     } @else if (!error()) {
       <p class="muted">Loading…</p>
     }
@@ -31,6 +45,11 @@ export class StudentHome implements OnInit {
   private readonly api = inject(ApiService);
   readonly tenants = inject(TenantService);
   readonly member = signal<Member | null>(null);
+  /** What the institute chose to show, or nothing when it has filled in none of it. */
+  readonly contact = computed(() => {
+    const p = this.tenants.info()?.profile;
+    return p && (p.description || p.city || p.contact_email || p.contact_phone || p.website || p.exam_categories.length) ? p : null;
+  });
   readonly error = signal<ApiError | null>(null);
 
   async ngOnInit(): Promise<void> {
