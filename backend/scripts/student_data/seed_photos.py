@@ -32,6 +32,7 @@ from app.aws import make_s3, make_table
 from app.config import Settings
 from app.repo import Repo, TenantRepo, now_iso
 from app.storage import ContentStorage
+from scripts.student_data import names
 
 DEFAULT_BATCH = "demo-photos-v1"
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -90,9 +91,22 @@ def _students(scoped: TenantRepo, only_demo: bool) -> list[dict]:
     return sorted(out, key=lambda m: m["email"])
 
 
+def gender_of(member: dict) -> str:
+    """The student's recorded gender; if there is none, the gender of their first name from the demo-name lists, else nothing."""
+    recorded = (member.get("gender") or "").lower()
+    if recorded in ("male", "female"):
+        return recorded
+    first = (member.get("first_name") or "").strip().lower()
+    if first in {n.lower() for n in names.FEMALE}:
+        return "female"
+    if first in {n.lower() for n in names.MALE}:
+        return "male"
+    return ""
+
+
 def assign(groups: dict[str, list[Path]], students: list[dict], seed: int) -> list[tuple[dict, Path]]:
     """Give each student a picture, going through the pictures in turn (in an order that depends on the seed) so they repeat evenly.
-    A student gets one from their gender's pictures if there are any, else from all of them."""
+    A student gets one from their gender's pictures if there are any (the gender recorded, or else read from the first name), else from all of them."""
     rng = random.Random(f"{seed}:photos")
     pools: dict[str, list[Path]] = {}
     for key in ("male", "female"):
@@ -102,7 +116,8 @@ def assign(groups: dict[str, list[Path]], students: list[dict], seed: int) -> li
     used = {key: 0 for key in pools}
     out = []
     for member in sorted(students, key=lambda m: m["email"]):
-        key = member.get("gender") if pools.get(member.get("gender") or "") else ""
+        gender = gender_of(member)
+        key = gender if pools.get(gender) else ""
         pool = pools[key or ""]
         if not pool:
             continue

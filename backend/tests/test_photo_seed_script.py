@@ -176,3 +176,13 @@ def test_the_command_line_runs_each_command(repo, school, storage, folder, capsy
     assert "would get a photo" in out and "Gave photos to 5" in out and "Removed 5 photos" in out
     with pytest.raises(SystemExit):
         seed.main(["create", *base], repo=repo, storage=storage)
+
+
+def test_a_student_with_no_gender_recorded_is_matched_by_first_name(repo, school, storage, folder):
+    scoped = repo.scoped("aaptprep")
+    for email, first in (("n1@example.com", "Priya"), ("n2@example.com", "Rahul"), ("n3@example.com", "Xqzt")):
+        scoped.create_member({"email": email, "role": "student", "status": "approved", "first_name": first, "last_name": "T", "gender": ""})
+    chosen = {m["email"]: p for m, p in seed.plan(repo, "aaptprep", folder, 7, False, False)}
+    assert chosen["n1@example.com"].parent.name == "female" and chosen["n2@example.com"].parent.name == "male"
+    assert chosen["n3@example.com"] is not None  # an unknown name may get any picture
+    assert seed.gender_of({"gender": "female", "first_name": "Rahul"}) == "female"  # a recorded gender wins
