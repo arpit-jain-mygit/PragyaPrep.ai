@@ -7,12 +7,12 @@ import { Icon } from './icon';
   selector: 'app-persona-picker',
   imports: [Icon],
   template: `
-    <div class="persona-grid" role="group" aria-label="Who are you?">
+    <div class="persona-grid" [class.compact]="compact()" role="group" aria-label="Who are you?">
       @for (p of personas; track p.id) {
         <button type="button" class="persona-btn" [class.on]="current() === p.id" [attr.aria-pressed]="current() === p.id" [attr.data-persona]="p.id" (click)="choose.emit(p.id)">
-          <app-icon [name]="p.icon" [size]="26" />
+          <app-icon [name]="p.icon" [size]="compact() ? 20 : 26" />
           <strong>{{ p.label }}</strong>
-          <span class="soft">{{ p.blurb }}</span>
+          @if (!compact()) { <span class="soft">{{ p.blurb }}</span> }
         </button>
       }
     </div>
@@ -20,6 +20,8 @@ import { Icon } from './icon';
 })
 export class PersonaPicker {
   readonly current = input<Persona | null>(null);
+  /** Small pills for the hero, without the one-line description. */
+  readonly compact = input(false);
   readonly choose = output<Persona>();
   readonly personas = PERSONAS;
 }

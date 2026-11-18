@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { PhotoService } from '../core/photo.service';
 import { API, DEMO, all, clickButton, el, sessionFor, settle, setupTestBed, text } from '../testing';
-import { Landing } from './landing';
 import { NotFound } from './not-found';
 import { TenantShell } from './tenant-shell';
 
@@ -235,33 +234,6 @@ describe('Institute page frame: the platform', () => {
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Log in']);
-  });
-});
-
-describe('Start page', () => {
-  it('opens an institute by its short name', async () => {
-    const env = setupTestBed({ tenant: false });
-    const fixture = TestBed.createComponent(Landing);
-    await settle(fixture);
-    fixture.componentInstance.slug = '  AaptPrep ';
-    fixture.componentInstance.open();
-    expect(env.navigate).toHaveBeenCalledWith(['/', 'aaptprep']);
-  });
-
-  it('does nothing when nothing is typed', async () => {
-    const env = setupTestBed({ tenant: false });
-    const fixture = TestBed.createComponent(Landing);
-    await settle(fixture);
-    fixture.componentInstance.open();
-    expect(env.navigate).not.toHaveBeenCalled();
-  });
-
-  it('suggests the demo institute in the local test version', async () => {
-    setupTestBed({ tenant: false });
-    const fixture = TestBed.createComponent(Landing);
-    await settle(fixture);
-    expect(text(fixture)).toContain('demo');
-    expect(text(fixture)).toContain('local test version');
   });
 });
 

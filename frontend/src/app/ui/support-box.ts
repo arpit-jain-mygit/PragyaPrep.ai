@@ -9,6 +9,7 @@ import { Icon } from './icon';
 /** A small form to write to the platform admin, with an optional screenshot (chosen, or pasted into the message). Sent by email. */
 @Component({
   selector: 'app-support-box',
+  host: { '(document:keydown.escape)': 'close.emit()' },
   imports: [FormsModule, Icon],
   template: `
     <div class="support-backdrop no-shot" (click)="close.emit()"></div>

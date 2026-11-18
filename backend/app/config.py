@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # How long a signed-in session lasts before a new emailed code is needed (7 days).
     session_minutes: int = 60 * 24 * 7
 
+    # The institute whose coursework outlines (titles only) the public home page shows, until the platform has courses of its own.
+    glimpse_tenant: str = "aaptprep"
+
     # How long a download link and an upload form stay valid.
     file_url_seconds: int = 300
     upload_url_seconds: int = 900

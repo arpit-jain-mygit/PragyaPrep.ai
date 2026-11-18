@@ -26,75 +26,35 @@ export function savePersona(persona: Persona): void {
   }
 }
 
-/** What the home page says to each kind of visitor. */
-export const PITCH: Record<Persona, { headline: string; lead: string; points: { icon: string; title: string; text: string }[]; cta: string; tier: Tier }> = {
-  institute: {
-    headline: 'Run your coaching online, under your own name',
-    lead: 'Your institute gets its own page, logo and colours. Plan the coursework, add live classes, set tests and see who is falling behind.',
-    points: [
-      { icon: 'layers', title: 'Coursework plan', text: 'Subject, topic and sub-topic with notes, files, videos and finish-by dates.' },
-      { icon: 'upload', title: 'Onboard in bulk', text: 'Add students and parents one by one or from an Excel sheet.' },
-      { icon: 'chart', title: 'Progress at a glance', text: 'See who is behind, where students get stuck, and remind them.' },
-    ],
-    cta: 'See plans for institutes',
-    tier: 'popular',
-  },
-  student: {
-    headline: 'Prepare for your exam, one topic at a time',
-    lead: 'Follow a clear plan, watch live class recordings, take tests and practise exactly the topics where you are weak.',
-    points: [
-      { icon: 'book', title: 'A clear plan', text: 'Every course broken into topics and sub-topics, with what is due and what is done.' },
-      { icon: 'play', title: 'Live class recordings', text: 'Watch the class again, with the slides, whenever you need.' },
-      { icon: 'clipboard', title: 'Tests and weak-area practice', text: 'Take tests, see your results by topic and practise the topics that need work.' },
-    ],
-    cta: 'See what you get',
-    tier: 'free',
-  },
-  parent: {
-    headline: 'Stay close to your child\'s preparation',
-    lead: 'See how your child is doing in every course, what is overdue and which topics are weak, and set them practice tests.',
-    points: [
-      { icon: 'chart', title: 'Progress you can read', text: 'Coursework done, tests taken and average score, course by course.' },
-      { icon: 'flag', title: 'Know what is overdue', text: 'See what has slipped, so you can talk about it early.' },
-      { icon: 'play', title: 'Set practice tests', text: 'Pick a weak topic and set your child a practice test in one click.' },
-    ],
-    cta: 'See what you get',
-    tier: 'premium',
-  },
+/** One line for each kind of visitor, and the plan that suits them. */
+export const PITCH: Record<Persona, { line: string; chips: string[]; cta: string; tier: Tier }> = {
+  institute: { line: 'Your own page, plans, live classes, tests and progress tracking.', chips: ['Own branded page', 'Bulk onboarding', 'Progress tracking'], cta: 'See plans', tier: 'popular' },
+  student: { line: 'A clear plan, class recordings, tests and practice on your weak topics.', chips: ['Clear plan', 'Live class recordings', 'Weak-area practice'], cta: 'See plans', tier: 'free' },
+  parent: { line: 'See progress, spot what is overdue and set practice tests.', chips: ['Progress view', 'Overdue alerts', 'Set practice tests'], cta: 'See plans', tier: 'premium' },
 };
 
 export type Tier = 'free' | 'popular' | 'premium';
 
-/** The three plans. Prices are not decided yet, so Popular and Premium say so. */
-export const TIERS: { id: Tier; name: string; tag: string; price: string; priceNote: string; summary: string; features: string[]; missing: string[] }[] = [
+export interface Perk { icon: string; text: string }
+
+/** The three plans, with short perks. The first few are shown on the home page, all of them (and what is left out) on the pricing page. */
+export const TIERS: { id: Tier; name: string; tag: string; price: string; priceNote: string; perks: Perk[]; missing: string[] }[] = [
   {
-    id: 'free',
-    name: 'Free',
-    tag: 'Start here',
-    price: 'Free',
-    priceNote: 'No payment needed',
-    summary: 'See how it works. One sub-topic of every course is open; the rest is locked.',
-    features: ['One open sub-topic in every course', 'Pick a course, then a topic, then a sub-topic', 'Talk to the platform team with questions'],
-    missing: ['All course content', 'Live classes and tests', 'Parent mode', 'AI assistance'],
+    id: 'free', name: 'Free', tag: 'Start here', price: 'Free', priceNote: 'No payment needed',
+    perks: [{ icon: 'eye', text: 'Peek into every course' }, { icon: 'lock', text: '1 free sub-topic per course' }, { icon: 'mail', text: 'Ask us anything' }],
+    missing: ['Full courses', 'Live classes and tests', 'Parent mode', 'AI assistant'],
   },
   {
-    id: 'popular',
-    name: 'Popular',
-    tag: 'Most chosen',
-    price: 'Price coming soon',
-    priceNote: 'To be announced',
-    summary: 'Everything a student or an institute needs to prepare, with platform support.',
-    features: ['All course content, notes, files and videos', 'Live class recordings and slides', 'Tests, results and weak-area practice', 'For institutes: own page, bulk onboarding and progress tracking', 'Platform support'],
-    missing: ['Parent mode', 'AI assistance'],
+    id: 'popular', name: 'Popular', tag: 'Most chosen', price: 'Price coming soon', priceNote: 'To be announced',
+    perks: [
+      { icon: 'layers', text: 'Every course, fully open' }, { icon: 'play', text: 'Live class recordings' }, { icon: 'clipboard', text: 'Tests and weak-area practice' },
+      { icon: 'building', text: 'Institutes: own branded page' }, { icon: 'help', text: 'Platform support' },
+    ],
+    missing: ['Parent mode', 'AI assistant'],
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    tag: 'Everything',
-    price: 'Price coming soon',
-    priceNote: 'To be announced',
-    summary: 'Everything in Popular, plus parents in the picture and AI help.',
-    features: ['Everything in Popular', 'Parent mode: progress view and practice tests set by parents', 'AI assistance'],
+    id: 'premium', name: 'Premium', tag: 'Everything', price: 'Price coming soon', priceNote: 'To be announced',
+    perks: [{ icon: 'check', text: 'Everything in Popular' }, { icon: 'users', text: 'Parent mode' }, { icon: 'chart', text: 'Practice tests set by parents' }, { icon: 'bell', text: 'AI study assistant' }],
     missing: [],
   },
 ];

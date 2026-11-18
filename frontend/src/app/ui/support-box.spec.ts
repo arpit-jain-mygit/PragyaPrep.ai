@@ -110,6 +110,12 @@ describe('Support box', () => {
     expect(http.expectOne(`${API}/api/support`).request.body.screenshot).toBeUndefined();
   });
 
+  it('closes with the Escape key', async () => {
+    const { closed } = await open();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the form out of its own screenshot', async () => {
     const { fixture } = await open();
     expect(el(fixture, '#support-box').classList.contains('no-shot')).toBe(true);

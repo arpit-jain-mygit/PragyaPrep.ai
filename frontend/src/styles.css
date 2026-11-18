@@ -546,23 +546,48 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 
 
 /* ---- The public home and pricing pages ---- */
-.home .hero h1 { font-size: 1.9rem; }
-.lead { font-size: 1.05rem; color: var(--muted); }
-.persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.5rem; }
-@media (max-width: 40rem) { .persona-grid { grid-template-columns: 1fr; } }
+.hero-band { background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); color: #fff; padding: 2.6rem 1rem 2.4rem; text-align: center; }
+.hero-inner { max-width: 44rem; margin: 0 auto; }
+.hero-band h1 { font-size: 2.6rem; line-height: 1.1; margin: 0 0 0.6rem; }
+.hero-band h1 span { color: #fde68a; }
+.hero-band p { color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; }
+.hero-q { margin: 1.3rem 0 0.4rem; font-weight: 600; }
+.hero-line { margin: 0.9rem 0 0.4rem; }
+.chips-row { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin: 0 0 1.1rem; }
+.hero-chip { background: rgba(255, 255, 255, 0.18); border-radius: 999px; padding: 0.2rem 0.8rem; font-size: 0.9rem; color: #fff; }
+.btn.light { background: #fff; color: #1d4ed8; }
+.btn.light:hover:not(:disabled) { background: #eef2ff; }
+.persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin: 0.8rem 0; }
+@media (max-width: 40rem) { .persona-grid { grid-template-columns: 1fr; } .hero-band h1 { font-size: 2rem; } }
 .persona-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; text-align: left; padding: 1rem; background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); cursor: pointer; font: inherit; color: var(--ink); }
 .persona-btn:hover { border-color: var(--brand); }
 .persona-btn.on { border-color: var(--brand); background: var(--info-bg); }
 .persona-btn app-icon { color: var(--brand); }
-.point-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
-@media (max-width: 40rem) { .point-grid { grid-template-columns: 1fr; } }
-.point { display: flex; flex-direction: column; gap: 0.2rem; }
-.point app-icon { color: var(--brand); }
+.persona-grid.compact { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+.persona-grid.compact .persona-btn { flex-direction: row; align-items: center; gap: 0.5rem; padding: 0.55rem 1.1rem; border-radius: 999px; background: rgba(255, 255, 255, 0.14); border: 2px solid rgba(255, 255, 255, 0.35); color: #fff; }
+.persona-grid.compact .persona-btn app-icon { color: #fff; }
+.persona-grid.compact .persona-btn:hover { background: rgba(255, 255, 255, 0.25); border-color: #fff; }
+.persona-grid.compact .persona-btn.on { background: #fff; border-color: #fff; color: #1d4ed8; }
+.persona-grid.compact .persona-btn.on app-icon { color: #1d4ed8; }
+.page .persona-grid.compact .persona-btn { background: var(--card); border-color: var(--line); color: var(--ink); }
+.page .persona-grid.compact .persona-btn app-icon { color: var(--brand); }
+.page .persona-grid.compact .persona-btn.on { background: var(--info-bg); border-color: var(--brand); color: var(--ink); }
 .tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
 @media (max-width: 52rem) { .tier-grid { grid-template-columns: 1fr; } }
-.tier h2, .tier h3 { margin: 0.4rem 0 0.2rem; }
-.tier.suits { border: 2px solid var(--brand); }
-.tier .price { margin: 0.2rem 0 0.6rem; }
-.tier ul { padding-left: 0; margin: 0.6rem 0 1rem; }
-.tier ul li { list-style: none; margin-bottom: 0.3rem; display: flex; flex-wrap: nowrap; gap: 0.45rem; align-items: flex-start; }
-.tier ul li app-icon { margin-top: 0.2rem; }
+.tier h2, .tier h3 { margin: 0.5rem 0 0.1rem; font-size: 1.35rem; }
+.tier.suits { border: 2px solid var(--brand); box-shadow: 0 6px 20px rgba(37, 99, 235, 0.15); }
+.tier .price { margin: 0.1rem 0 0.7rem; }
+.tier .perks { margin: 0 0 1rem; }
+.tier .perks li { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 0.5rem; padding: 0.25rem 0; }
+.tier .perks li app-icon { color: var(--brand); margin-top: 0.15rem; }
+.tier .perks li.soft app-icon { color: var(--muted); }
+.login-pop { position: absolute; right: 1rem; top: 3.6rem; z-index: 30; width: min(22rem, calc(100vw - 2rem)); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2); }
+.topbar { position: relative; }
+.dialog-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 40; }
+.dialog { position: fixed; z-index: 41; top: 4rem; left: 50%; transform: translateX(-50%); width: min(36rem, calc(100vw - 2rem)); max-height: calc(100vh - 6rem); overflow: auto; }
+.glimpse-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0; }
+.chip-btn { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 0.3rem 0.9rem; cursor: pointer; font: inherit; color: var(--ink); }
+.chip-btn.on { background: var(--brand); border-color: var(--brand); color: var(--brand-text); }
+.glimpse-subject h3 { margin: 0.8rem 0 0.2rem; font-size: 1rem; }
+.glimpse-subject details { border-top: 1px solid var(--line); padding: 0.35rem 0; }
+.glimpse-subject summary { cursor: pointer; font-weight: 600; }

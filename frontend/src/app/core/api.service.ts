@@ -326,6 +326,10 @@ export class ApiService {
     return this.post('/api/my/practice', body);
   }
 
+  glimpse(): Promise<{ courses: { name: string; subjects: { name: string; topics: { title: string; subtopics: string[] }[] }[] }[] }> {
+    return this.get('/api/public/glimpse');
+  }
+
   sendSupport(body: { message: string; page?: string; screenshot?: string }): Promise<{ sent: boolean }> {
     return this.post('/api/support', body);
   }
