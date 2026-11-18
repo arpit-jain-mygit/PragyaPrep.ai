@@ -491,12 +491,12 @@ body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
 td .cw-bar { display: inline-block; width: 5rem; vertical-align: middle; margin-right: 0.4rem; }
 
 /* Admin home tiles (the same loud look as the student home). */
-#tile-pending { --from: #d97706; --to: #db2777; }
-#tile-students { --from: #1d4ed8; --to: #7c3aed; }
-#tile-behind { --from: #be185d; --to: #7c3aed; }
-#tile-tests { --from: #0f766e; --to: #2563eb; }
-#tile-questions { --from: #7c3aed; --to: #c026d3; }
-#tile-courses { --from: #ea580c; --to: #db2777; }
+#tile-pending { --from: #b45309; --to: #d97706; }
+#tile-students { --from: #1d4ed8; --to: #3b82f6; }
+#tile-behind { --from: #be123c; --to: #e11d48; }
+#tile-tests { --from: #0e7490; --to: #0891b2; }
+#tile-questions { --from: #6d28d9; --to: #a855f7; }
+#tile-courses { --from: #047857; --to: #16a34a; }
 #tile-pending.alert-tile, #tile-behind.alert-tile { --from: #dc2626; --to: #f97316; }
 
 /* Notices: the badge on the top bar link, the home tile and the list. */

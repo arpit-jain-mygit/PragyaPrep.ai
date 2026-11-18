@@ -211,3 +211,4 @@ The login page shows these messages straight away. When an email isn't registere
 - A suspended tenant's students lose access immediately.
 - Tenant branding: display name, logo and primary colour, changed by the platform admin.
 - Top-bar icons have a distinct tint per section and bolder strokes so they stay readable on any brand colour.
+- Admin home tiles each have a distinct colour by meaning (amber pending, blue students, red behind, cyan tests, violet questions, green courses).
