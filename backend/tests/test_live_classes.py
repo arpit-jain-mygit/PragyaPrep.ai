@@ -337,7 +337,8 @@ def test_a_class_needs_a_subject_and_shows_where_it_sits(client, admin, cid, pla
     made = make(client, admin, cid, topic_id=plan["percent"], subtopic_id=plan["sub"]).json()[0]
     assert (made["paper_id"], made["topic_id"], made["subtopic_id"]) == ("quantitative-ability", plan["percent"], plan["sub"])
     assert made["place"] == "Quantitative Ability › Percentages › Concepts"
-    assert make(client, admin, cid, title="Subject only").json()[0]["place"] == "Quantitative Ability"
+    only = make(client, admin, cid, title="Subject only").json()
+    assert next(c for c in only if c["title"] == "Subject only")["place"] == "Quantitative Ability"
 
 
 @pytest.mark.parametrize("extra,problem", [

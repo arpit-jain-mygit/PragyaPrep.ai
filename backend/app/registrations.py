@@ -347,6 +347,22 @@ def _email_changed_email(tenant: dict, record: dict) -> Email:
     )
 
 
+def _sync_access(scoped: TenantRepo, email: str, person: dict, before: list[str], after: list[str], admin_email: str) -> None:
+    """The courses on a registration were changed: a course taken off loses its access, and one added is opened (for an approved
+    student). Access the student has to other courses is left alone."""
+    from app import content  # imported here because content is loaded after this module
+
+    for course_id in set(before) - set(after):
+        if scoped.get_access(email, course_id) is not None:
+            scoped.delete_access(email, course_id)
+    if person.get("status") == "approved":
+        for course_id in [c for c in after if c not in before]:
+            try:
+                content.grant_access(scoped, email, course_id, admin_email, source="edit")
+            except Exception:
+                logger.exception("Could not open a course after an edit")
+
+
 def edit(
     scoped: TenantRepo, tenant: dict, mailer: Mailer, email: str, changes: dict, admin_email: str
 ) -> tuple[dict, bool]:
@@ -396,8 +412,11 @@ def edit(
         return person, False
 
     audit = {"edited_by": admin_email, "edited_at": now_iso()}
+    changed_courses = clean["course_ids"] != current_ids
     if new_email == email:
         scoped.update_member(email, **fields, **audit)
+        if changed_courses:
+            _sync_access(scoped, email, person, current_ids, clean["course_ids"], admin_email)
         return scoped.get_member(email), False
 
     moved = {**person, **fields, **audit, "email": new_email, "previous_email": email}
@@ -409,5 +428,7 @@ def edit(
     from app import parents  # imported here because parents itself uses this module
 
     parents.relink(scoped, email, new_email)
+    if changed_courses:
+        _sync_access(scoped, new_email, person, current_ids, clean["course_ids"], admin_email)
     updated = scoped.get_member(new_email)
     return updated, send_quietly(mailer, _email_changed_email(tenant, updated))

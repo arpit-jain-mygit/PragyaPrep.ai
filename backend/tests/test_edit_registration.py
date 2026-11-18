@@ -182,3 +182,39 @@ def test_a_taken_email_is_reported_together_with_other_mistakes(client, admin, s
     response = edit(client, admin, student, email="taken@example.com", mobile="555")
     assert response.status_code == 422
     assert set(response.json()["errors"]) == {"email", "mobile"}
+
+
+# ---- Changing the courses changes the access ----
+
+def _open_courses(client, admin, who):
+    return sorted(a["course_name"] for a in client.get(f"/api/admin/registrations/{who}/access", headers=admin).json())
+
+
+def test_adding_a_course_opens_it_and_taking_one_off_closes_it(client, admin, student, school):
+    both = [school["clat"]["id"], school["cat"]["id"]]
+    client.post(f"/api/admin/registrations/{student}/access", json={"course_id": school["clat"]["id"]}, headers=admin)
+    assert edit(client, admin, student, course_ids=both).status_code == 200
+    assert _open_courses(client, admin, student) == ["CAT", "CLAT"]
+    assert edit(client, admin, student, course_ids=[school["clat"]["id"]]).status_code == 200
+    assert _open_courses(client, admin, student) == ["CLAT"]
+
+
+def test_access_to_courses_not_touched_by_the_edit_is_left_alone(client, admin, student, school):
+    client.post(f"/api/admin/registrations/{student}/access", json={"course_id": school["cat"]["id"]}, headers=admin)
+    assert edit(client, admin, student, city="Noida").status_code == 200
+    assert "CAT" in _open_courses(client, admin, student)
+    assert edit(client, admin, student, course_ids=[school["clat"]["id"], school["cat"]["id"]]).status_code == 200
+    assert "CAT" in _open_courses(client, admin, student)
+
+
+def test_the_access_follows_when_the_email_is_changed_in_the_same_edit(client, admin, student, school):
+    response = edit(client, admin, student, email="asha.new@example.com", course_ids=[school["cat"]["id"]])
+    assert response.status_code == 200
+    assert _open_courses(client, admin, "asha.new@example.com") == ["CAT"]
+
+
+def test_a_student_who_is_not_approved_gets_no_access_from_an_edit(client, admin, school):
+    form = valid_form(school["clat"]["id"], email="pending@example.com")
+    assert client.post("/api/register", json=form, headers=headers("aaptprep")).status_code == 201
+    assert edit(client, admin, "pending@example.com", course_ids=[school["cat"]["id"]]).status_code == 200
+    assert client.get("/api/admin/registrations/pending@example.com/access", headers=admin).json() == []
