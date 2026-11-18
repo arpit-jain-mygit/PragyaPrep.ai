@@ -1,3 +1,4 @@
+import { isNative, openInApp } from '../core/native';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { ApiError, FreeSample, FreeState, Member, StudentTestCard } from '../core/models';
@@ -118,11 +119,12 @@ export class FreeHome implements OnInit {
     if (this.opening()) return;
     this.opening.set(fileId);
     this.error.set(null);
-    const tab = window.open('', '_blank');
+    const tab = (isNative() ? null : window.open('', '_blank'));
     if (tab) tab.opener = null;
     try {
       const link = await this.api.freeFileLink(fileId);
-      if (tab) tab.location.href = link.url;
+      if (isNative()) await openInApp(link.url);
+      else if (tab) tab.location.href = link.url;
       else window.location.href = link.url;
     } catch (error) {
       tab?.close();

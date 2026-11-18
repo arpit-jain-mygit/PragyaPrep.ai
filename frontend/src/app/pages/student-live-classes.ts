@@ -1,3 +1,4 @@
+import { isNative, openInApp } from '../core/native';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { formatSize, shortDate } from '../core/format';
@@ -97,12 +98,13 @@ export class StudentLiveClasses implements OnInit {
     this.opening.set(file.file_id);
     this.error.set(null);
     // A new tab must be opened right away, while the click is still fresh, or the browser may block it.
-    const tab = file.kind === 'pdf' ? window.open('', '_blank') : null;
+    const tab = file.kind === 'pdf' ? (isNative() ? null : window.open('', '_blank')) : null;
     if (tab) tab.opener = null;
     try {
       const link = await this.api.fileLink(course.course_id, file.file_id);
       if (file.kind === 'pdf') {
-        if (tab) tab.location.href = link.url;
+        if (isNative()) await openInApp(link.url);
+        else if (tab) tab.location.href = link.url;
         else window.location.href = link.url;
       } else {
         this.renewals = 0;
