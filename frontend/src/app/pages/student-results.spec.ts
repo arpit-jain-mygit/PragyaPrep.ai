@@ -80,6 +80,26 @@ describe('Student results across tests', () => {
     expect(el(fixture, '[data-topic="Reading comprehension"] .meter').className).not.toContain('mid');
   });
 
+  it('makes a practice test on a weak topic and opens it', async () => {
+    const { fixture, http, navigate } = await open();
+    el(fixture, '[data-weak="Magnetism"]').click();
+    const request = http.expectOne(`${API}/api/my/practice`);
+    expect(request.request.body).toEqual({ paper: 'physics', topic: 'Magnetism' });
+    request.flush({ id: 'p1', title: 'Practice: Magnetism', question_count: 10 }, { status: 201, statusText: 'Created' });
+    await settle(fixture);
+    expect(navigate).toHaveBeenCalledWith(['/', 'demo', 'tests', 'p1']);
+  });
+
+  it('also offers practice on topics that are only fair, and explains a refusal', async () => {
+    const { fixture, http, navigate } = await open();
+    expect(all(fixture, '[data-improve]').map((b) => b.getAttribute('data-improve'))).toEqual(['Optics']);
+    el(fixture, '[data-improve="Optics"]').click();
+    http.expectOne(`${API}/api/my/practice`).flush({ detail: 'Practice tests open once you are enrolled in a course.' }, { status: 403, statusText: 'x' });
+    await settle(fixture);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(text(fixture)).toContain('Practice tests open once you are enrolled');
+  });
+
   it('lists every finished attempt with its marks and result, and links to it', async () => {
     const { fixture } = await open();
     expect(rows(fixture)).toEqual(['t2#1', 't1#2', 't1#1']);

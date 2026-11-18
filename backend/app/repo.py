@@ -744,6 +744,18 @@ class TenantRepo:
             },
         )
 
+    def create_practice(self, test: dict) -> None:
+        """A practice test made for one student. It is kept under that student, never in the institute's list of tests."""
+        _put_new(
+            self.table,
+            {**self._test_key(test["id"]), **test, "GSI1PK": f"{self._prefix}PRACTICE#{test['practice_for']}", "GSI1SK": f"{test['created_at']}#{test['id']}"},
+        )
+
+    def list_practice(self, email: str) -> list[dict]:
+        """A student's practice tests, newest first."""
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}PRACTICE#{email}"), ScanIndexForward=False)
+        return [_plain(item) for item in response["Items"]]
+
     def get_test(self, test_id: str) -> dict | None:
         return _plain(self.table.get_item(Key=self._test_key(test_id)).get("Item"))
 

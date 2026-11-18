@@ -370,6 +370,10 @@ export interface AttemptLine {
 
 export interface StudentTestCard {
   id: string;
+  /** A practice test made from a weak topic, only for this student. */
+  practice?: boolean;
+  /** Who made a practice test, when it was not the student (a parent). */
+  set_by?: string | null;
   title: string;
   description: string;
   start_at: string | null;

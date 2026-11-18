@@ -30,6 +30,7 @@ const GROUP_ICONS = { overdue: 'flag', open: 'play', upcoming: 'clock', finished
       <article class="card test-card" [attr.data-test]="test.title">
         <div class="row q-head">
           <strong>{{ test.title }}</strong>
+          @if (test.practice) { <span class="chip" title="A practice test, only for you">Practice</span> }
           <span class="status" [class.ok]="test.state === 'open' && !test.overdue" [class.warn]="test.state === 'upcoming' || urgent(test)" [class.bad]="test.overdue">{{ stateLabel(test) }}</span>
           <div class="q-actions">
             <a class="btn small" [class.secondary]="!canStart(test)" [routerLink]="['/', tenants.slug(), 'tests', test.id]">

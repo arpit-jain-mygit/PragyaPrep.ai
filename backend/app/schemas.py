@@ -493,3 +493,11 @@ class SupportIn(BaseModel):
     message: Any = None
     page: Any = None
     screenshot: Any = None
+
+
+class PracticeIn(BaseModel):
+    """A practice test on one topic. Checked by hand."""
+
+    paper: Any = None
+    topic: Any = None
+    count: Any = 10

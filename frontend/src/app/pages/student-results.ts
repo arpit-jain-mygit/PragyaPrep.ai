@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDate } from '../core/format';
 import { ApiError, MyResults, MyResultRow } from '../core/models';
@@ -57,7 +57,11 @@ import { InfoTip } from '../ui/info-tip';
                 <span class="topic-name">{{ topic.topic }}</span>
                 <span class="meter" [class.hard]="level(topic.accuracy) === 'weak'" [class.mid]="level(topic.accuracy) === 'ok'"><i [style.width.%]="topic.accuracy"></i></span>
                 <span class="soft topic-score">{{ topic.correct }} of {{ topic.questions }} · {{ topic.accuracy }}%</span>
-                @if (level(topic.accuracy) === 'weak') { <span class="chip rejected" [attr.data-weak]="topic.topic">Practise this</span> }
+                @if (level(topic.accuracy) === 'weak') {
+                  <button class="btn small" type="button" [attr.data-weak]="topic.topic" [disabled]="making()" (click)="practise(subject.id, topic.topic)"><app-icon name="play" [size]="14" /> Practise this</button>
+                } @else if (level(topic.accuracy) === 'ok') {
+                  <button class="btn small secondary" type="button" [attr.data-improve]="topic.topic" [disabled]="making()" (click)="practise(subject.id, topic.topic)"><app-icon name="play" [size]="14" /> Practise</button>
+                }
               </div>
             }
           </div>
@@ -106,7 +110,9 @@ import { InfoTip } from '../ui/info-tip';
 export class StudentResults implements OnInit {
   private readonly api = inject(ApiService);
   readonly tenants = inject(TenantService);
+  private readonly router = inject(Router);
   readonly date = formatDate;
+  readonly making = signal(false);
 
   readonly data = signal<MyResults | null>(null);
   readonly loading = signal(false);
@@ -137,6 +143,21 @@ export class StudentResults implements OnInit {
       this.error.set(error as ApiError);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Make a practice test on this topic and open it. */
+  async practise(paper: string, topic: string): Promise<void> {
+    if (this.making()) return;
+    this.making.set(true);
+    this.error.set(null);
+    try {
+      const made = await this.api.makePractice({ paper, topic });
+      await this.router.navigate(['/', this.tenants.slug(), 'tests', made.id]);
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.making.set(false);
     }
   }
 

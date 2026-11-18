@@ -83,6 +83,8 @@ def _schedule(test: dict, now: float, taken: bool) -> dict:
 
 
 def _visible(scoped: TenantRepo, member: dict, test: dict | None) -> bool:
+    if test and test.get("practice_for"):
+        return test["practice_for"] == member["email"] and test.get("status") == "published"
     return bool(test) and test.get("status") == "published" and bool(set(test.get("courses") or []) & _active_courses(scoped, member))
 
 
@@ -291,6 +293,7 @@ def test_card(scoped: TenantRepo, member: dict, test: dict) -> dict:
     total = Decimal(test["marks_correct"]) * count
     return {
         "id": test["id"], "title": test["title"], "description": test.get("description") or "",
+        "practice": bool(test.get("practice_for")), "set_by": test.get("created_by") if test.get("practice_for") and test.get("created_by") != member["email"] else None,
         "start_at": test.get("start_at"), "end_at": test.get("end_at"),
         "duration_minutes": test["duration_minutes"], "max_attempts": test["max_attempts"],
         "pass_percentage": test["pass_percentage"], "marks_correct": test["marks_correct"], "marks_incorrect": test["marks_incorrect"],
@@ -308,6 +311,7 @@ def list_tests(scoped: TenantRepo, member: dict) -> list[dict]:
     """Published tests for the courses this student can open now."""
     mine = _active_courses(scoped, member)
     tests = [t for t in scoped.list_tests() if t.get("status") == "published" and set(t.get("courses") or []) & mine]
+    tests += [t for t in scoped.list_practice(member["email"]) if t.get("status") == "published"]
     return [test_card(scoped, member, t) for t in tests]
 
 

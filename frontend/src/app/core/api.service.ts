@@ -279,6 +279,10 @@ export class ApiService {
     return this.get('/api/my/coursework');
   }
 
+  makePractice(body: { paper: string; topic: string; count?: number }): Promise<{ id: string; title: string; question_count: number }> {
+    return this.post('/api/my/practice', body);
+  }
+
   sendSupport(body: { message: string; page?: string; screenshot?: string }): Promise<{ sent: boolean }> {
     return this.post('/api/support', body);
   }
