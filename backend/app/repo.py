@@ -232,6 +232,9 @@ class TenantRepo:
         for access in self.list_access(old_email):
             self.put_access(new_email, {k: v for k, v in access.items() if k not in ("PK", "SK")})
             self.delete_access(old_email, access["course_id"])
+        for done in self.list_done(old_email):
+            self.put_done(new_email, done["course_id"], done["subtopic_id"], done["done_at"])
+            self.delete_done(old_email, done["course_id"], done["subtopic_id"])
         self.table.delete_item(Key=self._member_key(old_email))
 
     def replace_rejected_member(self, member: dict) -> bool:
@@ -327,6 +330,33 @@ class TenantRepo:
             KeyConditionExpression=Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with("ACCESS#"),
         )
         return sorted((_plain(item) for item in response["Items"]), key=lambda a: a.get("granted_at", ""))
+
+    # ---- Coursework progress: the sub-topics a student has marked complete. Stored with the student ----
+
+    def _done_key(self, email: str, course_id: str, subtopic_id: str) -> dict:
+        return {"PK": self._member_key(email)["PK"], "SK": f"DONE#{course_id}#{subtopic_id}"}
+
+    def put_done(self, email: str, course_id: str, subtopic_id: str, done_at: str) -> None:
+        self.table.put_item(Item={**self._done_key(email, course_id, subtopic_id), "course_id": course_id, "subtopic_id": subtopic_id, "done_at": done_at})
+
+    def get_done(self, email: str, course_id: str, subtopic_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._done_key(email, course_id, subtopic_id)).get("Item"))
+
+    def list_done(self, email: str) -> list[dict]:
+        """Everything this student has marked complete, across courses."""
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with("DONE#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def delete_done(self, email: str, course_id: str, subtopic_id: str) -> None:
+        self.table.delete_item(Key=self._done_key(email, course_id, subtopic_id))
 
     def delete_access(self, email: str, course_id: str) -> None:
         self.table.delete_item(Key=self._access_key(email, course_id))

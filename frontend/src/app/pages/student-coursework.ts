@@ -1,0 +1,269 @@
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ApiService } from '../core/api.service';
+import { formatSize, shortDate } from '../core/format';
+import { ApiError, StudentCourse, StudentCoursework, StudentMaterial, StudentSubject, StudentSubtopic, StudentTopic } from '../core/models';
+import { Icon } from '../ui/icon';
+import { InfoTip } from '../ui/info-tip';
+
+interface Chosen {
+  course: StudentCourse;
+  subject: StudentSubject;
+  topic: StudentTopic;
+  sub: StudentSubtopic;
+}
+
+/**
+ * A student's coursework: a tree on the left (course, subject, topic, sub-topic, each with its progress) and the chosen
+ * sub-topic on the right, with its note, finish-by date, material and a Mark complete button.
+ */
+@Component({
+  selector: 'app-student-coursework',
+  imports: [Icon, InfoTip],
+  template: `
+    <div class="page-head">
+      <h1>Coursework <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet." /></h1>
+      @if (data(); as d) {
+        @if (d.summary.total) {
+          <span class="cw-overall" id="overall">
+            <strong>{{ d.summary.done }}</strong> of {{ d.summary.total }} done
+            <span class="cw-bar"><i [style.width.%]="percent(d.summary.done, d.summary.total)"></i></span>
+          </span>
+        }
+      }
+    </div>
+
+    @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
+
+    @if (loading()) {
+      <p class="muted">Loading…</p>
+    } @else if (data(); as d) {
+      @if (!d.courses.length) {
+        <div class="empty-state" id="no-coursework"><app-icon name="layers" [size]="32" /><p>No coursework yet</p></div>
+      } @else {
+        <div class="cw-student">
+          <nav class="card cw-nav" id="nav" aria-label="Coursework">
+            @for (course of d.courses; track course.id) {
+              <div class="cw-node" [attr.data-course]="course.name">
+                <button type="button" class="cw-row cw-course" [attr.aria-expanded]="isOpen('c:' + course.id)" (click)="toggle('c:' + course.id)">
+                  <app-icon [name]="isOpen('c:' + course.id) ? 'chevron' : 'chevron-right'" [size]="16" />
+                  <strong>{{ course.name }}</strong>
+                  @if (course.overdue) { <span class="status bad" title="Overdue">{{ course.overdue }}</span> }
+                  <span class="cw-count">{{ course.progress.done }}/{{ course.progress.total }}</span>
+                </button>
+                <span class="cw-bar"><i [style.width.%]="percent(course.progress.done, course.progress.total)"></i></span>
+                @if (isOpen('c:' + course.id)) {
+                  @for (subject of course.subjects; track subject.paper_id) {
+                    <div class="cw-node cw-level-1" [attr.data-subject]="subject.name">
+                      <button type="button" class="cw-row" [attr.aria-expanded]="isOpen('s:' + course.id + ':' + subject.paper_id)" (click)="toggle('s:' + course.id + ':' + subject.paper_id)">
+                        <app-icon [name]="isOpen('s:' + course.id + ':' + subject.paper_id) ? 'chevron' : 'chevron-right'" [size]="16" />
+                        <span>{{ subject.name }}</span>
+                        <span class="cw-count">{{ subject.progress.done }}/{{ subject.progress.total }}</span>
+                      </button>
+                      @if (isOpen('s:' + course.id + ':' + subject.paper_id)) {
+                        @for (topic of subject.topics; track topic.id) {
+                          <div class="cw-node cw-level-2" [attr.data-topic]="topic.title">
+                            <button type="button" class="cw-row" [attr.aria-expanded]="isOpen('t:' + topic.id)" (click)="toggle('t:' + topic.id)">
+                              <app-icon [name]="isOpen('t:' + topic.id) ? 'chevron' : 'chevron-right'" [size]="16" />
+                              <span>{{ topic.title }}</span>
+                              <span class="cw-count">{{ topic.progress.done }}/{{ topic.progress.total }}</span>
+                            </button>
+                            @if (isOpen('t:' + topic.id)) {
+                              @for (sub of topic.subtopics; track sub.id) {
+                                <button type="button" class="cw-row cw-leaf" [class.selected]="chosen()?.sub?.id === sub.id" [attr.aria-current]="chosen()?.sub?.id === sub.id ? 'true' : null"
+                                  [attr.data-sub]="sub.title" (click)="select({ course, subject, topic, sub })">
+                                  <app-icon [name]="sub.done ? 'check' : sub.overdue ? 'flag' : 'clock'" [size]="15" [class]="sub.done ? 'ok-icon' : sub.overdue ? 'bad-icon' : 'soft-icon'" />
+                                  <span class="cw-leaf-title">{{ sub.title }}</span>
+                                </button>
+                              }
+                            }
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </nav>
+
+          <section class="cw-detail" id="detail" aria-live="polite">
+            @if (chosen(); as pick) {
+              <div class="card">
+                <p class="soft cw-crumb" id="crumb">{{ pick.course.name }} › {{ pick.subject.name }} › {{ pick.topic.title }}</p>
+                <h2 id="sub-name">{{ pick.sub.title }}</h2>
+                <p class="cw-due" id="due" [class.late]="pick.sub.overdue && !pick.sub.done" [class.done]="pick.sub.done">
+                  <app-icon [name]="pick.sub.done ? 'check' : pick.sub.overdue ? 'flag' : 'calendar'" [size]="16" /> {{ dueText(pick.sub) }}
+                </p>
+                @if (pick.sub.note) { <p class="cw-note" id="note">{{ pick.sub.note }}</p> }
+
+                @if (pick.sub.materials.length) {
+                  <ul class="cw-material" id="material">
+                    @for (item of pick.sub.materials; track $index) {
+                      <li>
+                        @if (item.type === 'link') {
+                          <app-icon name="link" [size]="16" />
+                          <a [href]="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
+                        } @else {
+                          <app-icon name="file" [size]="16" />
+                          <span>{{ item.title }} <span class="soft">{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}@if (item.size) { · {{ size(item.size) }} }</span></span>
+                          <button class="btn small secondary" type="button" [disabled]="opening() === item.file_id" (click)="openFile(pick, item)">
+                            <app-icon [name]="item.kind === 'pdf' ? 'eye' : 'play'" [size]="15" /> {{ item.kind === 'pdf' ? 'Open' : 'Play' }}
+                          </button>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+
+                @if (playing(); as video) {
+                  <video id="player" controls autoplay [src]="video.url" (error)="renew(pick, video.id)" style="width: 100%; border-radius: 8px; margin-top: 0.6rem"></video>
+                }
+
+                <div class="row cw-actions">
+                  @if (pick.sub.done) {
+                    <button class="btn secondary" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="rotate" [size]="16" /> Mark not complete</button>
+                  } @else {
+                    <button class="btn" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="check" [size]="16" /> Mark complete</button>
+                  }
+                </div>
+              </div>
+            } @else {
+              <div class="empty-state"><app-icon name="layers" [size]="32" /><p>Pick a sub-topic</p></div>
+            }
+          </section>
+        </div>
+      }
+    }
+  `,
+})
+export class StudentCourseworkPage implements OnInit {
+  private readonly api = inject(ApiService);
+
+  readonly data = signal<StudentCoursework | null>(null);
+  readonly loading = signal(false);
+  readonly busy = signal(false);
+  readonly error = signal<ApiError | null>(null);
+  readonly open = signal<Set<string>>(new Set());
+  readonly selectedId = signal<string | null>(null);
+  readonly opening = signal<string | null>(null);
+  readonly playing = signal<{ id: string; url: string } | null>(null);
+  private renewals = 0;
+
+  size = formatSize;
+
+  /** The chosen sub-topic with its place in the tree, from the latest data. */
+  readonly chosen = computed<Chosen | null>(() => {
+    const id = this.selectedId();
+    for (const course of this.data()?.courses ?? [])
+      for (const subject of course.subjects)
+        for (const topic of subject.topics)
+          for (const sub of topic.subtopics) if (sub.id === id) return { course, subject, topic, sub };
+    return null;
+  });
+
+  ngOnInit(): void {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const data = await this.api.myCoursework();
+      this.data.set(data);
+      // Start on the first sub-topic that is not done (else the first one), with its path open.
+      const all = data.courses.flatMap((course) => course.subjects.flatMap((subject) => subject.topics.flatMap((topic) => topic.subtopics.map((sub) => ({ course, subject, topic, sub })))));
+      const first = all.find((x) => !x.sub.done) ?? all[0];
+      this.open.set(new Set(data.courses.map((c) => `c:${c.id}`)));
+      if (first) this.select(first);
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  isOpen(key: string): boolean {
+    return this.open().has(key);
+  }
+
+  toggle(key: string): void {
+    const next = new Set(this.open());
+    if (!next.delete(key)) next.add(key);
+    this.open.set(next);
+  }
+
+  select(pick: Chosen): void {
+    const next = new Set(this.open());
+    next.add(`c:${pick.course.id}`).add(`s:${pick.course.id}:${pick.subject.paper_id}`).add(`t:${pick.topic.id}`);
+    this.open.set(next);
+    this.selectedId.set(pick.sub.id);
+    this.playing.set(null);
+    this.renewals = 0;
+  }
+
+  percent(done: number, total: number): number {
+    return total ? Math.round((done / total) * 100) : 0;
+  }
+
+  dueText(sub: StudentSubtopic): string {
+    if (sub.done) return `Done ${shortDate((sub.done_at ?? '').slice(0, 10))}`;
+    if (sub.due === null || sub.days_left === null) return 'No finish-by date';
+    const days = sub.days_left;
+    const when = days < 0 ? `Overdue by ${-days} ${days === -1 ? 'day' : 'days'}` : days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : `Due in ${days} days`;
+    return `${when} · ${shortDate(sub.due)}`;
+  }
+
+  async toggleDone(pick: Chosen): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const data = await (pick.sub.done ? this.api.markNotDone(pick.course.id, pick.sub.id) : this.api.markDone(pick.course.id, pick.sub.id));
+      this.data.set(data);
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async openFile(pick: Chosen, item: Extract<StudentMaterial, { type: 'file' }>): Promise<void> {
+    if (this.opening()) return;
+    this.opening.set(item.file_id);
+    this.error.set(null);
+    // A new tab must be opened right away, while the click is still fresh, or the browser may block it.
+    const tab = item.kind === 'pdf' ? window.open('', '_blank') : null;
+    if (tab) tab.opener = null;
+    try {
+      const link = await this.api.fileLink(pick.course.id, item.file_id);
+      if (item.kind === 'pdf') {
+        if (tab) tab.location.href = link.url;
+        else window.location.href = link.url;
+      } else {
+        this.renewals = 0;
+        this.playing.set({ id: item.file_id, url: link.url });
+      }
+    } catch (error) {
+      tab?.close();
+      this.error.set(error as ApiError);
+    } finally {
+      this.opening.set(null);
+    }
+  }
+
+  /** A video link lasts a few minutes. If playing fails because it ran out, get a new one once or twice. */
+  async renew(pick: Chosen, fileId: string): Promise<void> {
+    if (this.renewals >= 2) {
+      this.playing.set(null);
+      this.error.set({ status: -1, detail: "This video couldn't be played. Try again later, or tell your institute." });
+      return;
+    }
+    this.renewals++;
+    try {
+      const link = await this.api.fileLink(pick.course.id, fileId);
+      this.playing.set({ id: fileId, url: link.url });
+    } catch (error) {
+      this.playing.set(null);
+      this.error.set(error as ApiError);
+    }
+  }
+}

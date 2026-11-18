@@ -639,3 +639,57 @@ export interface CopyChoice {
   keep_dates: boolean;
   keep_status: boolean;
 }
+
+// ---- Coursework (student) ----
+
+export type StudentMaterial =
+  | { type: 'file'; file_id: string; title: string; kind: 'pdf' | 'mp4'; size: number | null }
+  | { type: 'link'; url: string; title: string };
+
+export interface Progress {
+  total: number;
+  done: number;
+}
+
+export interface StudentSubtopic {
+  id: string;
+  title: string;
+  note: string;
+  due: string | null;
+  due_from: 'subtopic' | 'topic' | 'subject' | null;
+  /** Days until the date; negative once it has passed. */
+  days_left: number | null;
+  overdue: boolean;
+  done: boolean;
+  done_at: string | null;
+  materials: StudentMaterial[];
+}
+
+export interface StudentTopic {
+  id: string;
+  title: string;
+  due: string | null;
+  progress: Progress;
+  subtopics: StudentSubtopic[];
+}
+
+export interface StudentSubject {
+  paper_id: string;
+  name: string;
+  due: string | null;
+  progress: Progress;
+  topics: StudentTopic[];
+}
+
+export interface StudentCourse {
+  id: string;
+  name: string;
+  progress: Progress;
+  overdue: number;
+  subjects: StudentSubject[];
+}
+
+export interface StudentCoursework {
+  summary: { total: number; done: number; left: number; overdue: number; this_week: number };
+  courses: StudentCourse[];
+}

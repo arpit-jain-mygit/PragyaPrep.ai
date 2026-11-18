@@ -70,6 +70,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests),
       },
       {
+        path: 'coursework',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-coursework').then((m) => m.StudentCourseworkPage),
+      },
+      {
         path: 'results',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults),

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
-import { MyCourse, MyResults, StudentTestCard } from '../core/models';
+import { MyCourse, MyResults, StudentCoursework, StudentTestCard } from '../core/models';
 import { ToTake, toTake } from '../core/schedule';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
@@ -33,6 +33,20 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
           <span class="tile-num" data-running>{{ runningCount() }}</span>
           <span class="tchips"><span class="tchip">Tap to continue</span></span>
         </a>
+      }
+
+      @if (coursework(); as work) {
+        @if (work.summary.total > 0) {
+          <a class="tile" id="tile-coursework" [class.alert-tile]="work.summary.overdue > 0" [routerLink]="[base(), 'coursework']">
+            <span class="tile-head"><app-icon name="layers" [size]="22" /> Coursework</span>
+            <span class="tile-num" data-left>{{ work.summary.left }}</span>
+            <span class="tchips">
+              @if (work.summary.left === 0) { <span class="tchip" data-alldone>all done</span> }
+              @if (work.summary.overdue > 0) { <span class="tchip bad" data-cw-overdue>{{ work.summary.overdue }} overdue</span> }
+              @if (work.summary.left > 0) { <span class="tchip" data-cw-week>{{ work.summary.this_week }} this week</span> }
+            </span>
+          </a>
+        }
       }
 
       <a class="tile" id="tile-courses" [routerLink]="[base(), 'courses']">
@@ -69,6 +83,7 @@ export class StudentTiles implements OnInit {
   readonly runningCount = signal(0);
   readonly courses = signal<MyCourse[]>([]);
   readonly results = signal<MyResults | null>(null);
+  readonly coursework = signal<StudentCoursework | null>(null);
   readonly weak = signal({ count: 0, name: '', accuracy: '' });
 
   base(): string {
@@ -84,6 +99,7 @@ export class StudentTiles implements OnInit {
       this.runningCount.set(going.length);
     });
     void this.run(async () => this.courses.set(await this.api.myCourses()));
+    void this.run(async () => this.coursework.set(await this.api.myCoursework()));
     void this.run(async () => {
       const results = await this.api.myResults();
       this.results.set(results);

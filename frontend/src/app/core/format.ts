@@ -78,3 +78,10 @@ export function formatSize(bytes: number | null): string {
 export function logoSrc(path: string | null | undefined): string | null {
   return path ? environment.apiBase + path : null;
 }
+
+/** "10 Feb 2027" from "2027-02-10", without any time-zone shift. */
+export function shortDate(value: string | null): string {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  return isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}

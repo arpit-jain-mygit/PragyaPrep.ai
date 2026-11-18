@@ -25,6 +25,7 @@ const ICONS: Record<string, string[]> = {
   home: ['M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z', 'M9 22V12h6v10'],
   building: ['M3 21h18', 'M5 21V7l7-4 7 4v14', 'M9 21v-6h6v6'],
   chevron: ['M6 9l6 6 6-6'],
+  'chevron-right': ['M9 6l6 6-6 6'],
   'chevron-up': ['M18 15l-6-6-6 6'],
   'arrow-left': ['M19 12H5', 'M12 19l-7-7 7-7'],
   clipboard: ['M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1Z', 'M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2', 'M9 12h6', 'M9 16h6'],

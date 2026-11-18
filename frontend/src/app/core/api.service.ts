@@ -9,6 +9,7 @@ import {
   CourseAccess,
   CourseFile,
   CopyChoice,
+  StudentCoursework,
   CopyResult,
   CourseworkPlan,
   WorkSubtopicInput,
@@ -199,6 +200,20 @@ export class ApiService {
 
   copyCoursework(courseId: string, choice: CopyChoice): Promise<CourseworkPlan & { copied: CopyResult }> {
     return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/copy`, choice);
+  }
+
+  // ---- Coursework (student) ----
+
+  myCoursework(): Promise<StudentCoursework> {
+    return this.get('/api/my/coursework');
+  }
+
+  markDone(courseId: string, subtopicId: string): Promise<StudentCoursework> {
+    return this.call(firstValueFrom(this.http.put<StudentCoursework>(`${this.base}/api/my/coursework/${encodeURIComponent(courseId)}/${encodeURIComponent(subtopicId)}/done`, {})));
+  }
+
+  markNotDone(courseId: string, subtopicId: string): Promise<StudentCoursework> {
+    return this.call(firstValueFrom(this.http.delete<StudentCoursework>(`${this.base}/api/my/coursework/${encodeURIComponent(courseId)}/${encodeURIComponent(subtopicId)}/done`)));
   }
 
   courseFiles(courseId: string): Promise<CourseFile[]> {

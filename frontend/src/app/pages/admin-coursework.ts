@@ -2,17 +2,13 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
+import { shortDate } from '../core/format';
 import { AdminCourse, ApiError, CopyResult, CourseFile, CourseworkPlan, WorkMaterial, WorkSubject, WorkSubtopic, WorkTopic } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
-/** "10 Feb 2027" from "2027-02-10", without any time-zone shift. */
-export function shortDate(value: string | null): string {
-  if (!value) return '';
-  const date = new Date(`${value}T00:00:00`);
-  return isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+export { shortDate };
 
 /**
  * A course's coursework plan: subject, topic, sub-topic. The admin adds topics and sub-topics, attaches the course's files and links,
