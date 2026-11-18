@@ -12,7 +12,7 @@ import { Icon } from '../ui/icon';
   imports: [RouterLink, Icon],
   template: `
     <div class="page-head">
-      <h1>{{ test()?.title ?? 'Test' }}</h1>
+      <h1>{{ test()?.title ?? 'Test' }}@if (test()?.set_by) { <span class="chip parent-tag" id="set-by-parent"> Set by your parent</span> }</h1>
       <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'learning', 'tests']"><app-icon name="arrow-left" [size]="16" /> Tests</a>
     </div>
 

@@ -24,6 +24,21 @@ async function openList(list: object[]) {
 }
 
 describe('Student tests list', () => {
+  it('marks a practice test the student made as Practice, and one a parent set as Set by your parent', async () => {
+    const { fixture } = await openList([
+      card({ id: 'p1', title: 'Practice: Optics', practice: true, set_by: null }),
+      card({ id: 'p2', title: 'Practice: Magnetism', practice: true, set_by: 'meena@example.com' }),
+      card({ id: 't9', title: 'Plain test' }),
+    ]);
+    const own = el(fixture, '[data-test="Practice: Optics"]');
+    expect(own.textContent).toContain('Practice');
+    expect(own.querySelector('#set-by-parent')).toBeNull();
+    const set = el(fixture, '[data-test="Practice: Magnetism"]');
+    expect(set.querySelector('#set-by-parent')!.textContent).toContain('Set by your parent');
+    expect(el(fixture, '[data-test="Plain test"]').textContent).not.toContain('Practice');
+    expect(el(fixture, '[data-test="Plain test"]').querySelector('#set-by-parent')).toBeNull();
+  });
+
   it('lists each test with its size, marking window, attempts and best score', async () => {
     const { fixture } = await openList([card({ minutes_left: 3000, attempts_used: 1, attempts_left: 2, best: { marks: '33', percentage: '55', passed: true } })]);
     const row = el(fixture, '[data-test="CAT Mock 1"]').textContent!.replace(/\s+/g, ' ');
@@ -185,6 +200,16 @@ describe('Student test intro', () => {
     expect(text(fixture)).toContain('You have used all your attempts for this test.');
     expect(navigate).not.toHaveBeenCalled();
     expect(el<HTMLButtonElement>(fixture, '#start-test').disabled).toBe(false);
+  });
+
+  it('shows the Set by your parent tag on the test page too', async () => {
+    const { fixture } = await openIntro(card({ practice: true, set_by: 'meena@example.com' }));
+    expect(el(fixture, '#set-by-parent').textContent).toContain('Set by your parent');
+  });
+
+  it('has no parent tag on the test page for an ordinary test', async () => {
+    const { fixture } = await openIntro(card());
+    expect(all(fixture, '#set-by-parent').length).toBe(0);
   });
 
   it('explains a test that cannot be found', async () => {
