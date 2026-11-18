@@ -5,6 +5,7 @@ import { MyNotices, MyResults, StudentCoursework, StudentTestCard } from '../cor
 import { ToTake, toTake } from '../core/schedule';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
+import { Ring } from '../ui/ring';
 
 const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
 
@@ -14,11 +15,25 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
  */
 @Component({
   selector: 'app-student-tiles',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, Ring],
   template: `
+    @if (loaded()) {
+      <section class="card today" id="today">
+        <h2><app-icon name="calendar" [size]="18" /> Today</h2>
+        <ul class="plain-list">
+          @if (running(); as test) { <li data-today="running"><app-icon name="play" [size]="18" /> <a [routerLink]="[base(), 'tests', test.id]">Carry on with {{ test.title }}</a></li> }
+          @if (overdue() > 0) { <li data-today="overdue"><app-icon name="flag" [size]="18" /> <a [routerLink]="learningLink()">{{ overdue() }} overdue {{ overdue() === 1 ? 'item' : 'items' }} to catch up on</a></li> }
+          @if ((coursework()?.summary?.this_week ?? 0) > 0) { <li data-today="week"><app-icon name="book" [size]="18" /> <a [routerLink]="[base(), 'learning']">{{ coursework()!.summary.this_week }} coursework {{ coursework()!.summary.this_week === 1 ? 'item' : 'items' }} due this week</a></li> }
+          @if (take().thisWeek > 0) { <li data-today="tests"><app-icon name="clipboard" [size]="18" /> <a [routerLink]="[base(), 'learning', 'tests']">{{ take().thisWeek }} {{ take().thisWeek === 1 ? 'test' : 'tests' }} to take this week</a></li> }
+          @if ((notices()?.action_unread ?? 0) > 0) { <li data-today="notices"><app-icon name="bell" [size]="18" /> <a [routerLink]="[base(), 'notices']">{{ notices()!.action_unread }} {{ notices()!.action_unread === 1 ? 'notice needs' : 'notices need' }} your action</a></li> }
+          @if (caughtUp()) { <li class="caught-up" data-today="clear"><app-icon name="check" [size]="18" /> You are all caught up. Nothing is due.</li> }
+        </ul>
+      </section>
+    }
     <div class="tiles">
       <a class="tile" id="tile-learning" [class.alert-tile]="overdue() > 0" [routerLink]="learningLink()">
         <span class="tile-head"><app-icon name="book" [size]="22" /> My Learning</span>
+        @if ((coursework()?.summary?.total ?? 0) > 0) { <app-ring class="tile-ring" data-ring [done]="coursework()!.summary.done" [total]="coursework()!.summary.total" [size]="40" /> }
         <span class="tile-num" data-total>{{ total() }}</span>
         <span class="tchips">
           @if (overdue() > 0) { <span class="tchip bad" data-overdue>{{ overdue() }} overdue</span> }
@@ -80,6 +95,11 @@ export class StudentTiles implements OnInit {
   readonly notices = signal<MyNotices | null>(null);
   readonly weak = signal({ count: 0, name: '', accuracy: '' });
 
+  /** True once the lists that feed the Today card have arrived (or failed), so it never flashes "all caught up" while loading. */
+  readonly loaded = signal(false);
+  readonly caughtUp = computed(() =>
+    !this.running() && this.overdue() === 0 && (this.coursework()?.summary?.this_week ?? 0) === 0 && this.take().thisWeek === 0 && (this.notices()?.action_unread ?? 0) === 0);
+
   readonly testsToTake = computed(() => this.take().overdue + this.take().thisWeek + this.take().later);
   readonly courseworkLeft = computed(() => this.coursework()?.summary.left ?? 0);
   readonly total = computed(() => this.testsToTake() + this.courseworkLeft());
@@ -96,21 +116,24 @@ export class StudentTiles implements OnInit {
   }
 
   ngOnInit(): void {
-    void this.run(async () => {
-      const tests = await this.api.myTests();
-      this.take.set(toTake(tests));
-      const going = tests.filter((t) => t.in_progress);
-      this.running.set(going[0] ?? null);
-      this.runningCount.set(going.length);
-    });
-    void this.run(async () => this.coursework.set(await this.api.myCoursework()));
-    void this.run(async () => this.notices.set(await this.api.myNotices()));
-    void this.run(async () => {
-      const results = await this.api.myResults();
-      this.results.set(results);
-      const weak = results.subjects.filter((s) => Number(s.accuracy) < 50);
-      if (weak.length) this.weak.set({ count: weak.length, name: weak[0].name, accuracy: weak[0].accuracy });
-    });
+    const loads = [
+      this.run(async () => {
+        const tests = await this.api.myTests();
+        this.take.set(toTake(tests));
+        const going = tests.filter((t) => t.in_progress);
+        this.running.set(going[0] ?? null);
+        this.runningCount.set(going.length);
+      }),
+      this.run(async () => this.coursework.set(await this.api.myCoursework())),
+      this.run(async () => this.notices.set(await this.api.myNotices())),
+      this.run(async () => {
+        const results = await this.api.myResults();
+        this.results.set(results);
+        const weak = results.subjects.filter((s) => Number(s.accuracy) < 50);
+        if (weak.length) this.weak.set({ count: weak.length, name: weak[0].name, accuracy: weak[0].accuracy });
+      }),
+    ];
+    void Promise.all(loads).then(() => this.loaded.set(true));
   }
 
   /** One tile's data failing must not spoil the others. */

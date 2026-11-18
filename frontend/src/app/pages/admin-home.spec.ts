@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { API, all, el, sessionFor, settle, setupTestBed, text } from '../testing';
+import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { AdminHome } from './admin-home';
 
 const COUNTS = { pending: 3, students: 40, courses: 4, tests_open: 55, questions: { published: 1500, draft: 12 } };
@@ -93,5 +93,52 @@ describe('Admin home', () => {
     const { fixture } = await open({ counts: 500, behind: { students: 4, courses: 1 } });
     expect(num(fixture, '[data-pending]')).toBe('…');
     expect(num(fixture, '[data-behind]')).toBe('4');
+  });
+});
+
+describe('Admin home: set-up checklist and find a student', () => {
+  const EMPTY = { pending: 0, students: 0, courses: 0, tests_open: 0, questions: { published: 0, draft: 0 } };
+
+  async function openHome(counts: object) {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/admin/home`).flush(counts);
+    env.http.expectOne(`${API}/api/admin/home/behind`).flush({ students: 0, courses: 0 });
+    await settle(fixture);
+    return { ...env, fixture };
+  }
+
+  it('shows the steps still to do, with what is done ticked', async () => {
+    const { fixture } = await openHome({ ...EMPTY, courses: 1, students: 2 });
+    expect(el(fixture, '#checklist').textContent).toContain('2 of 5 done');
+    expect(el(fixture, '[data-step="course"]').className).toContain('done');
+    expect(el(fixture, '[data-step="questions"]').className).not.toContain('done');
+    expect(el<HTMLAnchorElement>(fixture, '[data-step="questions"] a').getAttribute('href')).toBe('/demo/admin/questions');
+  });
+
+  it('goes away once everything is set up, and can be hidden before that', async () => {
+    const done = await openHome({ pending: 0, students: 3, courses: 2, tests_open: 1, questions: { published: 10, draft: 0 } });
+    expect(all(done.fixture, '#checklist').length).toBe(1); // the institute details step is still open
+    el<HTMLButtonElement>(done.fixture, '#checklist-hide').click();
+    await settle(done.fixture);
+    expect(all(done.fixture, '#checklist').length).toBe(0);
+    expect(localStorage.getItem('pragyaprep.checklist.demo')).toBe('1');
+  });
+
+  it('finds a student by name and opens the quick look', async () => {
+    const { fixture, http } = await openHome(EMPTY);
+    type(fixture, '#find-input', 'ash');
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/registrations?status=all`).flush([
+      { email: 'asha@example.com', first_name: 'Asha', last_name: 'Rao', mobile: '9876543210', status: 'approved' },
+      { email: 'ravi@example.com', first_name: 'Ravi', last_name: 'Kumar', mobile: '9811111111', status: 'approved' },
+    ]);
+    await settle(fixture);
+    expect(all(fixture, '[data-found]').map((b) => b.getAttribute('data-found'))).toEqual(['asha@example.com']);
+    el<HTMLButtonElement>(fixture, '[data-found="asha@example.com"]').click();
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/students/asha%40example.com/quick`);
   });
 });

@@ -218,3 +218,4 @@ The login page shows these messages straight away. When an email isn't registere
 - Institute admins have a My institute page: name, logo, colour, description, city, contact details, website, exam categories, and their own name, mobile and photo. Students see a Contact your institute card.
 - Batches: cohorts with courses, dates, seats, faculty and timetable. Enrolling opens the courses; students and parents see their batches.
 - Pop-ups: submit-test summary, rules before a test, student quick look drawer, one-time welcome, picture viewer, unsaved-changes warning.
+- Admin home: set-up checklist and find-a-student search. Student home: Today card and progress ring. Phones: bottom tab bar for students and parents.

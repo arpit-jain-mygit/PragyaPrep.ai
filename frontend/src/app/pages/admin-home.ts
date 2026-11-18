@@ -1,10 +1,14 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { AdminBehind, AdminHomeCounts } from '../core/models';
 import { SessionService } from '../core/session.service';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
+import { Ring } from '../ui/ring';
+import { StudentDrawer } from '../ui/student-drawer';
+import { Registration } from '../core/models';
 
 /**
  * The admin's home: a tile for each thing that needs looking at, each a count that opens the screen that deals with it.
@@ -12,11 +16,46 @@ import { Icon } from '../ui/icon';
  */
 @Component({
   selector: 'app-admin-home',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, FormsModule, Icon, Ring, StudentDrawer],
   template: `
     <div class="page-head">
       <h1>Welcome, {{ name() }}</h1>
     </div>
+
+    @if (quick(); as who) { <app-student-drawer [email]="who" (close)="quick.set(null)" /> }
+    <div class="find-student" id="find-student">
+      <app-icon name="search" [size]="18" />
+      <input id="find-input" name="find" type="search" placeholder="Find a student by name, email or mobile" autocomplete="off" [ngModel]="find()" (ngModelChange)="typed($event)" (focus)="loadStudents()" />
+    </div>
+    @if (find().trim()) {
+      <div class="card find-results" id="find-results">
+        @for (s of matches(); track s.email) {
+          <button type="button" class="find-row" [attr.data-found]="s.email" (click)="open(s.email)">
+            <strong>{{ s.first_name }} {{ s.last_name }}</strong> <span class="soft small">{{ s.email }} · {{ s.status }}</span>
+          </button>
+        } @empty { <p class="muted">{{ studentsLoaded() ? 'No one matches.' : 'Looking…' }}</p> }
+      </div>
+    }
+
+    @if (steps(); as list) {
+      @if (!hideChecklist() && doneCount() < list.length) {
+        <section class="card checklist" id="checklist">
+          <div class="row q-head">
+            <app-ring [done]="doneCount()" [total]="list.length" [size]="52" />
+            <div><strong>Set up your institute</strong><div class="soft small">{{ doneCount() }} of {{ list.length }} done</div></div>
+            <button class="btn secondary small" type="button" id="checklist-hide" style="margin-left: auto" (click)="hideList()">Hide</button>
+          </div>
+          <ul class="plain-list steps">
+            @for (step of list; track step.id) {
+              <li [class.done]="step.done" [attr.data-step]="step.id">
+                <app-icon [name]="step.done ? 'check' : step.icon" [size]="18" />
+                <a [routerLink]="step.link">{{ step.text }}</a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
 
     <div class="tiles">
       <a class="tile" id="tile-pending" [class.alert-tile]="(counts()?.pending ?? 0) > 0" [routerLink]="[base(), 'admin', 'registrations']" [queryParams]="{ status: 'pending' }">
@@ -61,6 +100,73 @@ export class AdminHome implements OnInit {
   readonly counts = signal<AdminHomeCounts | null>(null);
   readonly behind = signal<AdminBehind | null>(null);
   readonly behindFailed = signal(false);
+  readonly quick = signal<string | null>(null);
+  readonly find = signal('');
+  readonly students = signal<Registration[]>([]);
+  readonly studentsLoaded = signal(false);
+  readonly hideChecklist = signal(this.readHidden());
+
+  /** Matches for the search box: name, email or mobile, up to six. */
+  readonly matches = computed(() => {
+    const q = this.find().trim().toLowerCase();
+    if (!q) return [];
+    return this.students().filter((s) => `${s.first_name} ${s.last_name} ${s.email} ${s.mobile}`.toLowerCase().includes(q)).slice(0, 6);
+  });
+
+  /** The first-time set-up steps, each done once the thing exists. Nothing until the counts have arrived. */
+  readonly steps = computed(() => {
+    const c = this.counts();
+    if (!c) return null;
+    const p = this.tenants.info()?.profile;
+    const b = this.base();
+    return [
+      { id: 'profile', icon: 'building', text: 'Add your institute details and logo', done: !!(p && (p.description || p.city || p.contact_email || p.contact_phone)) || !!this.tenants.info()?.branding.logo_url, link: [b, 'admin', 'institute'] },
+      { id: 'course', icon: 'book', text: 'Add your first course', done: c.courses > 0, link: [b, 'admin', 'courses'] },
+      { id: 'students', icon: 'users', text: 'Add or import your students', done: c.students + c.pending > 0, link: [b, 'admin', 'registrations'] },
+      { id: 'questions', icon: 'help', text: 'Add questions to the question bank', done: c.questions.published > 0, link: [b, 'admin', 'questions'] },
+      { id: 'test', icon: 'clipboard', text: 'Open a test for your students', done: c.tests_open > 0, link: [b, 'admin', 'tests'] },
+    ];
+  });
+  readonly doneCount = computed(() => (this.steps() ?? []).filter((x) => x.done).length);
+
+  private hiddenKey(): string {
+    return `pragyaprep.checklist.${this.tenants.slug()}`;
+  }
+
+  private readHidden(): boolean {
+    try {
+      return localStorage.getItem(this.hiddenKey()) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  hideList(): void {
+    this.hideChecklist.set(true);
+    try {
+      localStorage.setItem(this.hiddenKey(), '1');
+    } catch {
+      /* nothing to do */
+    }
+  }
+
+  typed(value: string): void {
+    this.find.set(value);
+    this.loadStudents();
+  }
+
+  /** The student list is fetched the first time the search is used, not on every visit to the home page. */
+  loadStudents(): void {
+    if (this.studentsLoaded() || this.students().length) return;
+    void this.api.registrations('all').then((list) => {
+      this.students.set(list);
+      this.studentsLoaded.set(true);
+    }, () => this.studentsLoaded.set(true));
+  }
+
+  open(email: string): void {
+    this.quick.set(email);
+  }
 
   base(): string {
     return `/${this.tenants.slug()}`;

@@ -29,7 +29,7 @@ import { TenantService } from '../core/tenant.service';
         </div>
       </main>
     } @else if (tenants.info(); as info) {
-      <header class="topbar">
+      <header class="topbar" [attr.data-role]="member()?.role ?? null">
         <div class="topbar-inner">
           <a class="brand-name" [routerLink]="homeLink()">
             @if (logo(info.branding.logo_url); as src) { <img class="logo" [src]="src" alt="" /> }

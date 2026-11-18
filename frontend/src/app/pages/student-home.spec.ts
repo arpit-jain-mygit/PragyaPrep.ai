@@ -225,5 +225,21 @@ describe('Student home', () => {
     expect(fixture.nativeElement.querySelector('#my-batches')).toBeNull();
     expect(text(fixture)).toContain('Welcome, Asha');
   });
+
+  it('says you are all caught up on the Today card when nothing is due', async () => {
+    const { fixture } = await openHome();
+    expect(el(fixture, '[data-today="clear"]').textContent).toContain('all caught up');
+  });
+
+  it('lists what needs doing today, with a progress ring on My Learning', async () => {
+    const coursework = { summary: { total: 10, done: 4, left: 6, overdue: 2, this_week: 3 }, courses: [] };
+    const notices = { unread: 2, action_unread: 1, notices: [{ id: 'n1' }] };
+    const { fixture } = await openHome({ coursework, notices });
+    expect(all(fixture, '[data-today="clear"]').length).toBe(0);
+    expect(el(fixture, '[data-today="overdue"]').textContent).toContain('2 overdue items');
+    expect(el(fixture, '[data-today="week"]').textContent).toContain('3 coursework items due this week');
+    expect(el(fixture, '[data-today="notices"]').textContent).toContain('1 notice needs your action');
+    expect(el(fixture, '[data-ring] text').textContent).toBe('40%');
+  });
 });
 
