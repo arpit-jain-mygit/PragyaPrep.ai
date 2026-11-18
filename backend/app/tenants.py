@@ -5,7 +5,7 @@ from app.repo import ConflictError, Repo, is_valid_slug, now_iso
 
 # The platform admin (the PragyaPrep owner) belongs to this reserved tenant, so they sign in like anyone else.
 PLATFORM_SLUG = "platform"
-RESERVED_SLUGS = {PLATFORM_SLUG, "platform-admin", "admin", "api", "www", "app", "static", "assets", "login", "register", "status", "docs"}
+RESERVED_SLUGS = {PLATFORM_SLUG, "platform-admin", "admin", "api", "www", "app", "static", "assets", "login", "register", "status", "docs", "pricing", "free", "signup", "home", "about", "contact"}
 
 EMAIL_PATTERN = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}")

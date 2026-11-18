@@ -9,6 +9,7 @@ export const routes: Routes = [
     pathMatch: 'full',
     loadComponent: () => import('./pages/landing').then((m) => m.Landing),
   },
+  { path: 'pricing', loadComponent: () => import('./pages/pricing').then((m) => m.Pricing) },
   {
     // The platform admin's page. It must come before ':tenant', so 'platform-admin' isn't taken for an institute.
     path: 'platform-admin',

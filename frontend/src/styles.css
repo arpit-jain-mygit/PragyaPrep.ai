@@ -543,3 +543,26 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 .greeting { display: flex; align-items: center; gap: 0.9rem; }
 .greeting .avatar { box-shadow: 0 0 0 3px #fff, 0 2px 8px rgba(0, 0, 0, 0.18); }
 .person-cell { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+
+
+/* ---- The public home and pricing pages ---- */
+.home .hero h1 { font-size: 1.9rem; }
+.lead { font-size: 1.05rem; color: var(--muted); }
+.persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.5rem; }
+@media (max-width: 40rem) { .persona-grid { grid-template-columns: 1fr; } }
+.persona-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; text-align: left; padding: 1rem; background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); cursor: pointer; font: inherit; color: var(--ink); }
+.persona-btn:hover { border-color: var(--brand); }
+.persona-btn.on { border-color: var(--brand); background: var(--info-bg); }
+.persona-btn app-icon { color: var(--brand); }
+.point-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
+@media (max-width: 40rem) { .point-grid { grid-template-columns: 1fr; } }
+.point { display: flex; flex-direction: column; gap: 0.2rem; }
+.point app-icon { color: var(--brand); }
+.tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
+@media (max-width: 52rem) { .tier-grid { grid-template-columns: 1fr; } }
+.tier h2, .tier h3 { margin: 0.4rem 0 0.2rem; }
+.tier.suits { border: 2px solid var(--brand); }
+.tier .price { margin: 0.2rem 0 0.6rem; }
+.tier ul { padding-left: 0; margin: 0.6rem 0 1rem; }
+.tier ul li { list-style: none; margin-bottom: 0.3rem; display: flex; flex-wrap: nowrap; gap: 0.45rem; align-items: flex-start; }
+.tier ul li app-icon { margin-top: 0.2rem; }
