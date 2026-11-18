@@ -23,10 +23,11 @@ locals {
 
   # The website's own address is always allowed to call the API and to upload to S3, besides the addresses
   # in cors_origins (which are for working on your own computer).
-  # The Android app (Capacitor) runs its pages at https://localhost, so that origin is always allowed too.
+  # The Android app (Capacitor) runs its pages at https://localhost and the iPhone app at capacitor://localhost,
+  # so those origins are always allowed too.
   site_url     = "https://${aws_cloudfront_distribution.web.domain_name}"
-  app_origin   = "https://localhost"
-  cors_origins = distinct(concat(var.cors_origins, [local.site_url, local.app_origin]))
+  app_origins  = ["https://localhost", "capacitor://localhost"]
+  cors_origins = distinct(concat(var.cors_origins, [local.site_url], local.app_origins))
 }
 
 # ---- Data: one DynamoDB table (see backend/app/repo.py for the key layout) ----
