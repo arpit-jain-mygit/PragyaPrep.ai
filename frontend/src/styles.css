@@ -383,3 +383,14 @@ button.text-btn:hover { background: var(--info-bg); }
 .topic-row .meter { width: 100%; }
 .tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
 a.tab { text-decoration: none; }
+
+/* Loading cursor: IIM names spinning beside the pointer while the server is busy. */
+body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
+.busy-cursor { position: fixed; z-index: 2000; pointer-events: none; width: 112px; height: 112px; }
+.busy-cursor.at-corner { left: auto !important; top: auto !important; right: 16px; bottom: 16px; }
+.busy-cursor svg { display: block; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18)); }
+.busy-cursor .busy-bg { fill: var(--card); fill-opacity: 0.92; stroke: var(--line); stroke-width: 1; }
+.busy-cursor text { font-size: 7.4px; font-weight: 600; fill: var(--muted); letter-spacing: 0.2px; }
+.busy-cursor .busy-spin { transform-origin: 50px 50px; animation: busy-turn 6s linear infinite; }
+@keyframes busy-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .busy-cursor .busy-spin { animation: none; } }
