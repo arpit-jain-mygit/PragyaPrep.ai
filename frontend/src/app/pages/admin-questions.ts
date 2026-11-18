@@ -91,7 +91,10 @@ function draftFrom(question: Question): Draft {
         <app-info text="Pick a subject and topic, write the question and its options, and say why each option is right or wrong. Only published questions will be used in tests." />
       </h1>
       @if (!form()) {
-        <button class="btn" type="button" (click)="startAdd()"><app-icon name="plus" /> Add question</button>
+        <span class="row">
+          <button class="btn secondary" type="button" id="template" title="Excel template for uploading many questions" (click)="downloadTemplate()"><app-icon name="download" /> Template</button>
+          <button class="btn" type="button" (click)="startAdd()"><app-icon name="plus" /> Add question</button>
+        </span>
       }
     </div>
 
@@ -412,6 +415,21 @@ function draftFrom(question: Question): Draft {
 export class AdminQuestions implements OnInit {
   private readonly api = inject(ApiService);
   readonly letters = LETTERS;
+
+  /** The Excel template for uploading many questions, saved straight from this page. */
+  async downloadTemplate(): Promise<void> {
+    this.error.set(null);
+    try {
+      const blob = await this.api.questionTemplate();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'question-bank-template.xlsx';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      this.error.set(error as ApiError);
+    }
+  }
 
   readonly papers = signal<Paper[]>([]);
   readonly tab = signal<'questions' | 'upload'>('questions');

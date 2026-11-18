@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { AdminQuestions } from './admin-questions';
 
@@ -1023,5 +1023,29 @@ describe('Admin question bank: fill-in questions', () => {
       await settle(fixture);
       expect(text(fixture)).toContain('Deleted 248 questions. 2 stayed because a published test uses them.');
     });
+  });
+
+  it('has a Template button next to Add question that saves the Excel template', async () => {
+    const { fixture, http } = await open();
+    expect(el(fixture, '#template').textContent).toContain('Template');
+    const link = { href: '', download: '', click: vi.fn() } as unknown as HTMLAnchorElement;
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(link);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    el(fixture, '#template').click();
+    const request = http.expectOne(`${API}/api/admin/questions/template`);
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['x']));
+    await settle(fixture);
+    expect(link.download).toBe('question-bank-template.xlsx');
+    expect(link.click).toHaveBeenCalled();
+  });
+
+  it('shows why the template could not be downloaded', async () => {
+    const { fixture, http } = await open();
+    el(fixture, '#template').click();
+    http.expectOne(`${API}/api/admin/questions/template`).flush(new Blob(['{}']), { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(all(fixture, '.alert.error').length).toBe(1);
   });
 });
