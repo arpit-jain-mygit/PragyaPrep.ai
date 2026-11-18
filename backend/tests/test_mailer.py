@@ -92,7 +92,7 @@ def test_smtp_sends_the_message_through_the_provider_after_logging_in(monkeypatc
     mailer = SmtpMailer("smtp.example.com", 465, "me@example.com", "app-pass", "me@example.com")
     mailer.send(Email(to="asha@example.com", subject="123456 is your code", body="Hello", from_name="AAPT Prep", reply_to="help@example.com",
                       attachments=(Attachment("a.pdf", "application/pdf", b"%PDF"),)))
-    assert calls[0] == ("connect", "smtp.example.com", 465, 10) and calls[1] == ("login", "me@example.com", "app-pass")
+    assert calls[0] == ("connect", "smtp.example.com", 465, 25) and calls[1] == ("login", "me@example.com", "app-pass")
     message = calls[2][1]
     assert message["To"] == "asha@example.com" and message["Subject"] == "123456 is your code" and message["Reply-To"] == "help@example.com"
     assert "AAPT Prep" in message["From"] and "me@example.com" in message["From"]
@@ -124,3 +124,31 @@ def test_the_smtp_password_is_read_from_ssm_only_when_smtp_is_used(monkeypatch):
     asked.clear()
     loaded = aws.load_secrets(Settings(_env_file=None, ssm_prefix="/p", email_backend="smtp"))
     assert asked == ["/p/secret_key", "/p/smtp_password"] and loaded.smtp_password == "v"
+
+
+def test_smtp_treats_a_late_final_reply_as_sent_but_a_login_failure_as_failed(monkeypatch):
+    import smtplib
+    from app.mailer import SmtpMailer
+
+    class SlowServer:
+        def __init__(self, host, port, timeout):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def login(self, user, password):
+            if password == "wrong":
+                raise smtplib.SMTPAuthenticationError(535, b"bad")
+
+        def send_message(self, message):
+            raise smtplib.SMTPServerDisconnected("Connection unexpectedly closed: The read operation timed out")
+
+    monkeypatch.setattr("app.mailer.smtplib.SMTP_SSL", SlowServer)
+    mail = Email(to="a@example.com", subject="s", body="b", from_name="X")
+    SmtpMailer("h", 465, "me@example.com", "right", "me@example.com").send(mail)  # no error
+    with pytest.raises(smtplib.SMTPAuthenticationError):
+        SmtpMailer("h", 465, "me@example.com", "wrong", "me@example.com").send(mail)

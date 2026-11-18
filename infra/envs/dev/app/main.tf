@@ -233,7 +233,7 @@ resource "aws_lambda_function" "api" {
   filename         = var.package_path
   source_code_hash = filebase64sha256(var.package_path)
   memory_size      = 512
-  timeout          = 15
+  timeout          = 30
 
   environment {
     variables = {

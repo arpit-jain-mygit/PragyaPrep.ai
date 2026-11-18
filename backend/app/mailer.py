@@ -86,7 +86,7 @@ class SmtpMailer(Mailer):
     """Sends through an SMTP account, such as a Gmail address with an app password. Mail is signed by that provider, so it is
     trusted far more than SES mail that claims to come from a Gmail address. Gmail allows about 500 emails a day."""
 
-    def __init__(self, host: str, port: int, user: str, password: str, sender: str, timeout: int = 10):
+    def __init__(self, host: str, port: int, user: str, password: str, sender: str, timeout: int = 25):
         self.host, self.port, self.user, self.password, self.sender, self.timeout = host, port, user, password, sender, timeout
 
     def send(self, email: Email) -> None:
@@ -102,7 +102,13 @@ class SmtpMailer(Mailer):
             message.add_attachment(item.data, maintype=maintype or "application", subtype=subtype or "octet-stream", filename=item.filename)
         with smtplib.SMTP_SSL(self.host, self.port, timeout=self.timeout) as server:
             server.login(self.user, self.password)
-            server.send_message(message)
+            try:
+                server.send_message(message)
+            except (TimeoutError, smtplib.SMTPServerDisconnected):
+                # Gmail can be slow to give its last reply after taking the message, and the mail has usually gone by then.
+                # Failing here would make the app throw away a code that was in fact delivered, so this counts as sent.
+                # If it really was lost, the person asks for another code after the short wait.
+                logger.warning("SMTP gave no final reply for an email to %s; treating it as sent", email.to)
 
 
 def make_mailer(settings: Settings) -> Mailer:
