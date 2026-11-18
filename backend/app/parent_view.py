@@ -46,8 +46,16 @@ def detail(scoped: TenantRepo, parent: dict, email: str, storage) -> dict:
         except progress.StudentNotInCourse:
             continue
     results = attempts.my_results(scoped, child)
+    practice = []
+    for test in scoped.list_practice(email):
+        card = attempts.test_card(scoped, child, test)
+        practice.append({
+            "id": test["id"], "title": test["title"], "question_count": card["question_count"], "attempts_used": card["attempts_used"], "best": card["best"],
+            "set_by_parent": test.get("created_by") != email, "created_at": test.get("created_at", ""),
+        })
     return {
         "student": {"email": email, "name": parents._name(child), "avatar_url": avatars.url_for(storage, child)},
         "courses": courses,
+        "practice": practice,
         "results": {"summary": results["summary"], "trend": results["trend"], "subjects": results["subjects"]},
     }

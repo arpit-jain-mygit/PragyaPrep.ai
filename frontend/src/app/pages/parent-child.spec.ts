@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { API, all, el, sessionFor, settle, setupTestBed, text } from '../testing';
+import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { ParentChild } from './parent-child';
 
 const ROW = { email: 'asha@example.com', name: 'Asha Rao', status: 'behind', cw_done: 3, cw_total: 10, cw_overdue: 1, tests_taken: 1, tests_available: 2, tests_overdue: 0, avg_percent: 62, overdue: 1, last_active: null };
@@ -12,6 +12,10 @@ const course = (id: string, name: string) => ({
 const DATA = {
   student: { email: 'asha@example.com', name: 'Asha Rao', avatar_url: '' },
   courses: [course('c1', 'CAT'), course('c2', 'CLAT')],
+  practice: [
+    { id: 'p1', title: 'Practice: Optics', question_count: 10, attempts_used: 2, best: { marks: '8', percentage: '80', passed: true }, set_by_parent: false, created_at: '' },
+    { id: 'p2', title: 'Practice: Magnetism', question_count: 10, attempts_used: 0, best: null, set_by_parent: true, created_at: '' },
+  ],
   results: {
     summary: { tests_taken: 1, attempts: 1, in_progress: 0, average: '62', best: '62', tests_passed: 1 }, trend: [],
     subjects: [{ id: 'physics', name: 'Physics', correct: 9, questions: 20, accuracy: '45', topics: [
@@ -32,6 +36,37 @@ async function open(reply: object = DATA) {
 }
 
 describe('Parent: one child', () => {
+  it('lists course tests and practice tests with their type, and the practice ones set by the parent', async () => {
+    const { fixture } = await open();
+    const rows = all(fixture, '#tests tbody tr').map((r) => r.getAttribute('data-test'));
+    expect(rows).toEqual(['Mock 1', 'Practice: Optics', 'Practice: Magnetism']);
+    expect(el(fixture, '[data-test="Mock 1"]').textContent).toContain('Course');
+    expect(el(fixture, '[data-test="Practice: Optics"]').textContent).toContain('Practice');
+    expect(el(fixture, '[data-test="Practice: Magnetism"]').textContent).toContain('Set by you');
+    expect(el(fixture, '[data-test="Practice: Optics"]').textContent).toContain('80%');
+  });
+
+  it('searches the tests by name and filters them by type', async () => {
+    const { fixture } = await open();
+    const names = () => all(fixture, '#tests tbody tr[data-test]').map((r) => r.getAttribute('data-test'));
+    type(fixture, '#pt-search', 'magnet');
+    await settle(fixture);
+    expect(names()).toEqual(['Practice: Magnetism']);
+    type(fixture, '#pt-search', '');
+    type(fixture, '#pt-type', 'parent');
+    await settle(fixture);
+    expect(names()).toEqual(['Practice: Magnetism']);
+    type(fixture, '#pt-type', 'practice');
+    await settle(fixture);
+    expect(names()).toEqual(['Practice: Optics']);
+    type(fixture, '#pt-type', 'course');
+    await settle(fixture);
+    expect(names()).toEqual(['Mock 1']);
+    type(fixture, '#pt-search', 'zzz');
+    await settle(fixture);
+    expect(el(fixture, '#no-tests').textContent).toContain('No tests match');
+  });
+
   it('shows the first course with status, numbers, overdue items and tests', async () => {
     const { fixture } = await open();
     expect(el(fixture, '#status-line').textContent).toContain('Behind');
@@ -77,7 +112,7 @@ describe('Parent: one child', () => {
   });
 
   it('says so when the child has no course or no weak topics yet', async () => {
-    const { fixture } = await open({ ...DATA, courses: [], results: { ...DATA.results, subjects: [] } });
+    const { fixture } = await open({ ...DATA, courses: [], practice: [], results: { ...DATA.results, subjects: [] } });
     expect(text(fixture)).toContain('not enrolled in a course yet');
     expect(el(fixture, '#no-weak').textContent).toContain('after Asha finishes a test');
   });

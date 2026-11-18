@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
@@ -12,14 +13,34 @@ const GROUP_ICONS = { overdue: 'flag', open: 'play', upcoming: 'clock', finished
 /** The tests a student can take: for the courses they can open now. */
 @Component({
   selector: 'app-student-tests',
-  imports: [RouterLink, Icon],
+  imports: [FormsModule, RouterLink, Icon],
   template: `
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
+
+    @if (tests().length) {
+      <div class="toolbar" id="test-filters">
+        <div class="field" style="flex: 2 1 12rem">
+          <label class="sr-only" for="t-search">Search tests</label>
+          <input id="t-search" name="tsearch" type="search" placeholder="Search by test name" [ngModel]="search()" (ngModelChange)="search.set($event ?? '')" />
+        </div>
+        <div class="field">
+          <label class="sr-only" for="t-type">Type</label>
+          <select id="t-type" name="ttype" [ngModel]="type()" (ngModelChange)="type.set($event ?? '')">
+            <option value="">All types</option>
+            <option value="course">Course tests</option>
+            <option value="practice">My practice tests</option>
+            <option value="parent">Set by your parent</option>
+          </select>
+        </div>
+      </div>
+    }
 
     @if (loading()) {
       <p class="muted">Loading…</p>
     } @else if (!tests().length && !error()) {
       <div class="empty-state"><app-icon name="clipboard" [size]="32" /><p>No tests for your courses yet</p></div>
+    } @else if (!shown().length && !error()) {
+      <div class="empty-state" id="no-match"><app-icon name="clipboard" [size]="32" /><p>No tests match</p></div>
     }
 
     @for (group of groups(); track group.key) {
@@ -59,7 +80,19 @@ export class StudentTests implements OnInit {
   readonly tenants = inject(TenantService);
 
   readonly tests = signal<StudentTestCard[]>([]);
-  readonly groups = computed<ScheduleGroup[]>(() => scheduleGroups(this.tests()));
+  readonly search = signal('');
+  readonly type = signal('');
+  /** The tests that match the search and the type: course tests, practice tests the student made, or ones a parent set. */
+  readonly shown = computed(() => {
+    const words = this.search().toLowerCase().split(/\s+/).filter(Boolean);
+    const type = this.type();
+    return this.tests().filter(
+      (t) =>
+        words.every((w) => t.title.toLowerCase().includes(w)) &&
+        (!type || (type === 'course' && !t.practice) || (type === 'practice' && !!t.practice && !t.set_by) || (type === 'parent' && !!t.set_by)),
+    );
+  });
+  readonly groups = computed<ScheduleGroup[]>(() => scheduleGroups(this.shown()));
   readonly loading = signal(false);
   readonly error = signal<ApiError | null>(null);
 

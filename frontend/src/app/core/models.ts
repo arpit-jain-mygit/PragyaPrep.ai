@@ -986,5 +986,7 @@ export interface ChildSummary {
 export interface ChildDetail {
   student: { email: string; name: string; avatar_url: string };
   courses: StudentProgress[];
+  /** The child's practice tests, made by the child or set by a parent. */
+  practice: { id: string; title: string; question_count: number; attempts_used: number; best: { marks: string; percentage: string; passed: boolean } | null; set_by_parent: boolean; created_at: string }[];
   results: { summary: MyResults['summary']; trend: MyResults['trend']; subjects: SubjectResult[] };
 }

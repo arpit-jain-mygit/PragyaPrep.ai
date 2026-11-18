@@ -84,3 +84,14 @@ def test_only_parents_can_use_it_and_parents_cannot_use_student_pages(client, ad
     for path in ("/api/my/coursework", "/api/my/tests", "/api/my/results", "/api/my/live-classes"):
         assert client.get(path, headers=meena).status_code == 403
     assert client.post("/api/my/practice", json={"paper": "physics", "topic": "Optics"}, headers=meena).status_code == 403
+
+
+def test_the_detail_lists_practice_tests_with_who_set_them(client, bank, asha, meena):
+    own = client.post("/api/my/practice", json={"paper": "physics", "topic": "Optics", "count": 5}, headers=asha).json()
+    set_by = client.post("/api/parent/children/asha@example.com/practice", json={"paper": "physics", "topic": "Optics", "count": 5}, headers=meena).json()
+    start(client, asha, own["id"])
+    data = client.get("/api/parent/children/asha@example.com", headers=meena).json()
+    by_id = {p["id"]: p for p in data["practice"]}
+    assert by_id[own["id"]]["set_by_parent"] is False and by_id[own["id"]]["attempts_used"] == 1
+    assert by_id[set_by["id"]]["set_by_parent"] is True and by_id[set_by["id"]]["best"] is None
+    assert {"title", "question_count", "created_at"} <= set(by_id[set_by["id"]])

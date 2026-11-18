@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { shortDate, timeAgo } from '../core/format';
@@ -11,7 +12,7 @@ import { InfoTip } from '../ui/info-tip';
 /** One child, for their parent: course status, what is overdue, tests, and weak topics with a button to set a practice test. */
 @Component({
   selector: 'app-parent-child',
-  imports: [RouterLink, Avatar, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Avatar, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1 class="greeting">
@@ -52,26 +53,46 @@ import { InfoTip } from '../ui/info-tip';
           </ul>
         }
 
-        <h2>Tests</h2>
-        <div class="table-wrap">
-          <table class="compact" id="tests">
-            <thead><tr><th>Test</th><th>Attempts</th><th>Best score</th></tr></thead>
-            <tbody>
-              @for (test of c.tests; track test.id) {
-                <tr [attr.data-test]="test.title">
-                  <td><strong>{{ test.title }}</strong>@if (test.overdue) { <span class="status bad"> Missed</span> }</td>
-                  <td class="soft">{{ test.attempts_used }} of {{ test.max_attempts }}</td>
-                  <td>@if (test.best) { <strong>{{ test.best.percentage }}%</strong> <span class="status" [class.ok]="test.best.passed" [class.bad]="!test.best.passed">{{ test.best.passed ? 'passed' : 'not passed' }}</span> } @else { <span class="soft">-</span> }</td>
-                </tr>
-              } @empty {
-                <tr><td colspan="3"><div class="empty-state"><app-icon name="clipboard" [size]="32" /><p>No tests for this course</p></div></td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
       } @else {
         <div class="empty-state" id="no-courses"><app-icon name="layers" [size]="32" /><p>{{ d.student.name }} is not enrolled in a course yet</p></div>
       }
+
+      <h2>Tests</h2>
+      <div class="toolbar" id="test-filters">
+        <div class="field" style="flex: 2 1 12rem">
+          <label class="sr-only" for="pt-search">Search tests</label>
+          <input id="pt-search" name="ptsearch" type="search" placeholder="Search by test name" [ngModel]="search()" (ngModelChange)="search.set($event ?? '')" />
+        </div>
+        <div class="field">
+          <label class="sr-only" for="pt-type">Type</label>
+          <select id="pt-type" name="pttype" [ngModel]="type()" (ngModelChange)="type.set($event ?? '')">
+            <option value="">All types</option>
+            <option value="course">Course tests</option>
+            <option value="practice">Practice by {{ firstName() }}</option>
+            <option value="parent">Set by you</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="compact" id="tests">
+          <thead><tr><th>Test</th><th>Attempts</th><th>Best score</th></tr></thead>
+          <tbody>
+            @for (test of tests(); track test.id) {
+              <tr [attr.data-test]="test.title">
+                <td>
+                  <strong>{{ test.title }}</strong>
+                  @if (test.kind === 'course') { <span class="chip">Course</span> } @else if (test.kind === 'parent') { <span class="chip parent-tag">Set by you</span> } @else { <span class="chip">Practice</span> }
+                  @if (test.overdue) { <span class="status bad"> Missed</span> }
+                </td>
+                <td class="soft">{{ test.attempts_used }}@if (test.max_attempts) { of {{ test.max_attempts }} }</td>
+                <td>@if (test.best) { <strong>{{ test.best.percentage }}%</strong> <span class="status" [class.ok]="test.best.passed" [class.bad]="!test.best.passed">{{ test.best.passed ? 'passed' : 'not passed' }}</span> } @else { <span class="soft">-</span> }</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="3"><div class="empty-state" id="no-tests"><app-icon name="clipboard" [size]="32" /><p>{{ allTests().length ? 'No tests match' : 'No tests yet' }}</p></div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
       <h2>Where {{ firstName() }} needs practice <app-info text="Topics where the accuracy in finished tests is under 75%, weakest first. Set a practice test and {{ firstName() }} will find it under Tests." /></h2>
       @for (subject of d.results.subjects; track subject.id) {
@@ -107,6 +128,21 @@ export class ParentChild implements OnInit {
     return d ? (d.courses.find((c) => c.course.id === this.pick()) ?? d.courses[0] ?? null) : null;
   });
   readonly firstName = computed(() => (this.data()?.student.name ?? 'your child').split(' ')[0]);
+  readonly search = signal('');
+  readonly type = signal('');
+  /** The tests of the chosen course, then the child's practice tests (made by them, or set by the parent). */
+  readonly allTests = computed(() => {
+    const d = this.data();
+    if (!d) return [];
+    const course = (this.shown()?.tests ?? []).map((t) => ({ id: t.id, title: t.title, kind: 'course' as const, overdue: t.overdue, attempts_used: t.attempts_used, max_attempts: t.max_attempts as number | null, best: t.best }));
+    const practice = d.practice.map((t) => ({ id: t.id, title: t.title, kind: (t.set_by_parent ? 'parent' : 'practice') as 'parent' | 'practice', overdue: false, attempts_used: t.attempts_used, max_attempts: null as number | null, best: t.best }));
+    return [...course, ...practice];
+  });
+  readonly tests = computed(() => {
+    const words = this.search().toLowerCase().split(/\s+/).filter(Boolean);
+    const type = this.type();
+    return this.allTests().filter((t) => words.every((w) => t.title.toLowerCase().includes(w)) && (!type || t.kind === type));
+  });
   readonly Number = Number;
   date = shortDate;
   ago = timeAgo;

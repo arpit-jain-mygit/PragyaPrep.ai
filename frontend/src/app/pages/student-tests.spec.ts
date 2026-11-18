@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { API, all, el, sessionFor, settle, setupTestBed, text } from '../testing';
+import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { StudentAttempt } from './student-attempt';
 import { StudentTest } from './student-test';
 import { StudentTests } from './student-tests';
@@ -24,6 +24,38 @@ async function openList(list: object[]) {
 }
 
 describe('Student tests list', () => {
+  it('searches by name and filters by type: course, my practice, set by your parent', async () => {
+    const { fixture } = await openList([
+      card({ id: 'a', title: 'CAT Mock 1' }),
+      card({ id: 'b', title: 'Practice: Optics', practice: true, set_by: null }),
+      card({ id: 'c', title: 'Practice: Magnetism', practice: true, set_by: 'meena@example.com' }),
+    ]);
+    const names = () => all(fixture, 'article[data-test]').map((a) => a.getAttribute('data-test'));
+    expect(names().sort()).toEqual(['CAT Mock 1', 'Practice: Magnetism', 'Practice: Optics']);
+    type(fixture, '#t-type', 'parent');
+    await settle(fixture);
+    expect(names()).toEqual(['Practice: Magnetism']);
+    type(fixture, '#t-type', 'practice');
+    await settle(fixture);
+    expect(names()).toEqual(['Practice: Optics']);
+    type(fixture, '#t-type', 'course');
+    await settle(fixture);
+    expect(names()).toEqual(['CAT Mock 1']);
+    type(fixture, '#t-type', '');
+    type(fixture, '#t-search', 'magnet');
+    await settle(fixture);
+    expect(names()).toEqual(['Practice: Magnetism']);
+    type(fixture, '#t-search', 'zzz');
+    await settle(fixture);
+    expect(el(fixture, '#no-match').textContent).toContain('No tests match');
+  });
+
+  it('has no search box when there are no tests at all', async () => {
+    const { fixture } = await openList([]);
+    expect(all(fixture, '#test-filters').length).toBe(0);
+    expect(text(fixture)).toContain('No tests for your courses yet');
+  });
+
   it('marks a practice test the student made as Practice, and one a parent set as Set by your parent', async () => {
     const { fixture } = await openList([
       card({ id: 'p1', title: 'Practice: Optics', practice: true, set_by: null }),
