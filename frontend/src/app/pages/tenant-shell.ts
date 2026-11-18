@@ -40,6 +40,7 @@ import { TenantService } from '../core/tenant.service';
               @if (isPlatformAdmin()) {
                 <a routerLink="/platform-admin" routerLinkActive="active"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
               } @else if (isAdmin()) {
+                <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">Courses</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
@@ -77,7 +78,7 @@ export class TenantShell {
   readonly homeLink = computed(() => {
     const slug = this.tenants.slug() ?? '';
     if (this.isPlatformAdmin()) return ['/', 'platform-admin'];
-    if (this.isAdmin()) return ['/', slug, 'admin', 'registrations'];
+    if (this.isAdmin()) return ['/', slug, 'admin', 'home'];
     return ['/', slug, this.member() ? 'home' : 'login'];
   });
 

@@ -687,6 +687,21 @@ export interface StudentCoursework {
   courses: StudentCourse[];
 }
 
+// ---- Admin home ----
+
+export interface AdminHomeCounts {
+  pending: number;
+  students: number;
+  courses: number;
+  tests_open: number;
+  questions: { published: number; draft: number };
+}
+
+export interface AdminBehind {
+  students: number;
+  courses: number;
+}
+
 // ---- Progress (admin) ----
 
 export type ProgressStatus = 'behind' | 'not_started' | 'on_track';

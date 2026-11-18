@@ -22,13 +22,13 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Registrations', 'Courses', 'Question bank', 'Tests', 'Progress']);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Question bank', 'Tests', 'Progress']);
     expect(text(fixture)).toContain('Asha');
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });
 
   it.each([
-    ['tenant_admin', '/demo/admin/registrations'],
+    ['tenant_admin', '/demo/admin/home'],
     ['student', '/demo/home'],
   ] as const)('sends a %s to %s when they click the institute name', async (role, address) => {
     const env = setupTestBed();

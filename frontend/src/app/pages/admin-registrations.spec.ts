@@ -18,6 +18,30 @@ function answerReload(http: ReturnType<typeof setupTestBed>['http'], status: str
   http.expectOne((r) => r.url === `${API}/api/admin/registrations` && r.params.get('status') === status).flush(list as object[]);
 }
 
+describe('Registrations opened from the admin home', () => {
+  async function openWith(status: string | undefined, list: unknown[] = []) {
+    const env = setupTestBed(status === undefined ? {} : { queryParams: { status } });
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminRegistrations);
+    fixture.detectChanges();
+    return { env, fixture, list };
+  }
+
+  it('opens on the list named in the address, for example approved students', async () => {
+    const { env, fixture } = await openWith('approved');
+    env.http.expectOne((r) => r.url === `${API}/api/admin/registrations` && r.params.get('status') === 'approved').flush([]);
+    await settle(fixture);
+    expect(el(fixture, '[role="tab"][aria-selected="true"]').textContent!.trim()).toBe('approved');
+  });
+
+  it.each([[undefined], ['nonsense']])('opens on pending when the address names %s', async (status) => {
+    const { env, fixture } = await openWith(status);
+    env.http.expectOne((r) => r.url === `${API}/api/admin/registrations` && r.params.get('status') === 'pending').flush([]);
+    await settle(fixture);
+    expect(el(fixture, '[role="tab"][aria-selected="true"]').textContent!.trim()).toBe('pending');
+  });
+});
+
 describe('Admin registrations page', () => {
   it('shows every course a student chose on their card', async () => {
     const { fixture } = await open([registration({ course_ids: ['c1', 'c2'], course_names: ['CLAT', 'CAT'] })]);

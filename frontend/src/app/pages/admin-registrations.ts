@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { GENDER_LABELS, formatDate, formatDateTime } from '../core/format';
@@ -241,6 +242,7 @@ interface Notice {
 })
 export class AdminRegistrations implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly tabs = TABS;
   readonly active = signal<string>('pending');
@@ -267,6 +269,9 @@ export class AdminRegistrations implements OnInit {
   readonly gender = (value: string) => GENDER_LABELS[value] ?? value;
 
   ngOnInit(): void {
+    // The home page's tiles open a particular list, for example ?status=approved.
+    const wanted = this.route.snapshot.queryParamMap.get('status');
+    if (wanted && (TABS as readonly string[]).includes(wanted)) this.active.set(wanted);
     void this.load();
   }
 

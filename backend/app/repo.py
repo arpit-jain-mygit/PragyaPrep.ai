@@ -561,6 +561,26 @@ class TenantRepo:
             if not start:
                 return items
 
+    def count_questions(self) -> dict:
+        """How many questions are published and how many are drafts, reading only each question's status."""
+        counts = {"published": 0, "draft": 0}
+        start = None
+        while True:
+            args = {
+                "IndexName": "GSI1",
+                "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}QUESTIONS"),
+                "ProjectionExpression": "#status",
+                "ExpressionAttributeNames": {"#status": "status"},
+            }
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            for item in response["Items"]:
+                counts["published" if item.get("status") == "published" else "draft"] += 1
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return counts
+
     def update_question(self, question_id: str, fields: dict) -> None:
         _update(self.table, self._question_key(question_id), fields)
 

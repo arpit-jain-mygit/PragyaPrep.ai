@@ -488,3 +488,12 @@ body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
 .filters { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.7rem; flex-wrap: wrap; }
 .filters input[type='search'] { width: min(22rem, 100%); }
 td .cw-bar { display: inline-block; width: 5rem; vertical-align: middle; margin-right: 0.4rem; }
+
+/* Admin home tiles (the same loud look as the student home). */
+#tile-pending { --from: #d97706; --to: #db2777; }
+#tile-students { --from: #1d4ed8; --to: #7c3aed; }
+#tile-behind { --from: #be185d; --to: #7c3aed; }
+#tile-tests { --from: #0f766e; --to: #2563eb; }
+#tile-questions { --from: #7c3aed; --to: #c026d3; }
+#tile-courses { --from: #ea580c; --to: #db2777; }
+#tile-pending.alert-tile, #tile-behind.alert-tile { --from: #dc2626; --to: #f97316; }

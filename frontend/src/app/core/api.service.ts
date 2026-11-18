@@ -8,6 +8,8 @@ import {
   ApiError,
   CourseAccess,
   CourseFile,
+  AdminBehind,
+  AdminHomeCounts,
   CopyChoice,
   CourseProgress,
   CourseStuck,
@@ -219,6 +221,14 @@ export class ApiService {
   }
 
   // ---- Progress (admin) ----
+
+  adminHome(): Promise<AdminHomeCounts> {
+    return this.get('/api/admin/home');
+  }
+
+  adminBehind(): Promise<AdminBehind> {
+    return this.get('/api/admin/home/behind');
+  }
 
   courseProgress(courseId: string): Promise<CourseProgress> {
     return this.get(`/api/admin/progress/${encodeURIComponent(courseId)}`);

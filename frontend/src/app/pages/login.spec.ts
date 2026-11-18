@@ -120,13 +120,13 @@ describe('Login page: entering the code', () => {
     expect(navigate).toHaveBeenCalledWith(['/', 'demo', 'home']);
   });
 
-  it('takes the institute admin to the registrations queue', async () => {
+  it('takes the institute admin to the admin home', async () => {
     const { fixture, http, navigate } = await atCodeStep();
     type(fixture, '#code', '123456');
     el<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
     http.expectOne(`${API}/api/auth/verify-code`).flush(sessionFor('tenant_admin'));
     await settle(fixture);
-    expect(navigate).toHaveBeenCalledWith(['/', 'demo', 'admin', 'registrations']);
+    expect(navigate).toHaveBeenCalledWith(['/', 'demo', 'admin', 'home']);
   });
 
   it('keeps the Log in button off until six digits are typed', async () => {
@@ -209,13 +209,13 @@ describe('Login page: already signed in', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(Login);
     fixture.detectChanges();
-    expect(env.navigate).toHaveBeenCalledWith(['/', 'demo', 'admin', 'registrations'], { replaceUrl: true });
+    expect(env.navigate).toHaveBeenCalledWith(['/', 'demo', 'admin', 'home'], { replaceUrl: true });
   });
 });
 
 describe('homeFor', () => {
   it('sends institute admins to the queue, the platform admin to the institutes page, and students home', () => {
-    expect(homeFor({ ...sessionFor('tenant_admin').member }, 'demo')).toEqual(['/', 'demo', 'admin', 'registrations']);
+    expect(homeFor({ ...sessionFor('tenant_admin').member }, 'demo')).toEqual(['/', 'demo', 'admin', 'home']);
     expect(homeFor({ ...sessionFor('student').member }, 'demo')).toEqual(['/', 'demo', 'home']);
     expect(homeFor({ ...sessionFor('platform_admin').member }, 'platform')).toEqual(['/', 'platform-admin']);
   });

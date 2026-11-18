@@ -30,6 +30,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/student-home').then((m) => m.StudentHome),
       },
       {
+        path: 'admin/home',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-home').then((m) => m.AdminHome),
+      },
+      {
         path: 'admin/registrations',
         canActivate: [signedInGuard, adminGuard],
         loadComponent: () => import('./pages/admin-registrations').then((m) => m.AdminRegistrations),
