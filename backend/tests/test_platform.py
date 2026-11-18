@@ -472,3 +472,45 @@ def test_the_platform_api_offers_no_delete_at_all(client):
     assert platform_paths
     for path, methods in platform_paths.items():
         assert "delete" not in methods, path
+
+
+# ---- Plan, the institute's own details and its size ----
+
+def test_the_platform_admin_sees_an_institutes_details_and_size(client, owner, make_tenant, add_member, add_course, sign_in):
+    make_tenant("aaptprep", "AaptPrep", "ritesh@aaptprep.example.com")
+    add_member("aaptprep", "asha@example.com")
+    add_member("aaptprep", "ravi@example.com", status="pending")
+    add_member("aaptprep", "mum@example.com", role="parent")
+    add_course("aaptprep", "CAT")
+    admin = sign_in("aaptprep", "ritesh@aaptprep.example.com")
+    client.put("/api/admin/institute", json={"city": "Noida", "contact_email": "hi@aaptprep.example.com", "exam_categories": ["CLAT"]}, headers=admin)
+    found = client.get(f"{URL}/aaptprep", headers=owner).json()
+    assert found["counts"] == {"students": 1, "parents": 1, "pending": 1, "courses": 1}
+    assert found["profile"]["city"] == "Noida" and found["profile"]["exam_categories"] == ["CLAT"]
+    listed = next(i for i in client.get(URL, headers=owner).json() if i["slug"] == "aaptprep")
+    assert listed["counts"]["students"] == 1
+
+
+@pytest.mark.parametrize("plan", ["free", "popular", "premium"])
+def test_the_platform_admin_sets_a_plan(client, owner, make_tenant, plan):
+    make_tenant("aaptprep", "AaptPrep")
+    done = client.patch(f"{URL}/aaptprep", json={"plan": plan}, headers=owner)
+    assert done.status_code == 200 and done.json()["institute"]["plan"] == plan
+
+
+def test_an_unknown_plan_is_refused_and_the_institute_admin_cannot_set_one(client, owner, make_tenant, sign_in):
+    make_tenant("aaptprep", "AaptPrep", "ritesh@aaptprep.example.com")
+    bad = client.patch(f"{URL}/aaptprep", json={"plan": "gold"}, headers=owner)
+    assert bad.status_code == 422 and "free, popular or premium" in bad.json()["detail"]
+    admin = sign_in("aaptprep", "ritesh@aaptprep.example.com")
+    assert client.patch(f"{URL}/aaptprep", json={"plan": "premium"}, headers=admin).status_code in (401, 403)
+    assert client.put("/api/admin/institute", json={"plan": "premium"}, headers=admin).status_code == 422
+
+
+def test_moving_an_institute_off_the_free_plan_lifts_the_one_student_limit(client, owner, make_tenant, repo, sign_in):
+    make_tenant("aaptprep", "AaptPrep", "ritesh@aaptprep.example.com")
+    client.patch(f"{URL}/aaptprep", json={"plan": "free"}, headers=owner)
+    from app import plan_limits
+    assert plan_limits.is_free(repo.get_tenant("aaptprep"))
+    client.patch(f"{URL}/aaptprep", json={"plan": "popular"}, headers=owner)
+    assert not plan_limits.is_free(repo.get_tenant("aaptprep"))

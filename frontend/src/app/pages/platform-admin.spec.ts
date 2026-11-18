@@ -204,6 +204,29 @@ describe('Platform admin page: editing an institute', () => {
     expect(all(env.fixture, '#name-alpha').length).toBe(0);
   });
 
+  it('shows the plan and size in the list and the institute\'s own details while editing', async () => {
+    const rich: Institute = { ...ALPHA, plan: 'free', counts: { students: 1, parents: 1, pending: 2, courses: 3 }, profile: { description: 'Law coaching', city: 'Noida', contact_email: 'hi@alpha.example.com', contact_phone: '', website: '', exam_categories: ['CLAT'] } };
+    const env = await open([rich, BETA]);
+    expect(el(env.fixture, '[data-plan="alpha"]').textContent).toBe('free');
+    expect(el(env.fixture, '[data-counts="alpha"]').textContent).toContain('1 student, 1 parent, 3 courses, 2 waiting');
+    expect(el(env.fixture, '[data-plan="beta"]').textContent).toBe('premium');
+    clickButton(env.fixture, 'Edit');
+    await settle(env.fixture);
+    const details = el(env.fixture, '[data-details="alpha"]').textContent!.replace(/\s+/g, ' ');
+    expect(details).toContain('Noida');
+    expect(details).toContain('hi@alpha.example.com');
+    expect(details).toContain('CLAT');
+    expect(details).toContain('Law coaching');
+  });
+
+  it('changes the plan and sends only the plan', async () => {
+    const env = await openEdit();
+    expect(el<HTMLSelectElement>(env.fixture, '#plan-alpha').value).toBe('premium');
+    type(env.fixture, '#plan-alpha', 'free');
+    await settle(env.fixture);
+    expect(await save(env, { institute: { ...ALPHA, plan: 'free' }, new_admin_notified: null })).toEqual({ plan: 'free' });
+  });
+
   it('changes the colour', async () => {
     const env = await openEdit();
     type(env.fixture, '#color-alpha', '#0f766e');

@@ -208,6 +208,9 @@ class InstituteOut(BaseModel):
     created_at: str = ""
     plan: str = "paid"
     admin: InstituteAdminOut | None = None
+    # What the institute shows everyone, and how big it is (read only for the platform admin).
+    profile: dict = {}
+    counts: dict = {}
 
 
 class InstituteCreateIn(BaseModel):
@@ -226,6 +229,7 @@ class InstituteUpdateIn(BaseModel):
     status: str | None = None
     admin_name: str | None = None
     admin_email: str | None = None
+    plan: str | None = None
 
 
 class InstituteResultOut(BaseModel):

@@ -142,6 +142,20 @@ def logo_url(tenant: dict) -> str | None:
     return f"/api/logo/{tenant['slug']}?v={logo['version']}" if logo else None
 
 
+PLANS = ("free", "popular", "premium")
+
+
+def _counts(scoped) -> dict:
+    """How big the institute is: approved students and parents, people waiting for approval, and courses."""
+    approved = scoped.all_members_by_status("approved")
+    return {
+        "students": sum(1 for m in approved if m.get("role") == "student"),
+        "parents": sum(1 for m in approved if m.get("role") == "parent"),
+        "pending": len(scoped.all_members_by_status("pending")),
+        "courses": len(scoped.list_courses()),
+    }
+
+
 def describe(repo: Repo, tenant: dict) -> dict:
     """An institute as the platform admin sees it: its details and who its admin is."""
     admin = None
@@ -159,6 +173,8 @@ def describe(repo: Repo, tenant: dict) -> dict:
         "created_at": tenant.get("created_at", ""),
         "plan": tenant.get("plan", "paid"),
         "admin": admin,
+        "profile": {**{"description": "", "city": "", "contact_email": "", "contact_phone": "", "website": "", "exam_categories": []}, **(tenant.get("profile") or {})},
+        "counts": _counts(repo.scoped(tenant["slug"])),
     }
 
 
@@ -184,6 +200,7 @@ def update_institute(
     status: str | None = None,
     admin_name: str | None = None,
     admin_email: str | None = None,
+    plan: str | None = None,
 ) -> tuple[dict, str | None]:
     """Change an institute's name, colour or status, or its admin's name or email. Nothing here deletes anything.
 
@@ -209,6 +226,10 @@ def update_institute(
         if status not in ("active", "suspended"):
             raise ValidationError("Status must be 'active' or 'suspended'.")
         fields["status"] = status
+    if plan is not None:
+        if plan not in PLANS:
+            raise ValidationError("The plan must be free, popular or premium.")
+        fields["plan"] = plan
 
     scoped = repo.scoped(slug)
     current_email = tenant.get("admin_email")

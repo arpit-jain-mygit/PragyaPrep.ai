@@ -17,9 +17,15 @@ interface Draft {
   status: string;
   admin_name: string;
   admin_email: string;
+  plan: string;
 }
 
 const DEFAULT_COLOR = '#2563eb';
+
+/** The plan an institute is on. An older one that says paid is premium. */
+export function planOf(institute: { plan?: string }): string {
+  return institute.plan === 'free' || institute.plan === 'popular' ? institute.plan : 'premium';
+}
 
 function emptyForm() {
   return { slug: '', name: '', primary_color: DEFAULT_COLOR, admin_name: '', admin_email: '' };
@@ -96,13 +102,13 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Institute</th><th>Status</th><th>Admin</th><th>Created</th><th><span class="sr-only">Actions</span></th></tr>
+            <tr><th>Institute</th><th>Plan</th><th>Status</th><th>Admin</th><th>Created</th><th><span class="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             @for (institute of institutes(); track institute.slug) {
               @if (editing() === institute.slug) {
                 <tr>
-                  <td colspan="5">
+                  <td colspan="6">
                     <h2>Edit {{ institute.name }} <span class="muted small">({{ institute.slug }})</span></h2>
                     <div class="grid-2">
                       <div class="field">
@@ -114,6 +120,25 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
                         <input [id]="'color-' + institute.slug" name="color" type="color" [(ngModel)]="draft.primary_color" />
                       </div>
                     </div>
+                    <div class="field">
+                      <label [attr.for]="'plan-' + institute.slug">Plan</label>
+                      <select [id]="'plan-' + institute.slug" name="plan" [(ngModel)]="draft.plan">
+                        <option value="free">Free (1 student, 1 parent)</option>
+                        <option value="popular">Popular</option>
+                        <option value="premium">Premium</option>
+                      </select>
+                      <div class="hint">Moving to Free does not remove anyone already approved; it stops new approvals over the limit.</div>
+                    </div>
+                    @if (institute.profile; as p) {
+                      <div class="field" [attr.data-details]="institute.slug">
+                        <span class="label">Details the institute shows (they edit these)</span>
+                        <p class="muted small">
+                          {{ p.city || 'No city' }} · {{ p.contact_email || 'no email' }} · {{ p.contact_phone || 'no phone' }} · {{ p.website || 'no website' }}
+                          @if (p.exam_categories.length) { · {{ p.exam_categories.join(', ') }} }
+                        </p>
+                        @if (p.description) { <p class="muted small">{{ p.description }}</p> }
+                      </div>
+                    }
                     <div class="field">
                       <label [attr.for]="'status-' + institute.slug">Status</label>
                       <select [id]="'status-' + institute.slug" name="status" [(ngModel)]="draft.status">
@@ -181,7 +206,9 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
                     <span class="swatch" [style.background]="institute.primary_color" aria-hidden="true"></span>
                     <strong>{{ institute.name }}</strong>
                     <div class="muted small">{{ institute.slug }}</div>
+                    @if (institute.counts; as c) { <div class="muted small" [attr.data-counts]="institute.slug">{{ c.students }} student{{ c.students === 1 ? '' : 's' }}, {{ c.parents }} parent{{ c.parents === 1 ? '' : 's' }}, {{ c.courses }} course{{ c.courses === 1 ? '' : 's' }}@if (c.pending) {, {{ c.pending }} waiting}</div> }
                   </td>
+                  <td><span class="chip approved" [attr.data-plan]="institute.slug">{{ planOf(institute) }}</span></td>
                   <td><span class="chip" [class]="'chip ' + (institute.status === 'active' ? 'open' : 'suspended')">{{ institute.status }}</span></td>
                   <td>
                     @if (institute.admin; as admin) {
@@ -221,9 +248,10 @@ export class PlatformAdmin implements OnInit {
   readonly notice = signal<Notice | null>(null);
 
   form = emptyForm();
-  draft: Draft = { name: '', primary_color: DEFAULT_COLOR, status: 'active', admin_name: '', admin_email: '' };
+  draft: Draft = { name: '', primary_color: DEFAULT_COLOR, status: 'active', admin_name: '', admin_email: '', plan: 'premium' };
 
   readonly logo = logoSrc;
+  readonly planOf = planOf;
   private readonly uploader = inject(UploadService);
   readonly logoBusy = signal(false);
   readonly logoStage = signal<'sending' | 'checking'>('sending');
@@ -317,6 +345,7 @@ export class PlatformAdmin implements OnInit {
       status: institute.status,
       admin_name: fullName(institute.admin),
       admin_email: institute.admin?.email ?? '',
+      plan: planOf(institute),
     };
     this.adding.set(false);
     this.error.set(null);
@@ -352,6 +381,7 @@ export class PlatformAdmin implements OnInit {
     if (draft.name.trim() !== institute.name) changes.name = draft.name;
     if (draft.primary_color.toLowerCase() !== institute.primary_color.toLowerCase()) changes.primary_color = draft.primary_color;
     if (draft.status !== institute.status) changes.status = draft.status;
+    if (draft.plan !== planOf(institute)) changes.plan = draft.plan;
     const replacing = this.replacingAdmin(institute);
     // A new admin always gets the name shown on screen, so they can't silently inherit the old admin's.
     if (replacing || draft.admin_name.trim() !== fullName(institute.admin)) changes.admin_name = draft.admin_name;

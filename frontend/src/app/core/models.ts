@@ -164,6 +164,11 @@ export interface Institute {
   logo_url: string | null;
   created_at: string;
   admin: InstituteAdmin | null;
+  /** free, popular or premium (an older institute may still say paid, which counts as premium). */
+  plan?: string;
+  /** What the institute shows everyone. Read only here. */
+  profile?: InstituteProfile;
+  counts?: { students: number; parents: number; pending: number; courses: number };
 }
 
 export interface InstituteResult {
@@ -187,6 +192,7 @@ export interface InstituteUpdate {
   status?: string;
   admin_name?: string;
   admin_email?: string;
+  plan?: string;
 }
 
 
