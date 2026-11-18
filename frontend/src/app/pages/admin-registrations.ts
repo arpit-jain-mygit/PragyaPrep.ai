@@ -7,6 +7,7 @@ import { GENDER_LABELS, formatDate, formatDateTime } from '../core/format';
 import { AdminCourse, ApiError, CourseAccess, DecisionAction, Registration, RegistrationEdit } from '../core/models';
 import { Avatar } from '../ui/avatar';
 import { Icon } from '../ui/icon';
+import { StudentDrawer } from '../ui/student-drawer';
 import { PhotoPicker } from '../ui/photo-picker';
 import { UploadService } from '../core/upload.service';
 import { InfoTip } from '../ui/info-tip';
@@ -44,7 +45,7 @@ interface Notice {
 /** The admin's review queue: look at each registration, correct its details, then approve, reject, suspend or reactivate it. */
 @Component({
   selector: 'app-admin-registrations',
-  imports: [FormsModule, RouterLink, Avatar, Icon, InfoTip, PhotoPicker],
+  imports: [FormsModule, RouterLink, Avatar, Icon, InfoTip, PhotoPicker, StudentDrawer],
   template: `
     <div class="page-head">
       <h1>Registrations <app-info text="Review who has registered, and decide who may log in." /></h1>
@@ -82,6 +83,7 @@ interface Notice {
       <div class="empty-state" id="no-match"><app-icon name="search" [size]="32" /><p>No registrations match "{{ query() }}"</p></div>
     }
 
+    @if (quick(); as who) { <app-student-drawer [email]="who" (close)="quick.set(null)" /> }
     <div class="reg-tiles" id="tiles">
     @for (person of visible(); track person.email) {
       <article class="item reg-tile" [class.wide]="expanded(person.email)" [attr.data-status]="person.status" [attr.data-email]="person.email">
@@ -92,6 +94,7 @@ interface Notice {
             <div class="muted small who-email" [attr.title]="person.email">{{ person.email }}</div>
           </div>
           <span class="status" [class.ok]="person.status === 'approved'" [class.warn]="person.status === 'pending'" [class.bad]="person.status === 'rejected'">{{ person.status }}</span>
+          @if (person.status === 'approved') { <button class="icon-btn" type="button" [attr.data-quick]="person.email" title="Quick look" (click)="quick.set(person.email)"><app-icon name="eye" /><span class="sr-only">Quick look at {{ person.first_name }}</span></button> }
         </div>
         <div class="tile-courses">
           @for (name of person.course_names; track name) { <span class="tchip-sm">{{ name }}</span> }
@@ -281,6 +284,9 @@ interface Notice {
   `,
 })
 export class AdminRegistrations implements OnInit {
+  /** The student whose quick look is open in the side drawer. */
+  readonly quick = signal<string | null>(null);
+
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   readonly tenants = inject(TenantService);

@@ -93,3 +93,18 @@ describe('My profile', () => {
     http.expectNone(`${API}/api/me/delete-request`);
   });
 });
+
+describe('My profile: unsaved changes', () => {
+  it('knows when the form was changed and when it was saved again', async () => {
+    const { fixture, http } = await open('student', STUDENT);
+    const page = fixture.componentInstance as unknown as { hasUnsaved(): boolean };
+    expect(page.hasUnsaved()).toBe(false);
+    type(fixture, '#goal', '20');
+    await settle(fixture);
+    expect(page.hasUnsaved()).toBe(true);
+    el<HTMLButtonElement>(fixture, '#save').click();
+    http.expectOne(`${API}/api/me/profile`).flush({ ...STUDENT, weekly_goal_hours: 20 });
+    await settle(fixture);
+    expect(page.hasUnsaved()).toBe(false);
+  });
+});

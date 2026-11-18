@@ -5,11 +5,12 @@ import { formatDateTime } from '../core/format';
 import { ApiError, StudentTestCard } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
+import { Modal } from '../ui/modal';
 
 /** Before a test: what it holds and how it is marked, the student's earlier attempts, and the Start button. */
 @Component({
   selector: 'app-student-test',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, Modal],
   template: `
     <div class="page-head">
       <h1>{{ test()?.title ?? 'Test' }}@if (test()?.set_by) { <span class="chip parent-tag" id="set-by-parent"> Set by your parent</span> }</h1>
@@ -18,6 +19,21 @@ import { Icon } from '../ui/icon';
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
+    @if (instructions() && test(); as t) {
+      <app-modal title="Before you begin" boxId="instructions" (close)="instructions.set(false)">
+        <ul class="plain-list rules">
+          <li><app-icon name="clock" [size]="16" /> You have <strong>{{ t.duration_minutes }} minutes</strong>. The clock starts now and keeps running even if you leave the page.</li>
+          <li><app-icon name="check" [size]="16" /> {{ t.question_count }} questions, {{ sign(t.marks_correct) }} for a correct answer, {{ t.marks_incorrect === '0' ? 'nothing' : t.marks_incorrect }} for a wrong one, nothing if left blank.</li>
+          <li><app-icon name="flag" [size]="16" /> Your answers are saved as you go. You can mark a question for review and come back to it.</li>
+          <li><app-icon name="lock" [size]="16" /> When the time ends, the test is submitted for you with the answers saved so far.</li>
+          <li><app-icon name="rotate" [size]="16" /> You have {{ t.attempts_left }} attempt{{ t.attempts_left === 1 ? '' : 's' }} left, and this uses one.</li>
+        </ul>
+        <ng-container slot="footer">
+          <button class="btn secondary" type="button" id="instructions-cancel" (click)="instructions.set(false)">Not yet</button>
+          <button class="btn" type="button" id="begin-test" [disabled]="starting()" (click)="start()">{{ starting() ? 'Starting…' : 'I am ready, start' }}</button>
+        </ng-container>
+      </app-modal>
+    }
     @if (loading()) {
       <p class="muted">Loading…</p>
     } @else if (test(); as t) {
@@ -44,7 +60,7 @@ import { Icon } from '../ui/icon';
           } @else if (t.attempts_left === 0) {
             <span class="soft">You have used all your attempts.</span>
           } @else {
-            <button class="btn" type="button" id="start-test" [disabled]="starting()" (click)="start()"><app-icon name="play" /> Start test</button>
+            <button class="btn" type="button" id="start-test" [disabled]="starting()" (click)="instructions.set(true)"><app-icon name="play" /> Start test</button>
             <span class="soft">The clock starts when you click.</span>
           }
         </div>
@@ -90,6 +106,7 @@ export class StudentTest implements OnInit {
   readonly test = signal<StudentTestCard | null>(null);
   readonly loading = signal(false);
   readonly starting = signal(false);
+  readonly instructions = signal(false);
   readonly error = signal<ApiError | null>(null);
   readonly when = formatDateTime;
 
@@ -130,6 +147,7 @@ export class StudentTest implements OnInit {
     } catch (error) {
       this.error.set(error as ApiError);
       this.starting.set(false);
+      this.instructions.set(false);
     }
   }
 }

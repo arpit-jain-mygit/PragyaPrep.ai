@@ -131,6 +131,18 @@ export class MyProfilePage implements OnInit {
     }
   }
 
+  /** What the form held when it was last filled from the server, to tell whether anything was changed since. */
+  private baseline = '';
+
+  private snapshot(): string {
+    return JSON.stringify([this.mobile.trim(), this.birth, this.exams.trim(), this.examDate, Number(this.goal) || 0, this.notifyAnnouncements, this.notifyTests, this.notifyLive, this.relation, this.summary, this.consent]);
+  }
+
+  /** True when something was typed or ticked and not saved yet. */
+  hasUnsaved(): boolean {
+    return this.me() !== null && this.snapshot() !== this.baseline;
+  }
+
   /** Fill the form from what the server has. */
   private show(profile: MyProfile): void {
     this.me.set(profile);
@@ -146,6 +158,7 @@ export class MyProfilePage implements OnInit {
     this.relation = profile.relation ?? '';
     this.summary = profile.summary ?? 'weekly';
     this.consent = profile.consent ?? false;
+    this.baseline = this.snapshot();
   }
 
   async save(): Promise<void> {

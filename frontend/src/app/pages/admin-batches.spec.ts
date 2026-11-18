@@ -98,7 +98,7 @@ describe('Batches', () => {
     el<HTMLButtonElement>(fixture, '[data-open="Morning CAT"]').click();
     http.expectOne(`${API}/api/admin/batches/b1`).flush(DETAIL);
     await settle(fixture);
-    el<HTMLButtonElement>(fixture, '[data-student="asha@example.com"] button').click();
+    el<HTMLButtonElement>(fixture, '[data-student="asha@example.com"] button[aria-label^="Remove"]').click();
     const request = http.expectOne(`${API}/api/admin/batches/b1/students/asha%40example.com`);
     expect(request.request.method).toBe('DELETE');
     request.flush({ ...DETAIL, enrolled: 0, students: [] });
@@ -123,5 +123,22 @@ describe('Batches', () => {
     await settle(fixture);
     expect(el(fixture, '#batch-notice').textContent).toContain('archived');
     expect(all(fixture, '#enrol').length).toBe(0);
+  });
+});
+
+describe('Batches: quick look', () => {
+  it('opens the student drawer from a name in the batch', async () => {
+    const { fixture, http } = await open();
+    el<HTMLButtonElement>(fixture, '[data-open="Morning CAT"]').click();
+    http.expectOne(`${API}/api/admin/batches/b1`).flush(DETAIL);
+    await settle(fixture);
+    el<HTMLButtonElement>(fixture, '[data-quick="asha@example.com"]').click();
+    await settle(fixture);
+    http.expectOne(`${API}/api/admin/students/asha%40example.com/quick`).flush({
+      email: 'asha@example.com', first_name: 'Asha', last_name: 'Rao', status: 'approved', mobile: '', city: '', created_at: '', avatar_url: '',
+      target_exams: [], exam_date: '', courses: [], batches: ['Morning CAT'], parents: [], deletion_requested: false,
+    });
+    await settle(fixture);
+    expect(el(fixture, '#student-drawer').textContent).toContain('Asha Rao');
   });
 });

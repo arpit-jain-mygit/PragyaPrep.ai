@@ -9,6 +9,7 @@ import {
   SignupForm,
   Access,
   Batch,
+  StudentQuick,
   MyBatch,
   MyInstitute,
   MyProfile,
@@ -148,6 +149,12 @@ export class ApiService {
   /** The student's photo has been sent: attach it to their registration. */
   finishRegistrationPhoto(email: string, token: string): Promise<{ ok: boolean }> {
     return this.post('/api/register/photo', { email, token });
+  }
+
+  // ---- A student at a glance (the admin's side drawer) ----
+
+  studentQuick(email: string): Promise<StudentQuick> {
+    return this.get(`/api/admin/students/${encodeURIComponent(email)}/quick`);
   }
 
   // ---- Batches ----

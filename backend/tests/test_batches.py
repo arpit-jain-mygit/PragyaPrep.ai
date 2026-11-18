@@ -160,3 +160,20 @@ def test_one_institute_cannot_see_anothers_batches(client, make_tenant, admin, s
     assert client.get(URL, headers=other).json() == []
     batch_id = client.get(URL, headers=admin).json()[0]["id"]
     assert client.get(f"{URL}/{batch_id}", headers=other).status_code == 404
+
+
+def test_the_admin_sees_a_student_at_a_glance(client, admin, school, repo, sign_in):
+    batch = make(client, admin, school, seat_limit=None)
+    client.post(f"{URL}/{batch['id']}/students", json={"emails": ["asha@example.com"]}, headers=admin)
+    repo.scoped("aaptprep").create_member({"email": "mum@example.com", "role": "parent", "status": "approved", "first_name": "Meena", "last_name": "Rao", "children": ["asha@example.com"]})
+    quick = client.get("/api/admin/students/asha@example.com/quick", headers=admin).json()
+    assert quick["first_name"] == "Asha" and quick["status"] == "approved" and quick["batches"] == ["Morning CAT"]
+    assert [c["name"] for c in quick["courses"]] == ["CAT"] and quick["courses"][0]["active"] is True and quick["courses"][0]["source"] == "batch"
+    assert quick["parents"] == [{"name": "Meena Rao", "email": "mum@example.com"}]
+    assert "avatar_key" not in str(quick) and "code_hash" not in str(quick)
+
+
+def test_the_quick_view_is_for_the_admin_and_for_students_only(client, admin, school, sign_in):
+    assert client.get("/api/admin/students/asha@example.com/quick", headers=sign_in("aaptprep", "ravi@example.com")).status_code == 403
+    assert client.get("/api/admin/students/nobody@example.com/quick", headers=admin).status_code == 404
+    assert client.get("/api/admin/students/ritesh@aaptprep.example.com/quick", headers=admin).status_code == 404

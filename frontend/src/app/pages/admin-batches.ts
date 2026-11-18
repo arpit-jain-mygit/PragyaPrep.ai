@@ -4,6 +4,7 @@ import { ApiService } from '../core/api.service';
 import { formatDate } from '../core/format';
 import { AdminCourse, ApiError, Batch, Registration } from '../core/models';
 import { Icon } from '../ui/icon';
+import { StudentDrawer } from '../ui/student-drawer';
 
 interface Draft {
   name: string;
@@ -23,7 +24,7 @@ const emptyDraft = (): Draft => ({ name: '', courseIds: [], start: '', end: '', 
  */
 @Component({
   selector: 'app-admin-batches',
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, StudentDrawer],
   template: `
     <div class="page-head">
       <h1><app-icon name="layers" /> Batches</h1>
@@ -32,6 +33,7 @@ const emptyDraft = (): Draft => ({ name: '', courseIds: [], start: '', end: '', 
     @if (error(); as problem) { <div class="alert error" role="alert" id="batch-error">{{ problem.detail }}</div> }
     @if (notice(); as n) { <div class="alert ok" role="status" id="batch-notice">{{ n }}</div> }
 
+    @if (quick(); as who) { <app-student-drawer [email]="who" (close)="quick.set(null)" /> }
     @if (form(); as mode) {
       <form class="card" id="batch-form" (ngSubmit)="save()" novalidate>
         <h2>{{ mode === 'new' ? 'New batch' : 'Edit batch' }}</h2>
@@ -85,7 +87,7 @@ const emptyDraft = (): Draft => ({ name: '', courseIds: [], start: '', end: '', 
             </div>
             <h3>Students ({{ d.enrolled }})</h3>
             @for (s of d.students ?? []; track s.email) {
-              <p class="row" [attr.data-student]="s.email">{{ s.name }} <span class="soft small">{{ s.email }}</span>
+              <p class="row" [attr.data-student]="s.email"><button type="button" class="linklike" [attr.data-quick]="s.email" (click)="quick.set(s.email)">{{ s.name }}</button> <span class="soft small">{{ s.email }}</span>
                 <button class="icon-btn danger" type="button" [attr.aria-label]="'Remove ' + s.name" (click)="remove(d, s.email)"><app-icon name="x" [size]="14" /></button></p>
             }
             @if (!(d.students ?? []).length) { <p class="muted">No students yet.</p> }
@@ -120,6 +122,7 @@ export class AdminBatchesPage implements OnInit {
   readonly openId = signal<string | null>(null);
   readonly detail = signal<Batch | null>(null);
   readonly search = signal('');
+  readonly quick = signal<string | null>(null);
   readonly picked = signal<string[]>([]);
   draft: Draft = emptyDraft();
   private editing: string | null = null;

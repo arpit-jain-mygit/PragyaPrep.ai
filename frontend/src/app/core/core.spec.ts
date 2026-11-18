@@ -370,3 +370,18 @@ describe('platformGuard', () => {
     expect(String(await run())).toBe('/platform/login');
   });
 });
+
+describe('Unsaved changes guard', () => {
+  it('lets a page without changes go, and asks before a page with changes goes', async () => {
+    const { unsavedGuard } = await import('./guards');
+    const run = (page: { hasUnsaved(): boolean }) => (unsavedGuard as unknown as (p: unknown) => boolean)(page);
+    const ask = vi.spyOn(window, 'confirm');
+    expect(run({ hasUnsaved: () => false })).toBe(true);
+    expect(ask).not.toHaveBeenCalled();
+    ask.mockReturnValue(false);
+    expect(run({ hasUnsaved: () => true })).toBe(false);
+    ask.mockReturnValue(true);
+    expect(run({ hasUnsaved: () => true })).toBe(true);
+    ask.mockRestore();
+  });
+});

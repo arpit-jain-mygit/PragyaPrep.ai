@@ -183,12 +183,26 @@ describe('Taking a test', () => {
     clickButton(fixture, 'Mark for review');
     clickButton(fixture, 'Submit');
     await settle(fixture);
-    expect(el(fixture, '#submit-box').textContent).toContain('You answered 1 of 3');
-    expect(el(fixture, '#submit-box').textContent).toContain('1 marked for review');
+    const summary = el(fixture, '#submit-summary').textContent!.replace(/\s+/g, ' ');
+    expect(summary).toContain('1 answered');
+    expect(summary).toContain('2 not answered');
+    expect(summary).toContain('1 for review');
+    expect(all(fixture, '#unanswered-list [data-jump]').map((b) => b.textContent!.trim())).toEqual(['2', '3']);
     clickButton(fixture, 'Keep going');
     await settle(fixture);
     expect(all(fixture, '#submit-box').length).toBe(0);
     http.expectNone(`${API}/api/my/tests/t1/attempts/1/submit`);
+  });
+
+  it('jumps to a question that was left blank from the submit summary', async () => {
+    const { fixture } = open(attemptOf({ answers: { q1: 1 } }));
+    await settle(fixture);
+    clickButton(fixture, 'Submit');
+    await settle(fixture);
+    el(fixture, '[data-jump="3"]').click();
+    await settle(fixture);
+    expect(all(fixture, '#submit-box').length).toBe(0);
+    expect(el(fixture, '#take-question').textContent).toContain('Question 3 of 3');
   });
 
   it('submits after saving what is waiting, then hands over the result', async () => {

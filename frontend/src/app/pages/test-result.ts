@@ -3,16 +3,18 @@ import { RouterLink } from '@angular/router';
 import { AttemptResult, ReviewItem } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
+import { Lightbox } from '../ui/lightbox';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
 /** The result of a finished attempt: the score and, when the test allows it, every question with the right answer and the reasons. */
 @Component({
   selector: 'app-test-result',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, Lightbox],
   template: `
     @let r = result();
     @if (!embedded()) {
+      <app-lightbox />
       <div class="page-head">
         <h1>{{ r.title }}</h1>
         <div class="tools">

@@ -498,7 +498,7 @@ describe('Admin registrations page', () => {
     ['suspended', 'Reactivate'],
   ] as const)('offers %s people the %s button', async (status, button) => {
     const { fixture } = await open([registration({ status })]);
-    expect(all(fixture, 'article button').map((b) => b.textContent?.trim())).toEqual(['Show details', 'Edit', button]);
+    expect(all(fixture, 'article button:not([data-quick])').map((b) => b.textContent?.trim())).toEqual(['Show details', 'Edit', button]);
   });
 
   it('offers Approve for a rejected registration, and shows the reason given', async () => {

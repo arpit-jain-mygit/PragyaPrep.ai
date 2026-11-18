@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard, parentGuard, platformGuard, signedInGuard, tenantGuard } from './core/guards';
+import { adminGuard, parentGuard, platformGuard, signedInGuard, tenantGuard, unsavedGuard } from './core/guards';
 
 // Every page belongs to an institute, named in the address: /aaptprep/login, /aaptprep/register, and so on.
 // Once the platform has a domain, the institute will come from the web address instead.
@@ -55,6 +55,7 @@ export const routes: Routes = [
       {
         path: 'admin/institute',
         canActivate: [signedInGuard, adminGuard],
+        canDeactivate: [unsavedGuard],
         loadComponent: () => import('./pages/admin-institute').then((m) => m.AdminInstitutePage),
       },
       {
@@ -65,6 +66,7 @@ export const routes: Routes = [
       {
         path: 'profile',
         canActivate: [signedInGuard],
+        canDeactivate: [unsavedGuard],
         loadComponent: () => import('./pages/my-profile').then((m) => m.MyProfilePage),
       },
       {

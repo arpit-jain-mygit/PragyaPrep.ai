@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { logoSrc } from '../core/format';
 import { Avatar } from '../ui/avatar';
+import { Welcome } from '../ui/welcome';
 import { Icon } from '../ui/icon';
 import { SupportBox } from '../ui/support-box';
 import { NoticeService } from '../core/notice.service';
@@ -15,7 +16,7 @@ import { TenantService } from '../core/tenant.service';
  */
 @Component({
   selector: 'app-tenant-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox, Welcome],
   template: `
     @if (tenants.loading()) {
       <p class="center muted" style="margin-top: 3rem">Loading…</p>
@@ -80,6 +81,7 @@ import { TenantService } from '../core/tenant.service';
         <router-outlet />
       </main>
       @if (support()) { <app-support-box (close)="support.set(false)" /> }
+      @if (member(); as m) { @if (!isPlatformAdmin()) { <app-welcome [role]="m.role" [tenant]="info.slug" [email]="m.email" /> } }
       <p class="footer">Powered by PragyaPrep</p>
     }
   `,

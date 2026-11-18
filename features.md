@@ -217,3 +217,4 @@ The login page shows these messages straight away. When an email isn't registere
 - A free student also gets one free test for their picked course: one attempt, no dates, with the score and answer review.
 - Institute admins have a My institute page: name, logo, colour, description, city, contact details, website, exam categories, and their own name, mobile and photo. Students see a Contact your institute card.
 - Batches: cohorts with courses, dates, seats, faculty and timetable. Enrolling opens the courses; students and parents see their batches.
+- Pop-ups: submit-test summary, rules before a test, student quick look drawer, one-time welcome, picture viewer, unsaved-changes warning.

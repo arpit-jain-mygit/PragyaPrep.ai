@@ -1092,3 +1092,21 @@ export interface MyBatch {
   faculty: string;
   schedule: string;
 }
+
+/** A student at a glance, for the admin's side drawer. */
+export interface StudentQuick {
+  email: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  mobile: string;
+  city: string;
+  created_at: string;
+  avatar_url: string;
+  target_exams: string[];
+  exam_date: string;
+  courses: { name: string; active: boolean; expires_at: string | null; source: string }[];
+  batches: string[];
+  parents: { name: string; email: string }[];
+  deletion_requested: boolean;
+}

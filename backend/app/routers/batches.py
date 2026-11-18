@@ -2,8 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import batches
-from app.deps import STUDENT, TENANT_ADMIN, get_tenant_repo, require_roles
+from app.deps import STUDENT, TENANT_ADMIN, get_storage, get_tenant_repo, require_roles
 from app.repo import TenantRepo
+from app.storage import ContentStorage
 from app.tenants import ValidationError
 
 router = APIRouter(tags=["batches"])
@@ -54,3 +55,12 @@ def remove_student(batch_id: str, email: str, scoped: TenantRepo = Depends(get_t
 @router.get("/api/my/batches")
 def my_batches(scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
     return batches.for_student(scoped, student["email"])
+
+
+@router.get("/api/admin/students/{email}/quick")
+def quick_view(email: str, scoped: TenantRepo = Depends(get_tenant_repo), storage: ContentStorage = Depends(get_storage), admin: dict = Depends(require_roles(TENANT_ADMIN))):
+    """A student at a glance, for the side drawer: details, courses open, batches, parents."""
+    try:
+        return batches.quick_view(scoped, storage, email)
+    except batches.BatchNotFound:
+        raise HTTPException(status_code=404, detail="We couldn't find that student.")

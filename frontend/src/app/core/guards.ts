@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn, CanDeactivateFn, Router } from '@angular/router';
 import { SessionService } from './session.service';
 import { TenantService } from './tenant.service';
 
@@ -50,3 +50,12 @@ export const platformGuard: CanActivateFn = async () => {
   return router.createUrlTree(['/', 'platform', 'login']);
 };
 
+
+/** A page with a form can say whether it has changes that were not saved. */
+export interface MaybeUnsaved {
+  hasUnsaved(): boolean;
+}
+
+/** Leaving a page with unsaved changes asks first. The browser's own question is used, so it also works inside the Android app. */
+export const unsavedGuard: CanDeactivateFn<MaybeUnsaved> = (page) =>
+  !page.hasUnsaved?.() || window.confirm('You have changes that are not saved. Leave without saving?');

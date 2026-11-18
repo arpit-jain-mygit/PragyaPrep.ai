@@ -663,3 +663,25 @@ fieldset.field { border: 0; padding: 0; margin: 0 0 0.9rem; }
 .batch-detail { border-top: 1px solid var(--line); margin-top: 0.6rem; padding-top: 0.6rem; }
 .batch-detail h3 { margin: 0.9rem 0 0.4rem; font-size: 1rem; }
 .pick-list { max-height: 14rem; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.6rem; margin: 0.5rem 0; }
+
+/* ---- Popups, drawers and the picture viewer ---- */
+.modal { position: fixed; z-index: 41; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(30rem, calc(100vw - 2rem)); max-height: calc(100vh - 3rem); display: flex; flex-direction: column; padding: 0; overflow: hidden; margin: 0; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--line); }
+.modal-head h2 { margin: 0; font-size: 1.15rem; }
+.modal-body { padding: 1rem 1.1rem; overflow: auto; }
+.modal-foot { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; padding: 0.8rem 1.1rem; border-top: 1px solid var(--line); }
+.modal-foot:empty { display: none; }
+.modal.side { top: 0; left: auto; right: 0; transform: none; height: 100vh; max-height: 100vh; width: min(26rem, 100vw); border-radius: 0; animation: slide-in 0.18s ease-out; }
+@keyframes slide-in { from { transform: translateX(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .modal.side { animation: none; } }
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin: 0.6rem 0; }
+.summary-grid div { border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem; text-align: center; }
+.summary-grid strong { display: block; font-size: 1.5rem; }
+.summary-grid .bad { border-color: #f59e0b; background: #fffbeb; }
+.lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(15, 23, 42, 0.92); display: flex; align-items: center; justify-content: center; padding: 1rem; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; border-radius: 8px; }
+.lightbox-close { position: absolute; top: max(1rem, env(safe-area-inset-top, 0px)); right: 1rem; background: #fff; border: 0; border-radius: 999px; padding: 0.4rem 0.9rem; font: inherit; cursor: pointer; }
+img.qimg { cursor: zoom-in; }
+#unanswered-list .chip-btn { margin: 0 0.25rem 0.25rem 0; }
+.rules li { display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.7rem; }
+.rules li app-icon { margin-top: 0.15rem; color: var(--brand); }

@@ -196,11 +196,35 @@ describe('Student test intro', () => {
   it('starts an attempt and goes to it', async () => {
     const { fixture, http, navigate } = await openIntro(card());
     el<HTMLButtonElement>(fixture, '#start-test').click();
+    await settle(fixture);
+    http.expectNone(`${API}/api/my/tests/t1/start`);
+    el<HTMLButtonElement>(fixture, '#begin-test').click();
     const request = http.expectOne(`${API}/api/my/tests/t1/start`);
     expect(request.request.method).toBe('POST');
     request.flush({ status: 'in_progress', test_id: 't1', number: 2 });
     await settle(fixture);
     expect(navigate).toHaveBeenCalledWith(['/', 'demo', 'tests', 't1', 'attempts', 2]);
+  });
+
+  it('shows the rules before a new attempt, and Not yet closes them without starting', async () => {
+    const { fixture, http } = await openIntro(card());
+    el<HTMLButtonElement>(fixture, '#start-test').click();
+    await settle(fixture);
+    const rules = el(fixture, '#instructions').textContent!.replace(/\s+/g, ' ');
+    expect(rules).toContain('Before you begin');
+    expect(rules).toContain('minutes');
+    expect(rules).toContain('submitted for you');
+    el<HTMLButtonElement>(fixture, '#instructions-cancel').click();
+    await settle(fixture);
+    expect(all(fixture, '#instructions').length).toBe(0);
+    http.expectNone(`${API}/api/my/tests/t1/start`);
+  });
+
+  it('resumes an attempt straight away, without the rules', async () => {
+    const { fixture, http } = await openIntro(card({ in_progress: 1, attempts_used: 1, attempts: [{ number: 1, status: 'in_progress', started_at: '2027-01-15T08:00:00+00:00' }] }));
+    el<HTMLButtonElement>(fixture, '#start-test').click();
+    http.expectOne(`${API}/api/my/tests/t1/start`).flush({ status: 'in_progress', test_id: 't1', number: 1 });
+    expect(all(fixture, '#instructions').length).toBe(0);
   });
 
   it('offers to resume an attempt in progress', async () => {
@@ -227,6 +251,8 @@ describe('Student test intro', () => {
   it('shows the server\'s reason when starting is refused and stays on the page', async () => {
     const { fixture, http, navigate } = await openIntro(card());
     el<HTMLButtonElement>(fixture, '#start-test').click();
+    await settle(fixture);
+    el<HTMLButtonElement>(fixture, '#begin-test').click();
     http.expectOne(`${API}/api/my/tests/t1/start`).flush({ detail: 'You have used all your attempts for this test.' }, { status: 409, statusText: 'x' });
     await settle(fixture);
     expect(text(fixture)).toContain('You have used all your attempts for this test.');

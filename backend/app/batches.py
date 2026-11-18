@@ -238,3 +238,22 @@ def for_student(scoped: TenantRepo, email: str) -> list[dict]:
             shown = _shown(scoped, batch)
             out.append({key: shown[key] for key in ("id", "name", "course_names", "start_date", "end_date", "faculty", "schedule")})
     return out
+
+
+# ---- The admin's quick look at one student ----
+
+def quick_view(scoped: TenantRepo, storage, email: str) -> dict:
+    """Who a student is at a glance: details, courses open, batches, parents. For the admin's side drawer."""
+    from app import avatars, profiles
+
+    person = scoped.get_member(str(email).strip().lower())
+    if person is None or person.get("role") != "student":
+        raise BatchNotFound()
+    courses = [{"name": a["course_name"], "active": content.is_active(a), "expires_at": a.get("expires_at"), "source": a.get("source", "")} for a in scoped.list_access(person["email"])]
+    mine = [b["name"] for b in scoped.list_batches() if b.get("status", "active") == "active" and person["email"] in b.get("students", [])]
+    return {
+        "email": person["email"], "first_name": person.get("first_name", ""), "last_name": person.get("last_name", ""), "status": person.get("status", ""),
+        "mobile": person.get("mobile", ""), "city": person.get("city", ""), "created_at": person.get("created_at", ""), "avatar_url": avatars.url_for(storage, person),
+        "target_exams": person.get("target_exams", []), "exam_date": person.get("exam_date", ""),
+        "courses": courses, "batches": mine, "parents": profiles.linked(scoped, person), "deletion_requested": bool(person.get("deletion_requested_at")),
+    }

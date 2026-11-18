@@ -114,6 +114,17 @@ export class AdminInstitutePage implements OnInit {
     }
   }
 
+  private baseline = '';
+
+  private snapshot(): string {
+    return JSON.stringify([this.name, this.color, this.city, this.website, this.contactEmail, this.contactPhone, this.description, this.categories.trim(), this.firstName, this.lastName, this.mobile]);
+  }
+
+  /** True when something was typed and not saved yet. */
+  hasUnsaved(): boolean {
+    return this.me() !== null && this.snapshot() !== this.baseline;
+  }
+
   private show(m: MyInstitute): void {
     this.me.set(m);
     this.shared.avatarUrl.set(m.admin.avatar_url ?? '');
@@ -128,6 +139,7 @@ export class AdminInstitutePage implements OnInit {
     this.firstName = m.admin.first_name;
     this.lastName = m.admin.last_name;
     this.mobile = m.admin.mobile;
+    this.baseline = this.snapshot();
   }
 
   /** The top bar and the institute's look follow what was just saved. */

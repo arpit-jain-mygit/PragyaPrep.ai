@@ -74,3 +74,14 @@ describe('My institute', () => {
     expect(all(fixture, '#logo-remove').length).toBe(0);
   });
 });
+
+describe('My institute: unsaved changes', () => {
+  it('knows when the form was changed', async () => {
+    const { fixture } = await open();
+    const page = fixture.componentInstance as unknown as { hasUnsaved(): boolean };
+    expect(page.hasUnsaved()).toBe(false);
+    type(fixture, '#city', 'Pune');
+    await settle(fixture);
+    expect(page.hasUnsaved()).toBe(true);
+  });
+});

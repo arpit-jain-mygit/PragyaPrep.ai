@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { ApiError, AttemptQuestion, AttemptResult, AttemptView } from '../core/models';
 import { Icon } from '../ui/icon';
+import { Lightbox } from '../ui/lightbox';
+import { Modal } from '../ui/modal';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -12,7 +14,7 @@ const LETTERS = ['A', 'B', 'C', 'D'];
  */
 @Component({
   selector: 'app-take-test',
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, Lightbox, Modal],
   template: `
     <div class="take-bar" id="take-bar">
       <strong class="take-title">{{ attempt().title }}</strong>
@@ -26,18 +28,25 @@ const LETTERS = ['A', 'B', 'C', 'D'];
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
     @if (confirming()) {
-      <div class="danger-box" id="submit-box">
-        <p>
-          <strong>Submit the test?</strong>
-          You answered {{ answeredCount() }} of {{ attempt().questions.length }}{{ flagged().size ? ', ' + flagged().size + ' marked for review' : '' }}.
-          You can't change your answers afterwards.
-        </p>
-        <div class="row">
-          <button class="btn small" type="button" id="confirm-submit" [disabled]="submitting()" (click)="submit()">{{ submitting() ? 'Submitting…' : 'Yes, submit' }}</button>
-          <button class="btn secondary small" type="button" (click)="confirming.set(false)">Keep going</button>
+      <app-modal title="Submit the test?" boxId="submit-box" (close)="confirming.set(false)">
+        <div class="summary-grid" id="submit-summary">
+          <div><strong>{{ answeredCount() }}</strong> answered</div>
+          <div [class.bad]="unanswered().length > 0"><strong>{{ unanswered().length }}</strong> not answered</div>
+          <div><strong>{{ flagged().size }}</strong> for review</div>
         </div>
-      </div>
+        @if (unanswered().length) {
+          <p id="unanswered-list">Not answered:
+            @for (n of unanswered(); track n) { <button type="button" class="chip-btn" [attr.data-jump]="n" (click)="jump(n)">{{ n }}</button> }
+          </p>
+        }
+        <p class="muted">Time left: {{ clock() }}. You can't change your answers after you submit.</p>
+        <ng-container slot="footer">
+          <button class="btn secondary" type="button" id="keep-going" (click)="confirming.set(false)">Keep going</button>
+          <button class="btn" type="button" id="confirm-submit" [disabled]="submitting()" (click)="submit()">{{ submitting() ? 'Submitting…' : 'Yes, submit' }}</button>
+        </ng-container>
+      </app-modal>
     }
+    <app-lightbox />
 
     <div class="take-layout">
       <nav class="palette" aria-label="Questions" id="palette">
@@ -112,6 +121,15 @@ export class TakeTest implements OnInit, OnDestroy {
   readonly saveState = signal<'saved' | 'saving' | 'failed'>('saved');
 
   readonly current = computed<AttemptQuestion | undefined>(() => this.attempt().questions[this.index()]);
+  /** The numbers (1, 2, ...) of the questions without an answer, in order. */
+  readonly unanswered = computed(() => this.attempt().questions.map((q, i) => (this.isAnswered(q.id) ? 0 : i + 1)).filter((n) => n > 0));
+
+  /** Close the summary and go to that question. */
+  jump(number: number): void {
+    this.confirming.set(false);
+    this.go(number - 1);
+  }
+
   readonly answeredCount = computed(() => this.attempt().questions.filter((q) => this.isAnswered(q.id)).length);
   readonly clock = computed(() => {
     const total = this.remaining();
