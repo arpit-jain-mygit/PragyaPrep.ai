@@ -20,6 +20,17 @@ class TenantPublicOut(BaseModel):
 
 # ---- Login by emailed code ----
 
+class SignupIn(BaseModel):
+    """A first-time sign-up. kind is institute, student or parent; the institute fields are only for an institute."""
+    kind: str
+    email: str
+    name: str
+    institute_name: str = ""
+    slug: str = ""
+    primary_color: str = "#2563eb"
+    code: str = ""
+
+
 class RequestCodeIn(BaseModel):
     email: str
 
@@ -193,6 +204,7 @@ class InstituteOut(BaseModel):
     primary_color: str
     logo_url: str | None = None
     created_at: str = ""
+    plan: str = "paid"
     admin: InstituteAdminOut | None = None
 
 

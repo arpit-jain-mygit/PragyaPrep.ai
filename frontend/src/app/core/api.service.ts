@@ -3,6 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  FreeSample,
+  FreeState,
+  SignupForm,
   Access,
   StudentPhotoStart,
   RegistrationReceived,
@@ -328,6 +331,26 @@ export class ApiService {
 
   glimpse(): Promise<{ courses: { name: string; subjects: { name: string; topics: { title: string; subtopics: string[] }[] }[] }[] }> {
     return this.get('/api/public/glimpse');
+  }
+
+  signupCode(form: SignupForm): Promise<{ message: string }> {
+    return this.post('/api/public/signup/code', form);
+  }
+
+  signup(form: SignupForm, code: string): Promise<Session> {
+    return this.post('/api/public/signup', { ...form, code });
+  }
+
+  freeCourses(): Promise<FreeState> {
+    return this.get('/api/free/courses');
+  }
+
+  freePick(course: string): Promise<FreeState> {
+    return this.call(firstValueFrom(this.http.put<FreeState>(`${this.base}/api/free/pick`, { course })));
+  }
+
+  freeSample(): Promise<{ sample: FreeSample | null }> {
+    return this.get('/api/free/sample');
   }
 
   sendSupport(body: { message: string; page?: string; screenshot?: string }): Promise<{ sent: boolean }> {

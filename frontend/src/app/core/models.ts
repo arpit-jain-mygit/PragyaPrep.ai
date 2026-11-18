@@ -990,3 +990,28 @@ export interface ChildDetail {
   practice: { id: string; title: string; question_count: number; attempts_used: number; best: { marks: string; percentage: string; passed: boolean } | null; set_by_parent: boolean; created_at: string }[];
   results: { summary: MyResults['summary']; trend: MyResults['trend']; subjects: SubjectResult[] };
 }
+
+/** The form of a first-time sign-up. The institute fields are only used when kind is 'institute'. */
+export interface SignupForm {
+  kind: 'institute' | 'student' | 'parent';
+  email: string;
+  name: string;
+  institute_name?: string;
+  slug?: string;
+  primary_color?: string;
+}
+
+export interface FreeState {
+  picked: string | null;
+  courses: { name: string; subjects: { name: string; topics: { title: string; subtopics: string[] }[] }[] }[];
+}
+
+export interface FreeSample {
+  course: string;
+  subject: string;
+  topic: string;
+  title: string;
+  note: string;
+  links: { title: string; url: string }[];
+  more_in_paid: number;
+}

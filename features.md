@@ -212,3 +212,4 @@ The login page shows these messages straight away. When an email isn't registere
 - Tenant branding: display name, logo and primary colour, changed by the platform admin.
 - Top-bar icons have a distinct tint per section and bolder strokes so they stay readable on any brand colour.
 - Admin home tiles each have a distinct colour by meaning (amber pending, blue students, red behind, cyan tests, violet questions, green courses).
+- Anyone can sign up: a new institute (Free plan, its own page, 1 student and 1 parent), or a free student or parent with no institute who picks one course and opens its free sub-topic.

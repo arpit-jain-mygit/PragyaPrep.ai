@@ -1,7 +1,7 @@
 """Bulk onboarding for the institute's admin: the Excel template, a preview or import of a filled-in sheet, and the welcome emails."""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from app import avatars, student_import
+from app import avatars, plan_limits, student_import
 from app.config import Settings
 from app.deps import TENANT_ADMIN, get_mailer, get_settings, get_storage, get_tenant, get_tenant_repo, require_roles
 from app.mailer import Mailer
@@ -28,6 +28,7 @@ async def import_students(
     request: Request,
     confirm: bool = Query(False),
     scoped: TenantRepo = Depends(get_tenant_repo),
+    tenant: dict = Depends(get_tenant),
     admin: dict = Depends(require_roles(TENANT_ADMIN)),
 ):
     """Read an uploaded .xlsx (the request body). Without confirm=true, only check it and show what would happen.
@@ -39,6 +40,10 @@ async def import_students(
         raise HTTPException(status_code=422, detail=str(error))
     result = {"summary": checked["summary"], "rows": checked["rows"], "confirmed": confirm, "batch": None, "created": []}
     if confirm:
+        try:
+            plan_limits.check(scoped, tenant, "student", len(checked["ready_records"]))
+        except plan_limits.PlanLimit as error:
+            raise HTTPException(status_code=403, detail=error.message)
         made = student_import.create(scoped, admin["email"], checked["ready_records"]) if checked["ready_records"] else {"batch": None, "results": []}
         by_email = {r["email"]: r for r in made["results"]}
         created = 0

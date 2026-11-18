@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 
-from app import parent_import, parents
+from app import parent_import, parents, plan_limits
 from app.config import Settings
 from app.deps import TENANT_ADMIN, get_mailer, get_settings, get_tenant, get_tenant_repo, require_roles
 from app.mailer import Mailer
@@ -26,7 +26,11 @@ def add_parent(
     mailer: Mailer = Depends(get_mailer), admin: dict = Depends(require_roles(TENANT_ADMIN)),
 ):
     try:
+        if scoped.get_member((body.email or "").strip().lower()) is None:
+            plan_limits.check(scoped, tenant, "parent")
         parents.add(scoped, tenant, settings, mailer, admin["email"], body.model_dump())
+    except plan_limits.PlanLimit as error:
+        raise HTTPException(status_code=403, detail=error.message)
     except parents.FieldErrors as error:
         return JSONResponse(status_code=422, content={"detail": "Please correct the marked fields.", "errors": error.errors})
     except ValidationError as error:
@@ -51,6 +55,11 @@ async def import_parents(
         raise HTTPException(status_code=422, detail=str(error))
     result = {"summary": checked["summary"], "rows": checked["rows"], "confirmed": confirm}
     if confirm:
+        new_parents = sum(1 for r in checked["ready_records"] if scoped.get_member(r["email"]) is None)
+        try:
+            plan_limits.check(scoped, tenant, "parent", new_parents)
+        except plan_limits.PlanLimit as error:
+            raise HTTPException(status_code=403, detail=error.message)
         done = parent_import.create(scoped, tenant, settings, mailer, checked["ready_records"], admin["email"]) if checked["ready_records"] else {"created": 0, "linked": 0, "emailed": 0}
         for row in result["rows"]:
             if row["status"] == "ready":

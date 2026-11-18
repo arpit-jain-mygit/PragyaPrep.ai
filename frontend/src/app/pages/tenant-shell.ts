@@ -37,7 +37,7 @@ import { TenantService } from '../core/tenant.service';
           <nav class="nav" aria-label="Main">
             @if (!member()) {
               @if (info.slug !== 'platform') {
-                <a [routerLink]="['/', info.slug, 'register']" routerLinkActive="active" data-tone="plus"><app-icon name="plus" /><span class="nav-label">Register</span></a>
+                <a [routerLink]="info.slug === 'free' ? ['/signup'] : ['/', info.slug, 'register']" routerLinkActive="active" data-tone="plus"><app-icon name="plus" /><span class="nav-label">Register</span></a>
               }
               <a [routerLink]="['/', info.slug, 'login']" routerLinkActive="active" data-tone="out"><app-icon name="logout" /><span class="nav-label">Log in</span></a>
             } @else {
@@ -51,6 +51,8 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active" data-tone="tests"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active" data-tone="news"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
+              } @else if (info.slug === 'free') {
+                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
               } @else if (isParent()) {
                 <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">My children</span></a>
               } @else {

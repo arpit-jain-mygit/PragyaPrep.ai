@@ -217,10 +217,11 @@ describe('Pricing page', () => {
     expect(premium).toContain('AI study assistant');
   });
 
-  it('says honestly that sign-up and prices are not open yet', async () => {
+  it('lets anyone start free, and says honestly that the other prices are not announced yet', async () => {
     const fixture = await open();
-    expect(all<HTMLButtonElement>(fixture, '[data-cta]').every((b) => b.disabled)).toBe(true);
-    expect(el(fixture, '[data-cta="free"]').textContent).toContain('opens soon');
+    expect(el(fixture, '[data-cta="free"]').textContent).toContain('Start free');
+    expect(el(fixture, '[data-cta="free"]').getAttribute('href')).toContain('/signup');
+    expect(el<HTMLButtonElement>(fixture, 'button[data-cta="popular"]').disabled).toBe(true);
     expect(el(fixture, '[data-cta="premium"]').textContent).toContain('to be announced');
   });
 

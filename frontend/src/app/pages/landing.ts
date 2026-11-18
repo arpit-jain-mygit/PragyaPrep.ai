@@ -40,6 +40,7 @@ import { PublicBar } from '../ui/public-bar';
             <ul class="plain-list perks">
               @for (f of tier.perks.slice(0, 4); track f.text) { <li><app-icon [name]="f.icon" [size]="16" /> {{ f.text }}</li> }
             </ul>
+            @if (tier.id === 'free') { <a class="btn" routerLink="/signup" [queryParams]="{ as: persona() ?? 'student' }" data-cta="free">Start free</a> }
           </article>
         }
       </div>

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from app import avatars, registrations
+from app import avatars, plan_limits, registrations
 from app.config import Settings
 from app.deps import (
     TENANT_ADMIN,
@@ -91,9 +91,13 @@ def review_queue(
 
 def _decision(action: str, email: str, body: DecisionIn | None, tenant, scoped, mailer, admin, storage) -> DecisionOut:
     try:
+        if action in ("approve", "reactivate"):
+            plan_limits.check(scoped, tenant, "student")
         person, email_sent = registrations.decide(
             scoped, tenant, mailer, action, email, admin["email"], (body.reason if body else "") or ""
         )
+    except plan_limits.PlanLimit as error:
+        raise HTTPException(status_code=403, detail=error.message)
     except registrations.RegistrationNotFound:
         raise HTTPException(status_code=404, detail="We couldn't find that registration.")
     except registrations.InvalidTransition as error:

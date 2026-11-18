@@ -28,7 +28,11 @@ import { PublicBar } from '../ui/public-bar';
               @for (f of tier.perks; track f.text) { <li><app-icon [name]="f.icon" [size]="16" /> {{ f.text }}</li> }
               @for (f of tier.missing; track f) { <li class="soft"><app-icon name="x" [size]="15" /> {{ f }}</li> }
             </ul>
-            <button class="btn" type="button" disabled [attr.data-cta]="tier.id">{{ tier.id === 'free' ? 'Sign-up opens soon' : 'Pricing to be announced' }}</button>
+            @if (tier.id === 'free') {
+              <a class="btn" routerLink="/signup" [queryParams]="{ as: persona() ?? 'student' }" data-cta="free">Start free</a>
+            } @else {
+              <button class="btn" type="button" disabled [attr.data-cta]="tier.id">Pricing to be announced</button>
+            }
           </article>
         }
       </div>

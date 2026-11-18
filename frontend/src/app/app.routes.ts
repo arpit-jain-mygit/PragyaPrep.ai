@@ -9,6 +9,8 @@ export const routes: Routes = [
     pathMatch: 'full',
     loadComponent: () => import('./pages/landing').then((m) => m.Landing),
   },
+  { path: 'free/register', redirectTo: 'signup' },
+  { path: 'signup', loadComponent: () => import('./pages/signup').then((m) => m.Signup) },
   { path: 'pricing', loadComponent: () => import('./pages/pricing').then((m) => m.Pricing) },
   {
     // The platform admin's page. It must come before ':tenant', so 'platform-admin' isn't taken for an institute.

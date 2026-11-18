@@ -157,6 +157,7 @@ def describe(repo: Repo, tenant: dict) -> dict:
         "primary_color": tenant["branding"]["primary_color"],
         "logo_url": logo_url(tenant),
         "created_at": tenant.get("created_at", ""),
+        "plan": tenant.get("plan", "paid"),
         "admin": admin,
     }
 
