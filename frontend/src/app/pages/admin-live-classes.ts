@@ -2,12 +2,15 @@ import { Component, OnInit, computed, inject, input, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { shortDate } from '../core/format';
-import { ApiError, CourseFile, LiveClass, LiveClassInput, LiveImport, WorkMaterial } from '../core/models';
+import { ApiError, CourseFile, CourseworkPlan, LiveClass, LiveClassInput, LiveImport, WorkMaterial } from '../core/models';
 import { UploadService } from '../core/upload.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
 interface Draft {
+  paper_id: string;
+  topic_id: string;
+  subtopic_id: string;
   title: string;
   held_on: string;
   held_time: string;
@@ -16,7 +19,7 @@ interface Draft {
   materials: WorkMaterial[];
 }
 
-const empty = (): Draft => ({ title: '', held_on: '', held_time: '', description: '', status: 'draft', materials: [] });
+const empty = (): Draft => ({ paper_id: '', topic_id: '', subtopic_id: '', title: '', held_on: '', held_time: '', description: '', status: 'draft', materials: [] });
 
 /**
  * The live classes of a course: add the recordings (MP4) and slides (PDF), then describe each class one by one, or fill in the
@@ -102,6 +105,29 @@ const empty = (): Draft => ({ title: '', held_on: '', held_time: '', description
         <form (ngSubmit)="save()" novalidate>
           <div class="field"><label for="lc-title">Title</label><input id="lc-title" name="title" type="text" maxlength="120" [(ngModel)]="f.title" /></div>
           <div class="grid-2">
+            <div class="field">
+              <label for="lc-subject">Subject</label>
+              <select id="lc-subject" name="subject" [(ngModel)]="f.paper_id" (ngModelChange)="f.topic_id = ''; f.subtopic_id = ''">
+                <option value="">Choose the subject…</option>
+                @for (s of subjects(); track s.paper_id) { <option [value]="s.paper_id">{{ s.name }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="lc-topic">Topic <span class="soft">(optional)</span></label>
+              <select id="lc-topic" name="topic" [(ngModel)]="f.topic_id" (ngModelChange)="f.subtopic_id = ''" [disabled]="!f.paper_id">
+                <option value="">Whole subject</option>
+                @for (t of topicsOf(f); track t.id) { <option [value]="t.id">{{ t.title }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="lc-subtopic">Sub-topic <span class="soft">(optional)</span></label>
+              <select id="lc-subtopic" name="subtopic" [(ngModel)]="f.subtopic_id" [disabled]="!f.topic_id">
+                <option value="">Whole topic</option>
+                @for (x of subtopicsOf(f); track x.id) { <option [value]="x.id">{{ x.title }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
             <div class="field"><label for="lc-date">Date</label><input id="lc-date" name="date" type="date" [(ngModel)]="f.held_on" /></div>
             <div class="field"><label for="lc-time">Time <span class="soft">(optional)</span></label><input id="lc-time" name="time" type="time" [(ngModel)]="f.held_time" /></div>
           </div>
@@ -140,12 +166,13 @@ const empty = (): Draft => ({ title: '', held_on: '', held_time: '', description
 
     <div class="table-wrap">
       <table class="compact" id="classes">
-        <thead><tr><th>When</th><th>Class</th><th>Files</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <thead><tr><th>When</th><th>Class</th><th>Belongs to</th><th>Files</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
         <tbody>
           @for (c of classes(); track c.id) {
             <tr [attr.data-class]="c.title">
               <td class="soft">{{ date(c.held_on) }}@if (c.held_time) { <div>{{ c.held_time }}</div> }</td>
               <td><strong>{{ c.title }}</strong>@if (c.description) { <div class="soft">{{ c.description }}</div> }</td>
+              <td class="soft" data-place>{{ c.place || 'Not placed in the plan yet' }}</td>
               <td class="soft">{{ c.materials.length }}</td>
               <td><span class="status" [class.ok]="c.status === 'published'">{{ c.status === 'published' ? 'Published' : 'Draft' }}</span></td>
               <td class="actions-cell">
@@ -159,7 +186,7 @@ const empty = (): Draft => ({ title: '', held_on: '', held_time: '', description
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="5"><div class="empty-state"><app-icon name="play" [size]="32" /><p>No live classes yet</p></div></td></tr>
+            <tr><td colspan="6"><div class="empty-state"><app-icon name="play" [size]="32" /><p>No live classes yet</p></div></td></tr>
           }
         </tbody>
       </table>
@@ -173,6 +200,8 @@ export class AdminLiveClasses implements OnInit {
   readonly courseId = input.required<string>();
 
   readonly classes = signal<LiveClass[]>([]);
+  readonly plan = signal<CourseworkPlan | null>(null);
+  readonly subjects = computed(() => this.plan()?.subjects ?? []);
   readonly files = signal<CourseFile[]>([]);
   readonly form = signal<Draft | null>(null);
   readonly editing = signal<string | null>(null);
@@ -191,8 +220,9 @@ export class AdminLiveClasses implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [classes, files] = await Promise.all([this.api.liveClasses(this.courseId()), this.api.courseFiles(this.courseId())]);
+      const [classes, files, plan] = await Promise.all([this.api.liveClasses(this.courseId()), this.api.courseFiles(this.courseId()), this.api.coursework(this.courseId())]);
       this.classes.set(classes);
+      this.plan.set(plan);
       this.files.set(files);
     } catch (error) {
       this.error.set(error as ApiError);
@@ -205,6 +235,14 @@ export class AdminLiveClasses implements OnInit {
 
   problems(row: { problems: Record<string, string> }): [string, string][] {
     return Object.entries(row.problems ?? {});
+  }
+
+  topicsOf(draft: Draft) {
+    return this.subjects().find((s) => s.paper_id === draft.paper_id)?.topics ?? [];
+  }
+
+  subtopicsOf(draft: Draft) {
+    return this.topicsOf(draft).find((t) => t.id === draft.topic_id)?.subtopics ?? [];
   }
 
   materialTitle(item: WorkMaterial): string {
@@ -259,7 +297,7 @@ export class AdminLiveClasses implements OnInit {
   }
 
   startEdit(item: LiveClass): void {
-    this.form.set({ title: item.title, held_on: item.held_on, held_time: item.held_time, description: item.description, status: item.status, materials: item.materials.map((m) => ({ ...m })) });
+    this.form.set({ paper_id: item.paper_id ?? '', topic_id: item.topic_id ?? '', subtopic_id: item.subtopic_id ?? '', title: item.title, held_on: item.held_on, held_time: item.held_time, description: item.description, status: item.status, materials: item.materials.map((m) => ({ ...m })) });
     this.editing.set(item.id);
     this.link = '';
     this.error.set(null);
@@ -281,7 +319,7 @@ export class AdminLiveClasses implements OnInit {
     const f = this.form();
     if (!f || this.busy()) return;
     const body: LiveClassInput = {
-      title: f.title, held_on: f.held_on, held_time: f.held_time, description: f.description, status: f.status,
+      paper_id: f.paper_id, topic_id: f.topic_id, subtopic_id: f.subtopic_id, title: f.title, held_on: f.held_on, held_time: f.held_time, description: f.description, status: f.status,
       materials: f.materials.map((m) => (m.type === 'file' ? { type: 'file' as const, file_id: m.file_id } : { type: 'link' as const, url: m.url, title: m.title })),
     };
     await this.run(async () => {

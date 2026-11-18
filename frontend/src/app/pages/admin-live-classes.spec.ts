@@ -11,8 +11,13 @@ const FILES = [
   { id: 'half', course_id: 'c1', title: 'Half', kind: 'mp4', content_type: 'video/mp4', size: 10, status: 'uploading', created_at: '' },
 ];
 
+const PLAN = { course: { id: 'c1', name: 'CAT' }, counts: {}, subjects: [
+  { paper_id: 'quantitative-ability', name: 'Quantitative Ability', topics: [{ id: 't1', title: 'Percentages', subtopics: [{ id: 's1', title: 'Concepts' }] }, { id: 't2', title: 'Ratios', subtopics: [] }] },
+  { paper_id: 'logical-reasoning', name: 'Logical Reasoning', topics: [] },
+] };
+
 function live(overrides: object = {}) {
-  return { id: 'l1', title: 'Algebra live', held_on: '2027-02-10', held_time: '18:30', description: 'Chapter 1', status: 'draft', materials: [], ...overrides };
+  return { id: 'l1', paper_id: 'quantitative-ability', topic_id: 't1', subtopic_id: 's1', place: 'Quantitative Ability › Percentages › Concepts', title: 'Algebra live', held_on: '2027-02-10', held_time: '18:30', description: 'Chapter 1', status: 'draft', materials: [], ...overrides };
 }
 
 async function open(classes: object[] = [live()], files: object[] = FILES) {
@@ -23,6 +28,7 @@ async function open(classes: object[] = [live()], files: object[] = FILES) {
   fixture.detectChanges();
   env.http.expectOne(BASE).flush(classes);
   env.http.expectOne(`${API}/api/admin/courses/c1/files`).flush(files);
+  env.http.expectOne(`${API}/api/admin/courses/c1/coursework`).flush(PLAN);
   await settle(fixture);
   const send = vi.spyOn(TestBed.inject(UploadService), 'send').mockResolvedValue(undefined);
   return { ...env, fixture, send };
@@ -36,6 +42,7 @@ describe('Admin live classes', () => {
     expect(row).toContain('18:30');
     expect(row).toContain('Chapter 1');
     expect(row).toContain('Published');
+    expect(el(fixture, '[data-class="Algebra live"] [data-place]').textContent).toContain('Quantitative Ability › Percentages › Concepts');
     expect(el(fixture, '#file-count').textContent).toContain('1 recording and 1 PDF uploaded');
   });
 
@@ -48,6 +55,15 @@ describe('Admin live classes', () => {
   it('adds a class with the chosen files and a link, as a draft', async () => {
     const { fixture, http } = await open([]);
     el(fixture, '#add-class').click();
+    await settle(fixture);
+    type(fixture, '#lc-subject', 'quantitative-ability');
+    await settle(fixture);
+    expect(Array.from(el<HTMLSelectElement>(fixture, '#lc-topic').options).map((o) => o.textContent!.trim())).toEqual(['Whole subject', 'Percentages', 'Ratios']);
+    expect(el<HTMLSelectElement>(fixture, '#lc-subtopic').disabled).toBe(true);
+    type(fixture, '#lc-topic', 't1');
+    await settle(fixture);
+    expect(Array.from(el<HTMLSelectElement>(fixture, '#lc-subtopic').options).map((o) => o.textContent!.trim())).toEqual(['Whole topic', 'Concepts']);
+    type(fixture, '#lc-subtopic', 's1');
     await settle(fixture);
     type(fixture, '#lc-title', 'Geometry live');
     type(fixture, '#lc-date', '2027-03-01');
@@ -67,7 +83,7 @@ describe('Admin live classes', () => {
     const request = http.expectOne(BASE);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
-      title: 'Geometry live', held_on: '2027-03-01', held_time: '19:00', description: 'Triangles', status: 'draft',
+      paper_id: 'quantitative-ability', topic_id: 't1', subtopic_id: 's1', title: 'Geometry live', held_on: '2027-03-01', held_time: '19:00', description: 'Triangles', status: 'draft',
       materials: [{ type: 'file', file_id: 'v1' }, { type: 'link', url: 'https://youtu.be/abc', title: '' }],
     });
     request.flush([live({ title: 'Geometry live' })]);
@@ -93,6 +109,8 @@ describe('Admin live classes', () => {
     el(fixture, '[data-class="Algebra live"] button[title="Edit"]').click();
     await settle(fixture);
     expect(el<HTMLInputElement>(fixture, '#lc-title').value).toBe('Algebra live');
+    expect(el<HTMLSelectElement>(fixture, '#lc-subject').value).toBe('quantitative-ability');
+    expect(el<HTMLSelectElement>(fixture, '#lc-subtopic').value).toBe('s1');
     expect(el<HTMLInputElement>(fixture, '#lc-time').value).toBe('18:30');
     expect(el(fixture, '#lc-material').textContent).toContain('Algebra recording');
     el(fixture, '#lc-material button[title="Remove"]').click();

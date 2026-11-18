@@ -404,6 +404,7 @@ describe('Admin coursework page', () => {
     await settle(fixture);
     http.expectOne(`${API}/api/admin/courses/c1/live-classes`).flush([]);
     http.expectOne(`${API}/api/admin/courses/c1/files`).flush([]);
+    http.expectOne(`${API}/api/admin/courses/c1/coursework`).flush({ course: { id: 'c1', name: 'CAT' }, counts: {}, subjects: [] });
     await settle(fixture);
     expect(all(fixture, 'app-admin-live-classes').length).toBe(1);
     expect(all(fixture, '#tree').length).toBe(0);

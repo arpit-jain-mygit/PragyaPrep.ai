@@ -132,6 +132,33 @@ interface Chosen {
                   </ul>
                 }
 
+                @if (pick.sub.live_classes?.length) {
+                  <h3 style="margin: 1rem 0 0.3rem"><app-icon name="play" [size]="16" /> Live classes</h3>
+                  <div id="live-classes">
+                    @for (live of pick.sub.live_classes; track live.id) {
+                      <div class="cw-live" [attr.data-live]="live.title">
+                        <strong>{{ live.title }}</strong> <span class="soft">{{ shortDate(live.held_on) }}@if (live.held_time) { · {{ live.held_time }} }</span>
+                        @if (live.description) { <p class="soft" style="margin: 0.1rem 0 0.3rem">{{ live.description }}</p> }
+                        <ul class="cw-material">
+                          @for (item of live.materials; track $index) {
+                            <li>
+                              @if (item.type === 'link') {
+                                <app-icon name="link" [size]="16" /> <a [href]="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
+                              } @else {
+                                <app-icon name="file" [size]="16" />
+                                <span>{{ item.title }} <span class="soft">{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}</span></span>
+                                <button class="btn small secondary" type="button" [disabled]="opening() === item.file_id" (click)="openFile(pick, item)">
+                                  <app-icon [name]="item.kind === 'pdf' ? 'eye' : 'play'" [size]="15" /> {{ item.kind === 'pdf' ? 'Open' : 'Play' }}
+                                </button>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                  </div>
+                }
+
                 @if (playing(); as video) {
                   <video id="player" controls autoplay [src]="video.url" (error)="renew(pick, video.id)" style="width: 100%; border-radius: 8px; margin-top: 0.6rem"></video>
                 }
@@ -168,6 +195,7 @@ export class StudentCourseworkPage implements OnInit {
   private renewals = 0;
 
   size = formatSize;
+  shortDate = shortDate;
 
   /** The chosen sub-topic with its place in the tree, from the latest data. */
   readonly chosen = computed<Chosen | null>(() => {

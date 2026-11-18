@@ -653,6 +653,8 @@ export interface Progress {
 
 export interface StudentSubtopic {
   id: string;
+  /** Live classes tagged to this sub-topic, its topic or its subject. */
+  live_classes?: StudentLiveClass[];
   title: string;
   note: string;
   due: string | null;
@@ -887,6 +889,12 @@ export interface StudentPhotoStart {
 
 export interface LiveClass {
   id: string;
+  /** Where in the course plan it sits: a subject, and optionally a topic and a sub-topic. */
+  paper_id?: string;
+  topic_id?: string;
+  subtopic_id?: string;
+  /** The names, like "Quant › Percentages › Concepts". */
+  place?: string;
   title: string;
   /** YYYY-MM-DD */
   held_on: string;
@@ -898,6 +906,9 @@ export interface LiveClass {
 }
 
 export interface LiveClassInput {
+  paper_id?: string;
+  topic_id?: string;
+  subtopic_id?: string;
   title?: string;
   held_on?: string;
   held_time?: string;

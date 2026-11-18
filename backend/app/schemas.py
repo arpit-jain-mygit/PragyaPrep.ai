@@ -479,6 +479,9 @@ class StudentPhotoStartIn(BaseModel):
 class LiveClassIn(BaseModel):
     """A live class. Every field is checked by hand, so any of them may be left out."""
 
+    paper_id: Any = None
+    topic_id: Any = None
+    subtopic_id: Any = None
     title: Any = None
     held_on: Any = None
     held_time: Any = None

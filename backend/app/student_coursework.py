@@ -6,7 +6,7 @@ A sub-topic is overdue when its finish-by date has passed and it isn't complete;
 """
 from datetime import date, timedelta
 
-from app import clock, content, coursework
+from app import clock, content, coursework, live_classes
 from app.repo import TenantRepo, now_iso
 
 WEEK_DAYS = 7
@@ -30,6 +30,19 @@ def _student_material(items: list[dict]) -> list[dict]:
         else:
             out.append({"type": "link", "url": item["url"], "title": item.get("title") or item["url"]})
     return out
+
+
+def _belongs(item: dict, paper_id: str, topic_id: str, sub_id: str) -> bool:
+    """A live class shows under its sub-topic, and under every sub-topic of its topic or subject when it was tagged higher up."""
+    if item.get("subtopic_id"):
+        return item["subtopic_id"] == sub_id
+    if item.get("topic_id"):
+        return item["topic_id"] == topic_id
+    return item.get("paper_id") == paper_id
+
+
+def _student_live(item: dict) -> dict:
+    return {"id": item["id"], "title": item["title"], "held_on": item["held_on"], "held_time": item["held_time"], "description": item["description"], "materials": _student_material(item["materials"])}
 
 
 def _progress(total: int, done: int) -> dict:
@@ -59,6 +72,7 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
             plan = coursework.tree(scoped, course_id)
         except coursework.CourseNotFound:
             continue
+        live = live_classes.listing(scoped, course_id, published_only=True) if has_access else []
         subjects = []
         course_total = course_done = course_overdue = 0
         for subject in plan["subjects"]:
@@ -84,6 +98,7 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
                         "id": sub["id"], "title": sub["title"], "note": sub["note"], "due": due, "due_from": sub["due_from"],
                         "days_left": (date.fromisoformat(due) - today).days if due else None, "overdue": overdue,
                         "done": bool(done_at), "done_at": done_at, "materials": _student_material(sub["materials"]),
+                        "live_classes": [_student_live(c) for c in live if _belongs(c, subject["paper_id"], topic["id"], sub["id"])],
                     })
                 if not subtopics:
                     continue

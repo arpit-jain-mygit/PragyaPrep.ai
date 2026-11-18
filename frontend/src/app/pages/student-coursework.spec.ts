@@ -248,6 +248,24 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#locked-note').textContent).toContain('not enrolled');
   });
 
+  it('shows the live classes of a sub-topic, plays a recording and opens slides', async () => {
+    const live = [{ id: 'l1', title: 'Algebra live', held_on: '2027-01-10', held_time: '18:00', description: 'Chapter 1', materials: [{ type: 'file', file_id: 'v9', title: 'Recording', kind: 'mp4', size: 100 }, LINK] }];
+    const { fixture, http } = await open(data({ subs: [sub({ id: 's1', title: 'Concepts', live_classes: live })] }));
+    const box = el(fixture, '[data-live="Algebra live"]').textContent!.replace(/\s+/g, ' ');
+    expect(box).toContain('18:00');
+    expect(box).toContain('Chapter 1');
+    expect(box).toContain('Intro');
+    all(fixture, '[data-live="Algebra live"] button')[0].click();
+    http.expectOne(`${API}/api/my/courses/c1/files/v9/link`).flush({ url: 'https://files.example/v9.mp4', expires_in: 300, content_type: 'video/mp4', title: 'Recording' });
+    await settle(fixture);
+    expect(el(fixture, '#player').getAttribute('src')).toBe('https://files.example/v9.mp4');
+  });
+
+  it('has no live classes section when a sub-topic has none', async () => {
+    const { fixture } = await open();
+    expect(all(fixture, '#live-classes').length).toBe(0);
+  });
+
   it('says so when there is no coursework yet', async () => {
     const { fixture } = await open({ summary: { total: 0, done: 0, left: 0, overdue: 0, this_week: 0 }, courses: [] });
     expect(text(fixture)).toContain('No coursework yet');

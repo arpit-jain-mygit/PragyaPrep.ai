@@ -14,7 +14,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from app import live_classes
+from app import coursework, live_classes
 from app.repo import TenantRepo, now_iso
 from app.student_import import XLSX_TYPE, _cell
 from app.tenants import ValidationError
@@ -22,13 +22,13 @@ from app.tenants import ValidationError
 MAX_ROWS = 300
 MAX_BYTES = 2 * 1024 * 1024
 SHEET = "Live classes"
-REQUIRED = ["Title", "Date"]
-OPTIONAL = ["Time", "Description", "Video", "PDF", "Link", "Status"]
+REQUIRED = ["Title", "Date", "Subject"]
+OPTIONAL = ["Time", "Description", "Video", "PDF", "Link", "Status", "Topic", "Sub-topic"]
 COLUMNS = REQUIRED + OPTIONAL
 __all__ = ["XLSX_TYPE", "build_template", "read", "create"]
 
 
-def build_template(course_name: str, files: list[dict]) -> bytes:
+def build_template(course_name: str, files: list[dict], plan: list[dict] | None = None) -> bytes:
     """The blank workbook: a sheet to fill in, the course's uploaded files to copy names from, and how to fill it in."""
     book = Workbook()
     sheet = book.active
@@ -43,9 +43,9 @@ def build_template(course_name: str, files: list[dict]) -> bytes:
     sheet.freeze_panes = "A2"
     for row in range(2, MAX_ROWS + 2):
         sheet[f"B{row}"].number_format = "@"  # dates as text, so YYYY-MM-DD stays as typed
-        sheet[f"C{row}"].number_format = "@"
+        sheet[f"D{row}"].number_format = "@"
     status = DataValidation(type="list", formula1='"draft,published"', allow_blank=True, showErrorMessage=True, errorTitle="Not allowed", error="Choose draft or published.")
-    status.add(f"G2:G{MAX_ROWS + 1}")
+    status.add(f"I2:I{MAX_ROWS + 1}")
     sheet.add_data_validation(status)
 
     listed = book.create_sheet("Uploaded files")
@@ -57,11 +57,25 @@ def build_template(course_name: str, files: list[dict]) -> bytes:
         listed.cell(row=row, column=2, value="Video" if file["kind"] == "mp4" else "PDF")
         listed.cell(row=row, column=3, value=file["title"])
 
+    where = book.create_sheet("Plan")
+    for index, heading in enumerate(["Subject", "Topic", "Sub-topic"], start=1):
+        where.cell(row=1, column=index, value=heading).font = Font(bold=True)
+        where.column_dimensions[get_column_letter(index)].width = 36
+    line = 2
+    for subject in plan or []:
+        for topic in subject["topics"] or [{"title": "", "subtopics": []}]:
+            for sub in topic["subtopics"] or [{"title": ""}]:
+                where.cell(row=line, column=1, value=subject["name"])
+                where.cell(row=line, column=2, value=topic["title"])
+                where.cell(row=line, column=3, value=sub["title"])
+                line += 1
+
     notes = book.create_sheet("How to fill")
     notes.column_dimensions["A"].width = 120
     for row, line in enumerate([
         f"Live classes for {course_name}. One row per class. Blue headings must be filled in; grey headings are optional.",
         "Title and Date (YYYY-MM-DD, for example 2027-02-10). Time is optional, as HH:MM, for example 18:30.",
+        "Subject (required), Topic and Sub-topic (optional): where the class belongs in the course plan, written as on the 'Plan' sheet. Students see the class under that part of their coursework. A Sub-topic needs its Topic.",
         "Video and PDF: the file names of the recordings and slides, as listed on the 'Uploaded files' sheet. Upload the files to the course first, on the Live classes tab. Put several in one cell separated by ;",
         "Link: an optional web link (a video link, for example) starting with http:// or https://.",
         "Status: draft (the default) or published. Students only see published classes, and a published class needs a recording, slides, a link or a description.",
@@ -117,9 +131,40 @@ def _files_for(cell: str, kind: str, files: list[dict]) -> tuple[list[dict], lis
     return found, missing
 
 
-def _check(row: dict, files: list[dict]) -> tuple[dict, dict]:
+def _tag(row: dict, plan: list[dict]) -> tuple[dict, dict]:
+    """The plan place the Subject, Topic and Sub-topic cells name, and the problems by column."""
+    norm = lambda text: " ".join(str(text).lower().split())
     problems: dict[str, str] = {}
-    record: dict = {}
+    tag = {"paper_id": "", "topic_id": "", "subtopic_id": ""}
+    subject = next((s for s in plan if norm(s["name"]) == norm(row["Subject"])), None)
+    if not row["Subject"]:
+        problems["Subject"] = "Enter the subject."
+    elif subject is None:
+        problems["Subject"] = f"'{row['Subject']}' isn't a subject of this course. Subjects: {', '.join(s['name'] for s in plan) or 'none'}."
+    else:
+        tag["paper_id"] = subject["paper_id"]
+        topic = None
+        if row["Topic"]:
+            topic = next((t for t in subject["topics"] if norm(t["title"]) == norm(row["Topic"])), None)
+            if topic is None:
+                problems["Topic"] = f"'{row['Topic']}' isn't a topic of {subject['name']} in this plan."
+            else:
+                tag["topic_id"] = topic["id"]
+        if row["Sub-topic"]:
+            if not row["Topic"]:
+                problems["Sub-topic"] = "Enter the topic too."
+            elif topic is not None:
+                found = next((x for x in topic["subtopics"] if norm(x["title"]) == norm(row["Sub-topic"])), None)
+                if found is None:
+                    problems["Sub-topic"] = f"'{row['Sub-topic']}' isn't a sub-topic of {topic['title']}."
+                else:
+                    tag["subtopic_id"] = found["id"]
+    return tag, problems
+
+
+def _check(row: dict, files: list[dict], plan: list[dict]) -> tuple[dict, dict]:
+    tag, problems = _tag(row, plan)
+    record: dict = dict(tag)
     for column, field, clean in (("Title", "title", live_classes.clean_title), ("Time", "held_time", live_classes.clean_time), ("Description", "description", live_classes.clean_note)):
         try:
             record[field] = clean(row[column])
@@ -155,11 +200,12 @@ def read(content: bytes, scoped: TenantRepo, course_id: str) -> dict:
     """Check a sheet. Returns {"summary", "rows"} and the records to save under "ready_records". Saves nothing."""
     parsed = _rows(content)
     files = scoped.list_files(course_id)
+    plan = coursework.tree(scoped, course_id)["subjects"]
     existing = {(c["title"].lower(), c["held_on"]) for c in scoped.list_live(course_id)}
     seen: dict[tuple, int] = {}
     rows, ready = [], []
     for number, row in parsed:
-        record, problems = _check(row, files)
+        record, problems = _check(row, files, plan)
         shown = {"row": number, "title": record.get("title") or row["Title"], "held_on": record.get("held_on") or row["Date"],
                  "files": len([m for m in record.get("materials", []) if m["type"] == "file"]), "status": "ready", "message": "", "problems": problems}
         key = (record.get("title", "").lower(), record.get("held_on"))

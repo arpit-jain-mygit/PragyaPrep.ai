@@ -41,7 +41,7 @@ def add_file(repo, cid, file_id, filename, kind="mp4", title=None, status="ready
 
 
 def make(client, admin, cid, **overrides):
-    body = {"title": "Algebra live", "held_on": "2027-02-10", **overrides}
+    body = {"title": "Algebra live", "held_on": "2027-02-10", "paper_id": "quantitative-ability", **overrides}
     return client.post(url(cid), json=body, headers=admin)
 
 
@@ -183,7 +183,7 @@ def sheet(rows, header=None, title="Live classes"):
 
 def row(title="Algebra live", day="2027-02-10", **extra):
     values = {"Title": title, "Date": day, **extra}
-    return [values.get(name, "") for name in HEAD]
+    return [values.get(name, "Quantitative Ability" if name == "Subject" else "") for name in HEAD]
 
 
 def upload(client, admin, cid, content, confirm=False):
@@ -197,7 +197,7 @@ def test_the_template_has_the_sheet_the_courses_uploaded_files_and_instructions(
     response = client.get(url(cid, "/template"), headers=admin)
     assert response.status_code == 200 and "live-classes-template.xlsx" in response.headers["content-disposition"]
     book = load_workbook(BytesIO(response.content))
-    assert book.sheetnames == ["Live classes", "Uploaded files", "How to fill"]
+    assert book.sheetnames == ["Live classes", "Uploaded files", "Plan", "How to fill"]
     assert [c.value for c in book["Live classes"][1]] == HEAD
     listed = [[c.value for c in r] for r in book["Uploaded files"].iter_rows(min_row=2) if r[0].value]
     assert listed == [["Class 1.mp4", "Video", "Algebra recording"], ["slides.pdf", "PDF", "slides"]]  # the unfinished upload is not listed
@@ -315,3 +315,65 @@ def test_nothing_is_created_when_every_row_has_a_problem(client, admin, cid):
 def test_a_files_name_in_another_course_is_not_found_here(client, admin, school, cid, repo):
     add_file(repo, school["clat"]["id"], "other", "only-in-clat.mp4")
     assert upload(client, admin, cid, sheet([row(Video="only-in-clat.mp4")])).json()["rows"][0]["status"] == "error"
+
+
+# ---- Where a class sits in the plan ----
+
+from test_coursework import topic as plan_topic, sub as plan_sub  # noqa: E402
+
+
+@pytest.fixture
+def plan(client, admin, cid):
+    percent = plan_topic(client, admin, cid, "Percentages")
+    ratios = plan_topic(client, admin, cid, "Ratios")
+    concepts = plan_sub(client, admin, cid, percent["id"], "Concepts").json()
+    sub_id = next(x["id"] for s in concepts["subjects"] for t in s["topics"] if t["id"] == percent["id"] for x in t["subtopics"])
+    return {"percent": percent["id"], "ratios": ratios["id"], "sub": sub_id}
+
+
+def test_a_class_needs_a_subject_and_shows_where_it_sits(client, admin, cid, plan):
+    refused = client.post(url(cid), json={"title": "X", "held_on": "2027-02-10"}, headers=admin)
+    assert refused.status_code == 422 and "Choose the subject" in refused.json()["detail"]
+    made = make(client, admin, cid, topic_id=plan["percent"], subtopic_id=plan["sub"]).json()[0]
+    assert (made["paper_id"], made["topic_id"], made["subtopic_id"]) == ("quantitative-ability", plan["percent"], plan["sub"])
+    assert made["place"] == "Quantitative Ability › Percentages › Concepts"
+    assert make(client, admin, cid, title="Subject only").json()[0]["place"] == "Quantitative Ability"
+
+
+@pytest.mark.parametrize("extra,problem", [
+    ({"paper_id": "nope"}, "isn't in this course"), ({"topic_id": "nope"}, "isn't in this subject"),
+    ({"subtopic_id": "x"}, "Choose the topic first"), ({"paper_id": ""}, "Choose the subject"),
+])
+def test_bad_places_are_refused(client, admin, cid, plan, extra, problem):
+    if "Choose the topic first" in problem:
+        problem = "Choose the topic before"
+    response = make(client, admin, cid, **extra)
+    assert response.status_code == 422 and problem in response.json()["detail"]
+
+
+def test_a_sub_topic_of_another_topic_is_refused_and_editing_the_place_works(client, admin, cid, plan):
+    wrong = make(client, admin, cid, topic_id=plan["ratios"], subtopic_id=plan["sub"])
+    assert wrong.status_code == 422 and "isn't in this topic" in wrong.json()["detail"]
+    made = make(client, admin, cid).json()[0]
+    edited = client.patch(url(cid, f"/{made['id']}"), json={"paper_id": "quantitative-ability", "topic_id": plan["ratios"]}, headers=admin).json()[0]
+    assert edited["place"] == "Quantitative Ability › Ratios"
+    assert client.patch(url(cid, f"/{made['id']}"), json={"title": "Renamed"}, headers=admin).json()[0]["topic_id"] == plan["ratios"]
+
+
+def test_a_sheet_names_the_place_and_problems_are_by_column(client, admin, cid, plan):
+    good = row("Percent live", Topic="percentages", **{"Sub-topic": "CONCEPTS"})
+    bad = row("Bad live", day="2027-02-11", Subject="Nope", Topic="Nope")
+    bad_topic = row("Bad topic", day="2027-02-12", Topic="Missing", **{"Sub-topic": "Concepts"})
+    check = upload(client, admin, cid, sheet([good, bad, bad_topic])).json()
+    assert [r["status"] for r in check["rows"]] == ["ready", "error", "error"]
+    assert "isn't a subject" in check["rows"][1]["problems"]["Subject"]
+    assert "isn't a topic" in check["rows"][2]["problems"]["Topic"]
+    upload(client, admin, cid, sheet([good]), confirm=True)
+    made = client.get(url(cid), headers=admin).json()[0]
+    assert made["place"] == "Quantitative Ability › Percentages › Concepts"
+
+
+def test_the_template_lists_the_plan(client, admin, cid, plan):
+    book = load_workbook(BytesIO(client.get(url(cid, "/template"), headers=admin).content))
+    rows = [[c.value for c in r] for r in book["Plan"].iter_rows(min_row=2)]
+    assert ["Quantitative Ability", "Percentages", "Concepts"] in rows and ["Quantitative Ability", "Ratios", None] in rows

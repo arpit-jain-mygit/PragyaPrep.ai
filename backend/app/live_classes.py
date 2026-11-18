@@ -73,15 +73,51 @@ def clean_status(raw, materials: list, note: str) -> str:
     return status
 
 
+def _places(scoped: TenantRepo, course_id: str) -> dict:
+    """The course plan as lookups: subject id -> (name, {topic id -> (title, {sub-topic id -> title})})."""
+    out = {}
+    for subject in coursework.tree(scoped, course_id)["subjects"]:
+        out[subject["paper_id"]] = (subject["name"], {t["id"]: (t["title"], {x["id"]: x["title"] for x in t["subtopics"]}) for t in subject["topics"]})
+    return out
+
+
+def clean_tag(scoped: TenantRepo, course_id: str, body: dict) -> dict:
+    """Where in the course plan a class belongs: a subject, and optionally one of its topics and a sub-topic of that topic."""
+    places = _places(scoped, course_id)
+    paper, topic, sub = (str(body.get(key) or "") for key in ("paper_id", "topic_id", "subtopic_id"))
+    if not paper:
+        raise ValidationError("Choose the subject this class belongs to.")
+    if paper not in places:
+        raise ValidationError("That subject isn't in this course.")
+    topics = places[paper][1]
+    if topic and topic not in topics:
+        raise ValidationError("That topic isn't in this subject.")
+    if sub and not topic:
+        raise ValidationError("Choose the topic before the sub-topic.")
+    if sub and sub not in topics[topic][1]:
+        raise ValidationError("That sub-topic isn't in this topic.")
+    return {"paper_id": paper, "topic_id": topic, "subtopic_id": sub}
+
+
 # ---- Reading ----
 
 def _sorted(items: list[dict]) -> list[dict]:
     return sorted(items, key=lambda c: (c["held_on"], c.get("held_time", ""), c["id"]), reverse=True)
 
 
-def shown(record: dict, files: dict[str, dict]) -> dict:
-    """A live class with its material resolved to titles and kinds. A file that has gone is left out."""
+def shown(record: dict, files: dict[str, dict], places: dict | None = None) -> dict:
+    """A live class with its material resolved to titles and kinds, and where in the plan it sits. A file that has gone is left out."""
+    paper, topic, sub = record.get("paper_id", ""), record.get("topic_id", ""), record.get("subtopic_id", "")
+    names = []
+    subject = (places or {}).get(paper)
+    if subject:
+        names.append(subject[0])
+        if topic in subject[1]:
+            names.append(subject[1][topic][0])
+            if sub in subject[1][topic][1]:
+                names.append(subject[1][topic][1][sub])
     return {
+        "paper_id": paper, "topic_id": topic, "subtopic_id": sub, "place": " › ".join(names),
         "id": record["id"], "title": record["title"], "held_on": record["held_on"], "held_time": record.get("held_time", ""),
         "description": record.get("description", ""), "status": record.get("status", "draft"),
         "materials": coursework._shown_materials(record.get("materials"), files),
@@ -93,7 +129,8 @@ def listing(scoped: TenantRepo, course_id: str, published_only: bool = False) ->
     _course(scoped, course_id)
     files = {f["id"]: f for f in scoped.list_files(course_id) if f.get("status") == "ready"}
     records = [r for r in scoped.list_live(course_id) if not published_only or r.get("status") == "published"]
-    return [shown(r, files) for r in _sorted(records)]
+    places = _places(scoped, course_id)
+    return [shown(r, files, places) for r in _sorted(records)]
 
 
 # ---- Changing ----
@@ -103,7 +140,7 @@ def create(scoped: TenantRepo, course_id: str, body: dict, admin_email: str) -> 
     materials = coursework._materials(scoped, course_id, body.get("materials"))
     note = clean_note(body.get("description"))
     record = {
-        "id": uuid4().hex, "title": clean_title(body.get("title")), "held_on": clean_date(body.get("held_on")), "held_time": clean_time(body.get("held_time")),
+        **clean_tag(scoped, course_id, body), "id": uuid4().hex, "title": clean_title(body.get("title")), "held_on": clean_date(body.get("held_on")), "held_time": clean_time(body.get("held_time")),
         "description": note, "materials": materials, "status": clean_status(body.get("status"), materials, note),
         "created_at": now_iso(), "created_by": admin_email,
     }
@@ -118,6 +155,8 @@ def edit(scoped: TenantRepo, course_id: str, live_id: str, body: dict) -> dict:
     if record is None:
         raise LiveClassNotFound()
     changes: dict = {}
+    if any(key in body for key in ("paper_id", "topic_id", "subtopic_id")):
+        changes.update(clean_tag(scoped, course_id, body))
     if body.get("title") is not None:
         changes["title"] = clean_title(body["title"])
     if body.get("held_on") is not None:

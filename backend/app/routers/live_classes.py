@@ -44,7 +44,7 @@ def template(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
     if course is None:
         raise HTTPException(status_code=404, detail=NO_COURSE)
     return Response(
-        live_import.build_template(course["name"], scoped.list_files(course_id)), media_type=live_import.XLSX_TYPE,
+        live_import.build_template(course["name"], scoped.list_files(course_id), coursework.tree(scoped, course_id)["subjects"]), media_type=live_import.XLSX_TYPE,
         headers={"Content-Disposition": 'attachment; filename="live-classes-template.xlsx"'},
     )
 
