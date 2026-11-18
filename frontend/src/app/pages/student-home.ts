@@ -15,7 +15,7 @@ import { StudentTiles } from './student-tiles';
     }
     @if (member(); as m) {
       <div class="page-head">
-        <h1 class="greeting"><app-avatar [url]="m.avatar_url" [first]="m.first_name" [last]="m.last_name" [email]="m.email" [size]="48" /> Welcome, {{ m.first_name }}</h1>
+        <h1 class="greeting"><app-avatar [url]="m.avatar_url" [first]="m.first_name" [last]="m.last_name" [email]="m.email" [size]="76" /> Welcome, {{ m.first_name }}</h1>
         <span class="muted small">{{ m.email }}</span>
       </div>
       <app-student-tiles />

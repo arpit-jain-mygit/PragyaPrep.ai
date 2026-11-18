@@ -539,5 +539,6 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 .crop-zoom { display: flex; align-items: center; gap: 0.6rem; width: 14rem; }
 .crop-zoom input[type='range'] { width: 100%; padding: 0; }
 
-.greeting { display: flex; align-items: center; gap: 0.7rem; }
+.greeting { display: flex; align-items: center; gap: 0.9rem; }
+.greeting .avatar { box-shadow: 0 0 0 3px #fff, 0 2px 8px rgba(0, 0, 0, 0.18); }
 .person-cell { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
