@@ -63,3 +63,64 @@ def test_ses_needs_a_sender_address():
 def test_an_unknown_email_backend_is_refused():
     with pytest.raises(ValueError, match="Unknown email backend"):
         make_mailer(Settings(_env_file=None, email_backend="carrier-pigeon"))
+
+
+# ---- SMTP (for example Gmail with an app password) ----
+
+def test_smtp_sends_the_message_through_the_provider_after_logging_in(monkeypatch):
+    from app.mailer import Attachment, SmtpMailer
+
+    calls = []
+
+    class FakeServer:
+        def __init__(self, host, port, timeout):
+            calls.append(("connect", host, port, timeout))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def login(self, user, password):
+            calls.append(("login", user, password))
+
+        def send_message(self, message):
+            calls.append(("send", message))
+
+    monkeypatch.setattr("app.mailer.smtplib.SMTP_SSL", FakeServer)
+    mailer = SmtpMailer("smtp.example.com", 465, "me@example.com", "app-pass", "me@example.com")
+    mailer.send(Email(to="asha@example.com", subject="123456 is your code", body="Hello", from_name="AAPT Prep", reply_to="help@example.com",
+                      attachments=(Attachment("a.pdf", "application/pdf", b"%PDF"),)))
+    assert calls[0] == ("connect", "smtp.example.com", 465, 10) and calls[1] == ("login", "me@example.com", "app-pass")
+    message = calls[2][1]
+    assert message["To"] == "asha@example.com" and message["Subject"] == "123456 is your code" and message["Reply-To"] == "help@example.com"
+    assert "AAPT Prep" in message["From"] and "me@example.com" in message["From"]
+    assert message.get_body(("plain",)).get_content().strip() == "Hello"
+    assert [part.get_filename() for part in message.iter_attachments()] == ["a.pdf"]
+
+
+def test_smtp_needs_its_settings():
+    from app.mailer import SmtpMailer
+
+    assert isinstance(make_mailer(Settings(_env_file=None, email_backend="smtp", email_sender="me@gmail.com", smtp_user="me@gmail.com", smtp_password="x")), SmtpMailer)
+    with pytest.raises(ValueError, match="smtp_password"):
+        make_mailer(Settings(_env_file=None, email_backend="smtp", email_sender="me@gmail.com", smtp_user="me@gmail.com"))
+
+
+def test_the_smtp_password_is_read_from_ssm_only_when_smtp_is_used(monkeypatch):
+    from app import aws
+
+    asked = []
+
+    class FakeSsm:
+        def get_parameter(self, Name, WithDecryption):
+            asked.append(Name)
+            return {"Parameter": {"Value": "v"}}
+
+    monkeypatch.setattr(aws.boto3, "client", lambda *a, **k: FakeSsm())
+    aws.load_secrets(Settings(_env_file=None, ssm_prefix="/p", email_backend="ses"))
+    assert asked == ["/p/secret_key"]
+    asked.clear()
+    loaded = aws.load_secrets(Settings(_env_file=None, ssm_prefix="/p", email_backend="smtp"))
+    assert asked == ["/p/secret_key", "/p/smtp_password"] and loaded.smtp_password == "v"

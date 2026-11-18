@@ -241,8 +241,9 @@ resource "aws_lambda_function" "api" {
       PRAGYA_SSM_PREFIX    = local.ssm_prefix
       PRAGYA_FRONTEND_URL  = local.site_url
       PRAGYA_CORS_ORIGINS  = jsonencode(local.cors_origins)
-      PRAGYA_EMAIL_BACKEND = "ses"
+      PRAGYA_EMAIL_BACKEND = var.email_backend
       PRAGYA_EMAIL_SENDER  = var.email_sender
+      PRAGYA_SMTP_USER     = var.email_sender
     }
   }
 

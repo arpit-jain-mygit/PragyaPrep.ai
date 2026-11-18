@@ -29,7 +29,8 @@ def load_secrets(settings: Settings) -> Settings:
         return settings
     ssm = boto3.client("ssm", region_name=settings.aws_region)
     values = {}
-    for name in SECRET_SETTINGS:
+    names = SECRET_SETTINGS + (("smtp_password",) if settings.email_backend == "smtp" else ())
+    for name in names:
         response = ssm.get_parameter(Name=f"{settings.ssm_prefix}/{name}", WithDecryption=True)
         values[name] = response["Parameter"]["Value"]
     return settings.model_copy(update=values)

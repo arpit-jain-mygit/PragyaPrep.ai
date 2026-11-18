@@ -17,6 +17,12 @@ variable "email_sender" {
   type        = string
 }
 
+variable "email_backend" {
+  description = "How email is sent: 'ses' (Amazon SES) or 'smtp' (the email_sender's own account, for example Gmail with an app password stored in SSM as /pragyaprep/dev/smtp_password)."
+  type        = string
+  default     = "ses"
+}
+
 variable "ses_verified_emails" {
   description = "Other addresses to verify in SES. While SES is in sandbox mode, mail can only go to verified addresses."
   type        = list(string)

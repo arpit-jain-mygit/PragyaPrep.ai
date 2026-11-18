@@ -32,9 +32,14 @@ class Settings(BaseSettings):
     # S3 accepts a single presigned POST of up to 5 GB.
     max_upload_mb: int = 5120
 
-    # Email. 'console' prints in the terminal, 'memory' keeps a list (tests), 'ses' sends with Amazon SES.
+    # Email. 'console' prints in the terminal, 'memory' keeps a list (tests), 'ses' sends with Amazon SES,
+    # 'smtp' sends through an SMTP account (for example Gmail with an app password; the password is the smtp_password secret).
     email_backend: str = "console"
     email_sender: str = ""
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 465
+    smtp_user: str = ""
+    smtp_password: str = ""
 
     # Login codes and their limits.
     otp_ttl_seconds: int = 600  # a code works for 10 minutes
