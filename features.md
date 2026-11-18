@@ -210,4 +210,4 @@ The login page shows these messages straight away. When an email isn't registere
 - Emails come from one verified address (for example a Gmail address) until a domain exists.
 - A suspended tenant's students lose access immediately.
 - Tenant branding: display name, logo and primary colour, changed by the platform admin.
-- Top-bar icons sit in white discs with a distinct colour per section so they stay readable on any brand colour.
+- Top-bar icons have a distinct tint per section and bolder strokes so they stay readable on any brand colour.

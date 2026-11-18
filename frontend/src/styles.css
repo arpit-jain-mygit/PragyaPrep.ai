@@ -592,17 +592,17 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 .glimpse-subject details { border-top: 1px solid var(--line); padding: 0.35rem 0; }
 .glimpse-subject summary { cursor: pointer; font-weight: 600; }
 
-/* Nav icons: each section gets its own colour on a white disc, so the icon never blends into the institute's brand colour.
-   Every icon colour is dark enough for 3:1 against white; the label text keeps the high-contrast brand text colour. */
-.nav a app-icon { background: #ffffff; color: var(--tone, #1f2937); border-radius: 50%; width: 1.75rem; height: 1.75rem; align-items: center; justify-content: center; }
-.nav a[data-tone="home"] { --tone: #1d4ed8; }
-.nav a[data-tone="people"] { --tone: #7c3aed; }
-.nav a[data-tone="learn"] { --tone: #0f766e; }
-.nav a[data-tone="qbank"] { --tone: #b45309; }
-.nav a[data-tone="tests"] { --tone: #be123c; }
-.nav a[data-tone="prog"] { --tone: #15803d; }
-.nav a[data-tone="news"] { --tone: #a21caf; }
-.nav a[data-tone="inst"] { --tone: #0369a1; }
-.nav a[data-tone="plus"] { --tone: #15803d; }
-.nav a[data-tone="out"] { --tone: #374151; }
-.nav a.active app-icon { box-shadow: 0 0 0 2px var(--brand-text); }
+/* Nav icons: same bar as before, but each icon gets its own tint, mixed with the bar's text colour so it stays readable
+   on any brand colour (light tints on dark bars, deeper tints on light bars). Strokes are a touch bolder for sharpness. */
+.nav a app-icon { color: color-mix(in srgb, var(--tone, var(--brand-text)) 80%, var(--brand-text)); }
+.nav a app-icon svg { stroke-width: 2.4; }
+.nav a[data-tone="home"] { --tone: #93c5fd; }
+.nav a[data-tone="people"] { --tone: #c4b5fd; }
+.nav a[data-tone="learn"] { --tone: #5eead4; }
+.nav a[data-tone="qbank"] { --tone: #fcd34d; }
+.nav a[data-tone="tests"] { --tone: #fda4af; }
+.nav a[data-tone="prog"] { --tone: #86efac; }
+.nav a[data-tone="news"] { --tone: #f0abfc; }
+.nav a[data-tone="inst"] { --tone: #7dd3fc; }
+.nav a[data-tone="plus"] { --tone: #86efac; }
+.nav a[data-tone="out"] { --tone: #e5e7eb; }
