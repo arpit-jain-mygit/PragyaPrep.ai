@@ -8,6 +8,10 @@ import {
   ApiError,
   CourseAccess,
   CourseFile,
+  CopyChoice,
+  CopyResult,
+  CourseworkPlan,
+  WorkSubtopicInput,
   CodeResult,
   Course,
   DecisionAction,
@@ -162,6 +166,40 @@ export class ApiService {
   }
 
   // ---- Course files and access (admin) ----
+
+  // ---- Coursework (admin) ----
+
+  coursework(courseId: string): Promise<CourseworkPlan> {
+    return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework`);
+  }
+
+  addTopic(courseId: string, paperId: string, title: string): Promise<CourseworkPlan> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/topics`, { paper_id: paperId, title });
+  }
+
+  addSubtopic(courseId: string, topicId: string, body: WorkSubtopicInput): Promise<CourseworkPlan> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/topics/${encodeURIComponent(topicId)}/subtopics`, body);
+  }
+
+  editWork(courseId: string, nodeId: string, body: WorkSubtopicInput): Promise<CourseworkPlan> {
+    return this.patch(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/${encodeURIComponent(nodeId)}`, body);
+  }
+
+  setSubjectDue(courseId: string, paperId: string, due: string | null): Promise<CourseworkPlan> {
+    return this.patch(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/subjects/${encodeURIComponent(paperId)}`, { due });
+  }
+
+  moveWork(courseId: string, nodeId: string, direction: 'up' | 'down'): Promise<CourseworkPlan> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/${encodeURIComponent(nodeId)}/move`, { direction });
+  }
+
+  removeWork(courseId: string, nodeId: string): Promise<CourseworkPlan & { removed: number }> {
+    return this.call(firstValueFrom(this.http.delete<CourseworkPlan & { removed: number }>(`${this.base}/api/admin/courses/${encodeURIComponent(courseId)}/coursework/${encodeURIComponent(nodeId)}`)));
+  }
+
+  copyCoursework(courseId: string, choice: CopyChoice): Promise<CourseworkPlan & { copied: CopyResult }> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/coursework/copy`, choice);
+  }
 
   courseFiles(courseId: string): Promise<CourseFile[]> {
     return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/files`);

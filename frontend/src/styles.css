@@ -421,3 +421,36 @@ body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
 .tchip { font-size: 0.85rem; font-weight: 800; border-radius: 999px; padding: 0.15rem 0.7rem; background: rgba(255, 255, 255, 0.26); color: #fff; }
 .tchip.bad { background: #fff; color: #b91c1c; }
 
+
+/* Coursework (admin): the plan tree on the left, the editor on the right. */
+.cw-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 50rem) { .cw-grid { grid-template-columns: 1fr; } }
+.cw-tree { display: flex; flex-direction: column; gap: 0.8rem; }
+.cw-editor { position: sticky; top: 1rem; }
+.cw-subject .q-head { align-items: center; }
+.cw-topic { margin: 0.7rem 0 0; padding: 0.55rem 0 0 0.7rem; border-left: 3px solid var(--line); }
+.cw-date { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--muted); margin-left: auto; }
+.cw-date input[type='date'] { width: auto; padding: 0.2rem 0.4rem; font-size: 0.85rem; }
+.cw-subs { list-style: none; margin: 0.35rem 0 0; padding: 0; }
+.cw-subs li { display: flex; align-items: center; gap: 0.3rem; border-radius: 8px; }
+.cw-subs li.selected { background: var(--info-bg); }
+.cw-sub { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0.35rem 0.4rem; cursor: pointer; color: var(--ink); font: inherit; }
+.cw-sub-title { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.cw-add { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; }
+.cw-add input { flex: 1; min-width: 0; }
+.cw-material { list-style: none; margin: 0 0 0.5rem; padding: 0; }
+.cw-material li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
+.cw-material li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cw-attach { display: flex; gap: 0.4rem; margin-top: 0.4rem; align-items: center; }
+.cw-attach > * { min-width: 0; }
+.cw-status { display: flex; gap: 1.2rem; }
+.cw-status input { width: auto; margin-right: 0.3rem; }
+
+/* Coursework: copying from another course. */
+.cw-copy { margin-bottom: 1rem; }
+.cw-pick-subject { margin-top: 0.8rem; }
+.cw-pick-topic { margin: 0.3rem 0 0 1.2rem; }
+.cw-pick-sub { margin-left: 1.4rem; font-weight: 400; }
+.cw-check { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; cursor: pointer; }
+.cw-check input[type='checkbox'] { width: auto; margin: 0; }
+.cw-copy-actions { margin-top: 0.9rem; gap: 1.2rem; flex-wrap: wrap; align-items: center; }

@@ -411,3 +411,25 @@ class PaperOut(BaseModel):
     section: str
     stream: str
     topics: list[str]
+
+
+class CourseworkIn(BaseModel):
+    """A topic or sub-topic of a course's plan. Every field is checked by hand, so any of them may be left out."""
+
+    paper_id: Any = None
+    title: Any = None
+    note: Any = None
+    due: Any = None
+    status: Any = None
+    materials: Any = None
+    direction: Any = None
+
+
+class CourseworkCopyIn(BaseModel):
+    """Which topics and sub-topics of another course to copy here. Checked by hand."""
+
+    source_course_id: Any = None
+    topic_ids: Any = None
+    subtopic_ids: Any = None
+    keep_dates: Any = None
+    keep_status: Any = None

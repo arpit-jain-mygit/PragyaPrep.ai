@@ -279,6 +279,37 @@ class TenantRepo:
     def delete_file(self, course_id: str, file_id: str) -> None:
         self.table.delete_item(Key=self._file_key(course_id, file_id))
 
+    # ---- Coursework: the learning plan of a course (topics, sub-topics, finish-by dates), stored under the course's own key ----
+
+    def _work_key(self, course_id: str, node_id: str) -> dict:
+        return {"PK": self._course_key(course_id)["PK"], "SK": f"WORK#{node_id}"}
+
+    def put_work(self, course_id: str, node: dict) -> None:
+        """Write a node of the plan (a subject's date, a topic or a sub-topic), replacing any with the same id."""
+        self.table.put_item(Item={**self._work_key(course_id, node["id"]), **node})
+
+    def get_work(self, course_id: str, node_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._work_key(course_id, node_id)).get("Item"))
+
+    def list_work(self, course_id: str) -> list[dict]:
+        """Every node of a course's plan, in no particular order."""
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._course_key(course_id)["PK"]) & Key("SK").begins_with("WORK#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_work(self, course_id: str, node_id: str, fields: dict) -> None:
+        _update(self.table, self._work_key(course_id, node_id), fields)
+
+    def delete_work(self, course_id: str, node_id: str) -> None:
+        self.table.delete_item(Key=self._work_key(course_id, node_id))
+
     # ---- Access: which courses a student may open, and until when. Stored with the student ----
 
     def _access_key(self, email: str, course_id: str) -> dict:

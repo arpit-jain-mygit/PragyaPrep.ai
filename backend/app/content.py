@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from app import clock
+from app import clock, coursework
 from app.config import Settings
 from app.repo import TenantRepo, now_iso
 from app.storage import ContentStorage
@@ -122,12 +122,19 @@ def list_files(scoped: TenantRepo, course_id: str) -> list[dict]:
     return scoped.list_files(course_id)
 
 
+def key_in_use(scoped: TenantRepo, key: str) -> bool:
+    """Does any course of this institute still have a file row that points at this stored file? (Copied coursework shares files.)"""
+    return any(f.get("key") == key for course in scoped.list_courses() for f in scoped.list_files(course["id"]))
+
+
 def delete_file(scoped: TenantRepo, storage: ContentStorage, course_id: str, file_id: str) -> None:
     file = scoped.get_file(course_id, file_id)
     if file is None:
         raise FileNotFound()
     scoped.delete_file(course_id, file_id)
-    storage.delete(file["key"])
+    if not key_in_use(scoped, file["key"]):
+        storage.delete(file["key"])
+    coursework.drop_file(scoped, course_id, file_id)
 
 
 # ---- Access ----

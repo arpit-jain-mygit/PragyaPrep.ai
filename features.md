@@ -84,6 +84,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Manage the course list (it fills the registration dropdown): add, rename, change the access length and the subjects, hide or show. (The Courses page no longer shows or sets a fee; fees come back with payments in Phase 2.)
 - Give a student a course, renew it, or take it away, from the student's details.
 - Add and delete PDF and MP4 files in a course, from the course's **Files** page.
+- Build a course's **coursework** plan from the course's **Coursework** page: subjects (the course's own), topics and sub-topics, each sub-topic with a note, material (the course's files and links), an optional **finish-by date** (also settable on a topic or subject; anything below follows the nearest date above) and a draft or published status. The admin can **copy** topics and sub-topics from another course (only subjects both courses have): copies are independent, files are shared rather than uploaded again, and dates and status are left out unless the admin chooses to keep them. *(Student side, with the home tile, left navigation, progress and Mark complete, is the next step and not built yet.)*
 - Keep a **question bank** (see below).
 - Build **tests** from the question bank (see below).
 - Choose the **subjects (subjects)** each course covers, from the fixed list, with a tick list on the course form. Known course names (CUET, IPMAT, CAT, CLAT) start with their usual subjects, and the admin can change them. This is stored for the student side later.

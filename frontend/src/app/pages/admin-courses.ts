@@ -142,6 +142,7 @@ function accessFrom(draft: Draft): Access {
                   <td><span class="status" [class.ok]="course.active">{{ course.active ? 'Open' : 'Hidden' }}</span></td>
                   <td class="actions-cell">
                     <div class="icon-actions">
+                      <a class="icon-btn" title="Coursework" [routerLink]="['/', tenants.slug(), 'admin', 'courses', course.id, 'coursework']"><app-icon name="layers" /><span class="sr-only">Coursework</span></a>
                       <a class="icon-btn" title="Files" [routerLink]="['/', tenants.slug(), 'admin', 'courses', course.id, 'files']"><app-icon name="folder" /><span class="sr-only">Files</span></a>
                       <button class="icon-btn" type="button" title="Edit" (click)="startEdit(course)"><app-icon name="edit" /><span class="sr-only">Edit</span></button>
                       <button class="icon-btn" type="button" [attr.title]="course.active ? 'Hide' : 'Show'" [disabled]="saving()" (click)="toggleActive(course)">

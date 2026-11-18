@@ -48,5 +48,9 @@ class ContentStorage:
         response = self.s3.get_object(Bucket=self.bucket, Key=key, Range=f"bytes=0-{count - 1}")
         return response["Body"].read()
 
+    def put(self, key: str, data: bytes, content_type: str) -> None:
+        """Store a file directly, for scripts that load content without a browser."""
+        self.s3.put_object(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type)
+
     def delete(self, key: str) -> None:
         self.s3.delete_object(Bucket=self.bucket, Key=key)

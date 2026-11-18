@@ -569,3 +569,73 @@ export interface GrantRequestedResult {
   /** Chosen courses that no longer exist, by name. */
   skipped: string[];
 }
+
+// ---- Coursework: a course's plan of subjects, topics and sub-topics ----
+
+export type WorkMaterial =
+  | { type: 'file'; file_id: string; title: string; kind: 'pdf' | 'mp4'; size: number | null }
+  | { type: 'link'; url: string; title: string };
+
+export interface WorkSubtopic {
+  id: string;
+  title: string;
+  note: string;
+  /** Its own finish-by date (YYYY-MM-DD), if any. */
+  due: string | null;
+  /** The date that counts: its own, else its topic's, else its subject's. */
+  effective_due: string | null;
+  due_from: 'subtopic' | 'topic' | 'subject' | null;
+  status: 'draft' | 'published';
+  materials: WorkMaterial[];
+}
+
+export interface WorkTopic {
+  id: string;
+  title: string;
+  due: string | null;
+  subtopics: WorkSubtopic[];
+}
+
+export interface WorkSubject {
+  paper_id: string;
+  name: string;
+  due: string | null;
+  /** False for a subject taken off the course that still has a plan. */
+  in_course: boolean;
+  topics: WorkTopic[];
+  /** The usual topics of this subject that are not in the plan yet. */
+  topic_options: string[];
+}
+
+export interface CourseworkPlan {
+  course: { id: string; name: string };
+  counts: { topics: number; subtopics: number; published: number; with_dates: number };
+  subjects: WorkSubject[];
+}
+
+/** What the admin sends when adding or changing a sub-topic. */
+export interface WorkSubtopicInput {
+  title?: string;
+  note?: string;
+  due?: string | null;
+  status?: 'draft' | 'published';
+  materials?: ({ type: 'file'; file_id: string } | { type: 'link'; url: string; title: string })[];
+}
+
+/** What copying coursework from another course did. */
+export interface CopyResult {
+  topics_added: number;
+  subtopics_added: number;
+  subtopics_skipped: number;
+  files_linked: number;
+  /** Subjects this course does not have, so their topics were left out. */
+  subjects_skipped: string[];
+}
+
+export interface CopyChoice {
+  source_course_id: string;
+  topic_ids: string[];
+  subtopic_ids: string[];
+  keep_dates: boolean;
+  keep_status: boolean;
+}
