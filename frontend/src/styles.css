@@ -44,18 +44,18 @@ a { color: var(--brand); }
   padding: 0 1rem;
 }
 .topbar-inner {
-  max-width: 64rem;
+  max-width: 80rem;
   margin: 0 auto;
-  min-height: 3.5rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.1rem 1rem;
   flex-wrap: wrap;
 }
 .topbar a, .topbar button.linklike { color: var(--brand-text); }
-.brand-name { font-weight: 700; font-size: 1.15rem; text-decoration: none; margin-right: auto; padding: 0.5rem 0; }
-.nav { display: flex; align-items: center; gap: 0.25rem 1rem; flex-wrap: wrap; }
-.nav a { text-decoration: none; padding: 0.4rem 0.1rem; border-bottom: 2px solid transparent; }
+.brand-name { font-weight: 700; font-size: 1.15rem; text-decoration: none; margin-right: auto; padding: 0.3rem 0; }
+.nav { display: flex; align-items: center; gap: 0 0.9rem; flex-wrap: wrap; }
+.nav a { text-decoration: none; padding: 0.3rem 0.1rem; border-bottom: 2px solid transparent; }
 .nav a.active { border-bottom-color: var(--brand-text); font-weight: 600; }
 .nav .who { opacity: 0.9; font-size: 0.9rem; }
 
@@ -606,3 +606,16 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 .nav a[data-tone="inst"] { --tone: #7dd3fc; }
 .nav a[data-tone="plus"] { --tone: #86efac; }
 .nav a[data-tone="out"] { --tone: #e5e7eb; }
+
+/* On a light bar (dark text) the pastel tints would vanish, so use deep tones of the same hues. */
+:root[data-bar="light"] .nav a[data-tone="home"] { --tone: #1d4ed8; }
+:root[data-bar="light"] .nav a[data-tone="people"] { --tone: #6d28d9; }
+:root[data-bar="light"] .nav a[data-tone="learn"] { --tone: #0f766e; }
+:root[data-bar="light"] .nav a[data-tone="qbank"] { --tone: #b45309; }
+:root[data-bar="light"] .nav a[data-tone="tests"] { --tone: #be123c; }
+:root[data-bar="light"] .nav a[data-tone="prog"] { --tone: #15803d; }
+:root[data-bar="light"] .nav a[data-tone="news"] { --tone: #a21caf; }
+:root[data-bar="light"] .nav a[data-tone="inst"] { --tone: #0369a1; }
+:root[data-bar="light"] .nav a[data-tone="plus"] { --tone: #15803d; }
+:root[data-bar="light"] .nav a[data-tone="out"] { --tone: #374151; }
+:root[data-bar="light"] .nav a app-icon { color: var(--tone, var(--brand-text)); }

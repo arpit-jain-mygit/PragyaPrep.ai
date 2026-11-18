@@ -52,7 +52,9 @@ export class TenantService {
   private applyBranding(info: TenantInfo): void {
     const root = document.documentElement.style;
     root.setProperty('--brand', info.branding.primary_color);
-    root.setProperty('--brand-text', readableTextColor(info.branding.primary_color));
+    const text = readableTextColor(info.branding.primary_color);
+    root.setProperty('--brand-text', text);
+    document.documentElement.dataset['bar'] = text.toLowerCase() === '#ffffff' ? 'dark' : 'light';
     document.title = info.branding.display_name;
   }
 
@@ -60,6 +62,7 @@ export class TenantService {
     const root = document.documentElement.style;
     root.removeProperty('--brand');
     root.removeProperty('--brand-text');
+    delete document.documentElement.dataset['bar'];
     document.title = 'PragyaPrep';
   }
 }

@@ -17,13 +17,13 @@ describe('Institute page frame', () => {
     expect(text(fixture)).toContain('Powered by PragyaPrep');
   });
 
-  it('shows the admin\'s links, their name, and a Sign out button', async () => {
+  it('shows the admin\'s links and a Sign out button (the name is in the welcome banner, not the bar)', async () => {
     const env = setupTestBed();
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Question bank', 'Tests', 'Progress', 'Announcements']);
-    expect(text(fixture)).toContain('Asha');
+    expect(all(fixture, '.who').length).toBe(0);
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });
 

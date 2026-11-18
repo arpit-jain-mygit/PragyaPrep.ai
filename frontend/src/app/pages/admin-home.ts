@@ -16,7 +16,6 @@ import { Icon } from '../ui/icon';
   template: `
     <div class="page-head">
       <h1>Welcome, {{ name() }}</h1>
-      <span class="muted small">{{ tenants.info()?.branding?.display_name }}</span>
     </div>
 
     <div class="tiles">

@@ -62,7 +62,6 @@ import { TenantService } from '../core/tenant.service';
               @if (!isPlatformAdmin()) {
                 <button class="icon-btn" type="button" id="support-open" title="Contact support" (click)="support.set(true)"><app-icon name="help" /><span class="sr-only">Contact support</span></button>
               }
-              <span class="who">{{ member()!.first_name }}</span>
               <button class="icon-btn" type="button" title="Sign out" (click)="signOut()"><app-icon name="logout" /><span class="sr-only">Sign out</span></button>
             }
           </nav>
