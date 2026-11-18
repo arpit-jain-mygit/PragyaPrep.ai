@@ -342,14 +342,14 @@ class TenantRepo:
             if not start:
                 return items
 
-    def count_test_attempt(self, test_id: str) -> None:
-        """One more attempt has been started at this test. Kept on the test so lists needn't count."""
+    def count_test_attempt(self, test_id: str, by: int = 1) -> None:
+        """Attempts have been started at this test (by is negative when some are removed). Kept on the test so lists needn't count."""
         try:
             self.table.update_item(
                 Key=self._test_key(test_id),
                 UpdateExpression="ADD attempt_count :one",
                 ConditionExpression="attribute_exists(PK)",
-                ExpressionAttributeValues={":one": 1},
+                ExpressionAttributeValues={":one": by},
             )
         except ClientError as error:
             if error.response["Error"]["Code"] != "ConditionalCheckFailedException":
