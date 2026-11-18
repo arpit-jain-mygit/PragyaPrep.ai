@@ -17,7 +17,7 @@ const LETTERS = ['A', 'B', 'C', 'D'];
         <h1>{{ r.title }}</h1>
         <div class="tools">
           <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests', r.test_id]"><app-icon name="arrow-left" [size]="16" /> Test</a>
-          <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'learning', 'tests']">All tests</a>
+          <a class="btn secondary small" [routerLink]="tenants.slug() === 'free' ? ['/', 'free', 'home'] : ['/', tenants.slug(), 'learning', 'tests']">{{ tenants.slug() === 'free' ? 'Home' : 'All tests' }}</a>
         </div>
       </div>
     }

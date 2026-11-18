@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
-import { ApiError, FreeSample, FreeState, Member } from '../core/models';
+import { ApiError, FreeSample, FreeState, Member, StudentTestCard } from '../core/models';
+import { RouterLink } from '@angular/router';
+import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 
 /**
@@ -9,7 +11,7 @@ import { Icon } from '../ui/icon';
  */
 @Component({
   selector: 'app-free-home',
-  imports: [Icon],
+  imports: [Icon, RouterLink],
   template: `
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
     <div class="page-head"><h1>Welcome, {{ member().first_name }}</h1><span class="chip approved">Free plan</span></div>
@@ -48,6 +50,27 @@ import { Icon } from '../ui/icon';
               </ul>
             }
           }
+          @if (member().role === 'student') {
+            <h3 style="margin-top: 1.25rem">Your free test</h3>
+            @if (test(); as t) {
+              <div class="row" id="free-test">
+                <app-icon name="clipboard" [size]="18" />
+                <strong>{{ t.title }}</strong>
+                <span class="soft">{{ t.question_count }} questions, {{ t.duration_minutes }} minutes, one attempt</span>
+                @if (t.attempts_used === 0) {
+                  <a class="btn small" id="free-test-start" [routerLink]="['/', tenants.slug(), 'tests', t.id]">Take the test</a>
+                } @else if (t.in_progress) {
+                  <a class="btn small" id="free-test-start" [routerLink]="['/', tenants.slug(), 'tests', t.id, 'attempts', t.in_progress]">Carry on</a>
+                } @else {
+                  <span class="chip approved" id="free-test-done">Done</span>
+                  <a class="btn secondary small" id="free-test-result" [routerLink]="['/', tenants.slug(), 'tests', t.id, 'attempts', t.attempts[0].number]">See your result</a>
+                }
+              </div>
+              <p class="soft small"><app-icon name="lock" [size]="14" /> More tests open on a paid plan.</p>
+            } @else {
+              <p class="soft small">No free test is ready for this course yet.</p>
+            }
+          }
           <h3 style="margin-top: 1.25rem">The rest of {{ s.picked }}</h3>
           <ul class="plain-list" id="locked-list">
             @for (t of lockedTopics(s); track t) { <li class="soft"><app-icon name="lock" [size]="14" /> {{ t }}</li> }
@@ -65,6 +88,8 @@ import { Icon } from '../ui/icon';
 })
 export class FreeHome implements OnInit {
   private readonly api = inject(ApiService);
+  readonly tenants = inject(TenantService);
+  readonly test = signal<StudentTestCard | null>(null);
   readonly member = signal<Member>({ email: '', first_name: '', last_name: '', role: 'student', status: 'approved' } as Member);
   readonly state = signal<FreeState | null>(null);
   readonly sample = signal<FreeSample | null>(null);
@@ -83,7 +108,9 @@ export class FreeHome implements OnInit {
   }
 
   private async loadSample(): Promise<void> {
-    if (this.state()?.picked) this.sample.set((await this.api.freeSample()).sample);
+    if (!this.state()?.picked) return;
+    this.sample.set((await this.api.freeSample()).sample);
+    if (this.member().role === 'student') this.test.set((await this.api.freeTest()).test);
   }
 
   /** Open a file of the free sub-topic in a new tab. The tab is opened first, while the click is fresh, so the browser doesn't block it. */

@@ -1,7 +1,8 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { TenantService } from './tenant.service';
 import {
   FreeSample,
   FreeState,
@@ -100,6 +101,7 @@ export function toApiError(error: unknown): ApiError {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  private readonly injector = inject(Injector);
   private readonly base = environment.apiBase;
 
   private async call<T>(request: Promise<T>): Promise<T> {
@@ -606,12 +608,21 @@ export class ApiService {
 
   // ---- Student: tests ----
 
+  /** A free learner's one test lives under /api/free; everyone else's tests under /api/my. The pages are the same. */
+  private testsPath(): string {
+    return this.injector.get(TenantService).slug() === 'free' ? '/api/free/tests' : '/api/my/tests';
+  }
+
+  freeTest(): Promise<{ test: StudentTestCard | null }> {
+    return this.get('/api/free/test');
+  }
+
   myTests(): Promise<StudentTestCard[]> {
     return this.get('/api/my/tests');
   }
 
   myTest(id: string): Promise<StudentTestCard> {
-    return this.get(`/api/my/tests/${encodeURIComponent(id)}`);
+    return this.get(`${this.testsPath()}/${encodeURIComponent(id)}`);
   }
 
   /** The student's results across all their tests. */
@@ -620,19 +631,19 @@ export class ApiService {
   }
 
   startTest(id: string): Promise<AttemptView> {
-    return this.post(`/api/my/tests/${encodeURIComponent(id)}/start`);
+    return this.post(`${this.testsPath()}/${encodeURIComponent(id)}/start`);
   }
 
   attempt(testId: string, number: number): Promise<AttemptView | AttemptResult> {
-    return this.get(`/api/my/tests/${encodeURIComponent(testId)}/attempts/${number}`);
+    return this.get(`${this.testsPath()}/${encodeURIComponent(testId)}/attempts/${number}`);
   }
 
   saveAnswers(testId: string, number: number, answers: Record<string, number | string | null>): Promise<{ saved: number; remaining_seconds: number }> {
-    return this.call(firstValueFrom(this.http.put<{ saved: number; remaining_seconds: number }>(`${this.base}/api/my/tests/${encodeURIComponent(testId)}/attempts/${number}/answers`, { answers })));
+    return this.call(firstValueFrom(this.http.put<{ saved: number; remaining_seconds: number }>(`${this.base}${this.testsPath()}/${encodeURIComponent(testId)}/attempts/${number}/answers`, { answers })));
   }
 
   submitAttempt(testId: string, number: number): Promise<AttemptResult> {
-    return this.post(`/api/my/tests/${encodeURIComponent(testId)}/attempts/${number}/submit`);
+    return this.post(`${this.testsPath()}/${encodeURIComponent(testId)}/attempts/${number}/submit`);
   }
 
   // ---- Student ----

@@ -13,7 +13,7 @@ import { Icon } from '../ui/icon';
   template: `
     <div class="page-head">
       <h1>{{ test()?.title ?? 'Test' }}@if (test()?.set_by) { <span class="chip parent-tag" id="set-by-parent"> Set by your parent</span> }</h1>
-      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'learning', 'tests']"><app-icon name="arrow-left" [size]="16" /> Tests</a>
+      <a class="btn secondary small" [routerLink]="back()"><app-icon name="arrow-left" [size]="16" /> {{ tenants.slug() === 'free' ? 'Home' : 'Tests' }}</a>
     </div>
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
@@ -77,6 +77,11 @@ import { Icon } from '../ui/icon';
   `,
 })
 export class StudentTest implements OnInit {
+  /** Where the back button goes: a free learner has no tests list, so it goes home. */
+  back(): string[] {
+    return this.tenants.slug() === 'free' ? ['/', 'free', 'home'] : ['/', this.tenants.slug() ?? '', 'learning', 'tests'];
+  }
+
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

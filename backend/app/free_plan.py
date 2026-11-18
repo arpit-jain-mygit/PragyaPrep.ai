@@ -75,3 +75,50 @@ def file_link(repo: Repo, storage, settings: Settings, member: dict, file_id: st
         raise FileNotFound()
     url = storage.presigned_download(file["key"], file["content_type"], settings.file_url_seconds)
     return {"url": url, "expires_in": settings.file_url_seconds, "content_type": file["content_type"], "title": file["title"]}
+
+
+# ---- The one free test ----
+
+class _FreeScope:
+    """Lets the ordinary test code run for a free learner. The test, its questions and passages are read from the sample
+    institute (only the one free test and its own questions are visible); the learner's attempts are stored in the free
+    tenant, with their own account. The learner gets one attempt, whatever the test's own limit and dates say."""
+
+    def __init__(self, own: TenantRepo, source: TenantRepo, course_id: str, test: dict):
+        self._own, self._source, self._course_id = own, source, course_id
+        self._test = {**test, "max_attempts": 1, "start_at": None, "end_at": None, "courses": [course_id]}
+        self._questions = set(test.get("question_ids") or [])
+
+    def get_test(self, test_id: str):
+        return self._test if test_id == self._test["id"] else None
+
+    def list_access(self, email: str):
+        return [{"course_id": self._course_id, "expires_at": None}]
+
+    def get_question(self, question_id: str):
+        return self._source.get_question(question_id) if question_id in self._questions else None
+
+    def get_passage(self, passage_id: str):
+        return self._source.get_passage(passage_id)
+
+    def count_test_attempt(self, test_id: str, by: int = 1) -> None:
+        return None
+
+    def __getattr__(self, name: str):
+        return getattr(self._own, name)
+
+
+def test_scope(repo: Repo, settings: Settings, own: TenantRepo, member: dict):
+    """The free learner's view of the picked course's free test (its first published test that has questions), or None."""
+    name = member.get("free_course")
+    if not name:
+        return None
+    source = repo.scoped(settings.glimpse_tenant)
+    course = next((c for c in source.list_courses() if c["name"] == name and c.get("active", True)), None)
+    if course is None:
+        return None
+    tests = [t for t in source.list_tests() if t.get("status") == "published" and not t.get("practice_for") and course["id"] in (t.get("courses") or []) and t.get("question_ids")]
+    if not tests:
+        return None
+    first = min(tests, key=lambda t: (t.get("created_at", ""), t["id"]))
+    return _FreeScope(own, source, course["id"], first)

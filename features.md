@@ -214,3 +214,4 @@ The login page shows these messages straight away. When an email isn't registere
 - Admin home tiles each have a distinct colour by meaning (amber pending, blue students, red behind, cyan tests, violet questions, green courses).
 - Anyone can sign up: a new institute (Free plan, its own page, 1 student and 1 parent), or a free student or parent with no institute who picks one course and opens its free sub-topic.
 - Students and parents have a My profile page (the photo in the top bar): photo, mobile, and for students date of birth, exam goals, exam date, weekly goal and email choices; for parents relation, summary rhythm and consent. They can download their data and ask for deletion (the admin decides).
+- A free student also gets one free test for their picked course: one attempt, no dates, with the score and answer review.

@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { ApiService } from '../core/api.service';
+import { TenantService } from '../core/tenant.service';
 import { describe, expect, it, vi } from 'vitest';
 import { API, all, el, settle, setupTestBed, text, type } from '../testing';
 import { FreeHome } from './free-home';
@@ -97,14 +99,20 @@ describe('Free home', () => {
     await settle(fixture);
     env.http.expectOne(`${API}/api/free/sample`).flush({ sample: { course: 'CAT', subject: 'Quant', topic: 'Percentages', title: 'Concepts', note: 'Free note', links: [{ title: 'Read this', url: 'https://x.example' }], files: [{ file_id: 'f1', title: 'Free notes', kind: 'pdf', size: 10 }] } });
     await settle(fixture);
+    env.http.expectOne(`${API}/api/free/test`).flush({ test: { id: 't1', title: 'Free mock', question_count: 4, duration_minutes: 30, max_attempts: 1, attempts_used: 0, attempts_left: 1, in_progress: null, attempts: [] } });
+    await settle(fixture);
     expect(el(fixture, '#free-sample').textContent).toContain('Free note');
+    expect(el(fixture, '#free-test').textContent).toContain('Free mock');
+    expect(el<HTMLAnchorElement>(fixture, '#free-test-start').getAttribute('href')).toBe('/demo/tests/t1');
     expect(el(fixture, '#free-files [data-file="f1"]').textContent).toContain('Free notes');
-    expect(text(fixture)).not.toContain('paid plan');
+    expect(text(fixture)).not.toContain('in this sub-topic open on a paid plan');
     expect(all(fixture, '#locked-list li').map((li) => li.textContent!.trim())).toEqual(['Percentages: Practice']);
     expect(fixture.nativeElement.querySelector('#pick-course')).toBeNull();
   });
 
-  async function openSample(files = [{ file_id: 'f1', title: 'Free notes', kind: 'pdf', size: 10 }]) {
+  const CARD = { id: 't1', title: 'Free mock', question_count: 4, duration_minutes: 30, max_attempts: 1, attempts_used: 0, attempts_left: 1, in_progress: null, attempts: [] };
+
+async function openSample(files = [{ file_id: 'f1', title: 'Free notes', kind: 'pdf', size: 10 }], test: object | null = { id: 't1', title: 'Free mock', question_count: 4, duration_minutes: 30, max_attempts: 1, attempts_used: 0, attempts_left: 1, in_progress: null, attempts: [] }) {
     const env = setupTestBed();
     const fixture = TestBed.createComponent(FreeHome);
     fixture.detectChanges();
@@ -113,6 +121,8 @@ describe('Free home', () => {
     env.http.expectOne(`${API}/api/free/courses`).flush({ picked: 'CAT', courses: COURSES });
     await settle(fixture);
     env.http.expectOne(`${API}/api/free/sample`).flush({ sample: { course: 'CAT', subject: 'Quant', topic: 'Percentages', title: 'Concepts', note: 'Free note', links: [], files } });
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/free/test`).flush({ test });
     await settle(fixture);
     return { ...env, fixture };
   }
@@ -146,4 +156,37 @@ describe('Free home', () => {
     const { fixture } = await openSample([]);
     expect(fixture.nativeElement.querySelector('#free-files')).toBeNull();
   });
+
+  it('says when no free test is ready', async () => {
+    const { fixture } = await openSample([], null);
+    expect(text(fixture)).toContain('No free test is ready');
+  });
+
+  it('offers to carry on with a test in progress', async () => {
+    const { fixture } = await openSample([], { ...CARD, attempts_used: 1, in_progress: 1, attempts: [{ number: 1 }] });
+    expect(el(fixture, '#free-test-start').textContent).toContain('Carry on');
+    expect(el<HTMLAnchorElement>(fixture, '#free-test-start').getAttribute('href')).toBe('/demo/tests/t1/attempts/1');
+  });
+
+  it('shows Done and the result link once the one attempt is finished', async () => {
+    const { fixture } = await openSample([], { ...CARD, attempts_used: 1, attempts_left: 0, attempts: [{ number: 1 }] });
+    expect(el(fixture, '#free-test-done').textContent).toContain('Done');
+    expect(el<HTMLAnchorElement>(fixture, '#free-test-result').getAttribute('href')).toBe('/demo/tests/t1/attempts/1');
+    expect(fixture.nativeElement.querySelector('#free-test-start')).toBeNull();
+  });
+
+  it('sends a free learner\'s test calls to the free API and everyone else\'s to the usual one', async () => {
+    const env = setupTestBed();
+    const api = TestBed.inject(ApiService);
+    const tenants = TestBed.inject(TenantService);
+    tenants.slug.set('free');
+    const free = api.startTest('t1');
+    env.http.expectOne(`${API}/api/free/tests/t1/start`).flush({});
+    await free;
+    tenants.slug.set('demo');
+    const usual = api.startTest('t1');
+    env.http.expectOne(`${API}/api/my/tests/t1/start`).flush({});
+    await usual;
+  });
 });
+
