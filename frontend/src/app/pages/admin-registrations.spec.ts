@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { API, all, clickButton, el, registration, sessionFor, settle, setupTestBed, text, type } from '../testing';
-import { AdminRegistrations } from './admin-registrations';
+import { AdminRegistrations, searchText } from './admin-registrations';
 
 async function open(initial: unknown[] = [registration()]) {
   const env = setupTestBed();
@@ -17,6 +17,111 @@ async function open(initial: unknown[] = [registration()]) {
 function answerReload(http: ReturnType<typeof setupTestBed>['http'], status: string, list: unknown[]) {
   http.expectOne((r) => r.url === `${API}/api/admin/registrations` && r.params.get('status') === status).flush(list as object[]);
 }
+
+const PEOPLE = [
+  registration({ email: 'meera@example.com', first_name: 'Meera', last_name: 'Kapoor', mobile: '9876543210', city: 'Noida', pin_code: '201309', course_names: ['CLAT'], gender: 'female', birth_date: '2004-08-21', created_at: '2027-01-15T08:00:00+00:00' }),
+  registration({ email: 'rahul.bansal@example.org', first_name: 'Rahul', last_name: 'Bansal', mobile: '9123456780', whatsapp: '9000011111', city: 'Pune', pin_code: '411001', address: '12, Kothrud', course_names: ['CAT', 'IPMAT'], gender: 'male', birth_date: '2003-03-05', created_at: '2027-02-02T08:00:00+00:00', status: 'approved', decided_by: 'ritesh@example.com', decided_at: '2027-02-03T08:00:00+00:00' }),
+  registration({ email: 'zed@example.com', first_name: 'Zed', last_name: 'Khan', mobile: '9000000001', city: 'Pune', pin_code: '411045', course_names: ['CUET'], gender: 'other', reason: 'Documents unclear', previous_email: 'old.zed@example.com' }),
+];
+
+describe('Registrations: search', () => {
+  const emails = (fixture: Parameters<typeof el>[0]) => all(fixture, '[data-email]').map((r) => r.getAttribute('data-email'));
+
+  it('has a search box only when there are registrations, and says how many are shown', async () => {
+    const { fixture } = await open(PEOPLE);
+    expect(el(fixture, '#search').getAttribute('aria-label')).toBe('Search registrations');
+    expect(el(fixture, '#showing').textContent).toContain('3 shown');
+  });
+
+  it('has no search box when the list is empty', async () => {
+    const { fixture } = await open([]);
+    expect(all(fixture, '#search').length).toBe(0);
+  });
+
+  it.each([
+    ['name', 'meera', ['meera@example.com']],
+    ['surname, in any case', 'BANSAL', ['rahul.bansal@example.org']],
+    ['email', 'zed@example', ['zed@example.com']],
+    ['mobile', '9123456780', ['rahul.bansal@example.org']],
+    ['part of a mobile', '000001', ['zed@example.com']],
+    ['WhatsApp number', '9000011111', ['rahul.bansal@example.org']],
+    ['city', 'pune', ['rahul.bansal@example.org', 'zed@example.com']],
+    ['PIN code', '201309', ['meera@example.com']],
+    ['address', 'kothrud', ['rahul.bansal@example.org']],
+    ['a course', 'IPMAT', ['rahul.bansal@example.org']],
+    ['gender', 'female', ['meera@example.com']],
+    ['status', 'approved', ['rahul.bansal@example.org']],
+    ['birth date as stored', '2003-03-05', ['rahul.bansal@example.org']],
+    ['registered date as stored', '2027-02-02', ['rahul.bansal@example.org']],
+    ['who decided', 'ritesh', ['rahul.bansal@example.org']],
+    ['the reason given', 'unclear', ['zed@example.com']],
+    ['an earlier email', 'old.zed', ['zed@example.com']],
+  ])('finds a registration by its %s', async (_what, query, expected) => {
+    const { fixture } = await open(PEOPLE);
+    type(fixture, '#search', query);
+    await settle(fixture);
+    expect(emails(fixture)).toEqual(expected);
+  });
+
+  it('needs every word to be found, in any order and across different details', async () => {
+    const { fixture } = await open(PEOPLE);
+    type(fixture, '#search', 'pune cat');
+    await settle(fixture);
+    expect(emails(fixture)).toEqual(['rahul.bansal@example.org']);
+    type(fixture, '#search', '  411045   zed ');
+    await settle(fixture);
+    expect(emails(fixture)).toEqual(['zed@example.com']);
+  });
+
+  it('finds a mobile number typed with a space, and shows how many match', async () => {
+    const { fixture } = await open(PEOPLE);
+    type(fixture, '#search', '91234 56780');
+    await settle(fixture);
+    expect(emails(fixture)).toEqual(['rahul.bansal@example.org']);
+    expect(el(fixture, '#showing').textContent).toContain('Showing 1 of 3');
+  });
+
+  it('says so when nothing matches, and clears with the button', async () => {
+    const { fixture } = await open(PEOPLE);
+    type(fixture, '#search', 'nobody here');
+    await settle(fixture);
+    expect(emails(fixture)).toEqual([]);
+    expect(el(fixture, '#no-match').textContent).toContain('No registrations match "nobody here"');
+    el(fixture, '#clear-search').click();
+    await settle(fixture);
+    expect(emails(fixture).length).toBe(3);
+    expect(all(fixture, '#clear-search').length).toBe(0);
+    expect(all(fixture, '#no-match').length).toBe(0);
+  });
+
+  it('keeps the search when another list is opened', async () => {
+    const { fixture, http } = await open(PEOPLE);
+    type(fixture, '#search', 'pune');
+    await settle(fixture);
+    clickButton(fixture, 'approved');
+    answerReload(http, 'approved', [PEOPLE[1], registration({ email: 'x@example.com', first_name: 'X', city: 'Delhi', status: 'approved' })]);
+    await settle(fixture);
+    expect(emails(fixture)).toEqual(['rahul.bansal@example.org']);
+    expect(el<HTMLInputElement>(fixture, '#search').value).toBe('pune');
+  });
+
+  it('never matches the words undefined or null for details that are empty', async () => {
+    const { fixture } = await open([registration({ email: 'blank@example.com', birth_date: '', gender: '', address: '', city: '', pin_code: '', reason: '' })]);
+    type(fixture, '#search', 'undefined');
+    await settle(fixture);
+    expect(emails(fixture)).toEqual([]);
+    type(fixture, '#search', 'null');
+    await settle(fixture);
+    expect(emails(fixture)).toEqual([]);
+  });
+
+  it('builds the line it searches from every detail the page shows', () => {
+    const line = searchText(PEOPLE[1]);
+    for (const part of ['rahul', 'bansal', 'rahul.bansal@example.org', '9123456780', '9000011111', 'kothrud', 'pune', '411001', 'male', '2003-03-05', 'cat ipmat', 'approved', 'ritesh@example.com']) {
+      expect(line).toContain(part);
+    }
+  });
+});
 
 describe('Registrations: import link', () => {
   it('has an Import button that opens the import page', async () => {

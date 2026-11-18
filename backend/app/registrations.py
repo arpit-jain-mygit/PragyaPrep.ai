@@ -296,7 +296,7 @@ def list_registrations(scoped: TenantRepo, status: str) -> list[dict]:
     if status != "all" and status not in STATUSES:
         raise ValidationError("Status must be pending, approved, rejected, suspended or all.")
     wanted = STATUSES if status == "all" else (status,)
-    people = [person for state in wanted for person in scoped.list_members_by_status(state)]
+    people = [person for state in wanted for person in scoped.all_members_by_status(state)]
     students = [person for person in people if person.get("role") == "student"]
     return sorted(students, key=lambda person: person.get("created_at", ""), reverse=True)
 

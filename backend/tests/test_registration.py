@@ -303,3 +303,13 @@ def test_a_suspended_institute_takes_no_registrations(client, repo, school):
 
 def test_the_institute_must_be_named(client, school):
     assert client.post("/api/register", json=valid_form(school["id"])).status_code == 400
+
+
+def test_every_registration_is_listed_not_only_the_newest_two_hundred(client, school, sign_in, repo):
+    scoped = repo.scoped("aaptprep")
+    for i in range(230):
+        scoped.create_member({"email": f"s{i:03d}@example.com", "role": "student", "status": "approved", "first_name": "S", "last_name": f"N{i}", "created_at": f"2027-01-01T00:00:{i % 60:02d}+00:00"})
+    admin = sign_in("aaptprep", "ritesh@example.com")
+    listed = client.get("/api/admin/registrations?status=approved", headers=admin).json()
+    assert len(listed) == 230
+    assert len(client.get("/api/admin/registrations?status=all", headers=admin).json()) == 230

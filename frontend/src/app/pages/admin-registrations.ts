@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
@@ -18,6 +18,17 @@ function emptyDraft(): Draft {
     email: '', first_name: '', last_name: '', birth_date: '', gender: 'female', mobile: '',
     same: true, whatsapp: '', address: '', city: '', pin_code: '', course_ids: [],
   };
+}
+
+/** Everything the page shows about a registration, as one lower-case line to search in: names, email, numbers, address,
+ * courses, status, who decided or edited, and the dates both as written and as shown. */
+export function searchText(person: Registration): string {
+  const gender = GENDER_LABELS[person.gender] ?? person.gender;
+  return [
+    person.first_name, person.last_name, person.email, person.previous_email, person.mobile, person.whatsapp, person.address, person.city, person.pin_code,
+    gender, person.gender, person.birth_date, formatDate(person.birth_date), (person.course_names ?? []).join(' '), person.status, person.reason,
+    person.decided_by, person.edited_by, person.created_at?.slice(0, 10), formatDateTime(person.created_at), formatDateTime(person.decided_at), formatDateTime(person.edited_at ?? ''),
+  ].filter(Boolean).join(' ').toLowerCase();
 }
 
 const TABS = ['pending', 'approved', 'rejected', 'suspended', 'all'] as const;
@@ -48,13 +59,23 @@ interface Notice {
     }
     @if (loadError(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
+    @if (items().length > 0) {
+      <div class="filters">
+        <input type="search" id="search" placeholder="Search name, email, mobile, city, course…" aria-label="Search registrations" [ngModel]="query()" (ngModelChange)="query.set($event ?? '')" [ngModelOptions]="{ standalone: true }" />
+        @if (query()) { <button class="icon-btn" type="button" id="clear-search" title="Clear search" (click)="query.set('')"><app-icon name="x" /><span class="sr-only">Clear search</span></button> }
+        <span class="soft" id="showing">{{ visible().length === items().length ? items().length + ' shown' : 'Showing ' + visible().length + ' of ' + items().length }}</span>
+      </div>
+    }
+
     @if (loading()) {
       <p class="muted">Loading…</p>
     } @else if (items().length === 0 && !loadError()) {
       <div class="empty-state"><app-icon name="users" [size]="32" /><p>No {{ active() === 'all' ? '' : active() }} registrations.</p></div>
+    } @else if (visible().length === 0 && !loadError()) {
+      <div class="empty-state" id="no-match"><app-icon name="search" [size]="32" /><p>No registrations match "{{ query() }}"</p></div>
     }
 
-    @for (person of items(); track person.email) {
+    @for (person of visible(); track person.email) {
       <article class="item" [attr.data-email]="person.email">
         <div class="item-head">
           <div>
@@ -250,6 +271,15 @@ export class AdminRegistrations implements OnInit {
   readonly tabs = TABS;
   readonly active = signal<string>('pending');
   readonly items = signal<Registration[]>([]);
+  /** What the admin typed in the search box. Every word must be found somewhere in a registration's details. */
+  readonly query = signal('');
+  readonly visible = computed(() => {
+    const words = this.query().toLowerCase().split(/\s+/).filter(Boolean);
+    return words.length ? this.items().filter((person) => {
+      const text = searchText(person);
+      return words.every((word) => text.includes(word));
+    }) : this.items();
+  });
   readonly loading = signal(false);
   readonly loadError = signal<ApiError | null>(null);
   readonly notice = signal<Notice | null>(null);
