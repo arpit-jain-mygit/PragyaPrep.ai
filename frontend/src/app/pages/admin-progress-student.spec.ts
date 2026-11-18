@@ -104,4 +104,35 @@ describe('Admin progress: one student', () => {
     const { fixture } = await open(404);
     expect(text(fixture)).toContain("We couldn't find that student in this course.");
   });
+
+  it('offers a Remind button for a student who is behind, asks first, and reminds just them', async () => {
+    const { fixture, http } = await open();
+    expect(all(fixture, '#remind-panel').length).toBe(0);
+    el(fixture, '#remind').click();
+    await settle(fixture);
+    expect(el(fixture, '#remind-panel').textContent).toContain('Asha Rao');
+    el(fixture, '#remind-send').click();
+    const request = http.expectOne(`${API}/api/admin/reminders`);
+    expect(request.request.body).toEqual({ course_id: 'c1', emails: ['asha@example.com'], send_email: true });
+    request.flush({ reminded: 1, skipped: 0, not_behind: 0, emailed: 1, email_failed: 0 });
+    await settle(fixture);
+    expect(el(fixture, '#remind-result').textContent).toContain('Reminder sent and emailed');
+    expect(all(fixture, '#remind-panel').length).toBe(0);
+  });
+
+  it('says so when the student was already reminded today', async () => {
+    const { fixture, http } = await open();
+    el(fixture, '#remind').click();
+    await settle(fixture);
+    el(fixture, '#remind-send').click();
+    http.expectOne(`${API}/api/admin/reminders`).flush({ reminded: 0, skipped: 1, not_behind: 0, emailed: 0, email_failed: 0 });
+    await settle(fixture);
+    expect(el(fixture, '#remind-result').textContent).toContain('Already reminded today');
+  });
+
+  it('has no Remind button for a student who is not behind', async () => {
+    const base = detail();
+    const { fixture } = await open({ ...base, row: { ...base.row, status: 'on_track', overdue: 0 } });
+    expect(all(fixture, '#remind').length).toBe(0);
+  });
 });

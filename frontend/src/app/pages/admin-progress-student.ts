@@ -1,8 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { shortDate, timeAgo } from '../core/format';
-import { ApiError, StudentProgress } from '../core/models';
+import { ApiError, ReminderResult, StudentProgress } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 import { STATUS_LABELS } from './admin-progress';
@@ -10,12 +11,33 @@ import { STATUS_LABELS } from './admin-progress';
 /** One student in one course: status, coursework by subject and topic, what is overdue, and their tests. */
 @Component({
   selector: 'app-admin-progress-student',
-  imports: [RouterLink, Icon],
+  imports: [FormsModule, RouterLink, Icon],
   template: `
     <div class="page-head">
       <h1>{{ data()?.student?.name ?? 'Student' }}@if (data()) { <span class="soft"> · {{ data()!.course.name }}</span> }</h1>
-      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'admin', 'progress']"><app-icon name="arrow-left" [size]="16" /> Progress</a>
+      <span class="row">
+        @if (data()?.row?.status === 'behind') {
+          <button class="btn small" type="button" id="remind" [disabled]="busy()" (click)="confirmRemind.set(!confirmRemind())"><app-icon name="bell" [size]="16" /> Remind</button>
+        }
+        <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'admin', 'progress']"><app-icon name="arrow-left" [size]="16" /> Progress</a>
+      </span>
     </div>
+
+    @if (confirmRemind() && data(); as d) {
+      <div class="card" id="remind-panel" role="group" aria-label="Remind this student">
+        <p style="margin-top: 0">Send {{ d.student.name }} a reminder about what is overdue in {{ d.course.name }}?</p>
+        <div class="row">
+          <label class="cw-check"><input type="checkbox" id="remind-email" [(ngModel)]="remindEmail" [ngModelOptions]="{ standalone: true }" /> Send an email too</label>
+          <button class="btn" type="button" id="remind-send" [disabled]="busy()" (click)="remind()"><app-icon name="bell" [size]="16" /> Send</button>
+          <button class="btn secondary" type="button" (click)="confirmRemind.set(false)">Cancel</button>
+        </div>
+      </div>
+    }
+    @if (reminded(); as r) {
+      <div class="alert ok" role="status" id="remind-result">
+        @if (r.reminded) { Reminder sent@if (r.emailed) { and emailed } } @else if (r.skipped) { Already reminded today, so nothing new was sent } @else { Nothing to send: they aren't behind }
+      </div>
+    }
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
@@ -95,6 +117,10 @@ export class AdminProgressStudent implements OnInit {
   readonly data = signal<StudentProgress | null>(null);
   readonly loading = signal(false);
   readonly error = signal<ApiError | null>(null);
+  readonly confirmRemind = signal(false);
+  readonly busy = signal(false);
+  readonly reminded = signal<ReminderResult | null>(null);
+  remindEmail = true;
 
   date = shortDate;
   ago = timeAgo;
@@ -107,6 +133,21 @@ export class AdminProgressStudent implements OnInit {
       this.error.set(error as ApiError);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async remind(): Promise<void> {
+    const d = this.data();
+    if (!d) return;
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      this.reminded.set(await this.api.sendReminders(d.course.id, [d.student.email], this.remindEmail));
+      this.confirmRemind.set(false);
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.busy.set(false);
     }
   }
 

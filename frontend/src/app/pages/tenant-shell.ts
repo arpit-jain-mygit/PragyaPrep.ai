@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { logoSrc } from '../core/format';
 import { Icon } from '../ui/icon';
+import { NoticeService } from '../core/notice.service';
 import { SessionService } from '../core/session.service';
 import { TenantService } from '../core/tenant.service';
 
@@ -46,9 +47,11 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
               } @else {
                 <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active"><app-icon name="home" /><span class="nav-label">Home</span></a>
                 <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
+                <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
               }
               <span class="who">{{ member()!.first_name }}</span>
               <button class="icon-btn" type="button" title="Sign out" (click)="signOut()"><app-icon name="logout" /><span class="sr-only">Sign out</span></button>
@@ -68,6 +71,15 @@ export class TenantShell {
   readonly tenants = inject(TenantService);
   private readonly sessions = inject(SessionService);
   private readonly router = inject(Router);
+  readonly notices = inject(NoticeService);
+
+  constructor() {
+    // A signed-in student's unread count sits on the Notices link; everyone else has none.
+    effect(() => {
+      if (this.member()?.role === 'student') void this.notices.refresh();
+      else this.notices.clear();
+    });
+  }
 
   readonly member = computed(() => this.sessions.member(this.tenants.slug()));
   readonly isAdmin = computed(() => this.member()?.role === 'tenant_admin');

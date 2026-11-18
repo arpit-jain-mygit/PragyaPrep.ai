@@ -12,7 +12,7 @@ const summary = { tests_taken: 4, attempts: 6, in_progress: 0, average: '62.5', 
 
 const NO_WORK = { summary: { total: 0, done: 0, left: 0, overdue: 0, this_week: 0 }, courses: [] };
 
-async function openHome(replies: { tests?: object[] | number; results?: object | number; coursework?: object | number } = {}) {
+async function openHome(replies: { tests?: object[] | number; results?: object | number; coursework?: object | number; notices?: object | number } = {}) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('student'));
   const fixture = TestBed.createComponent(StudentHome);
@@ -26,6 +26,7 @@ async function openHome(replies: { tests?: object[] | number; results?: object |
   };
   reply('/api/my/tests', replies.tests, []);
   reply('/api/my/coursework', replies.coursework, NO_WORK);
+  reply('/api/my/notices', replies.notices, { unread: 0, action_unread: 0, notices: [] });
   reply('/api/my/results', replies.results, { summary: { ...summary, attempts: 0, tests_taken: 0, tests_passed: 0, average: null, best: null }, trend: [], attempts: [], subjects: [] });
   await settle(fixture);
   return { ...env, fixture };
@@ -38,7 +39,7 @@ describe('Student home', () => {
     const { fixture } = await openHome();
     expect(text(fixture)).toContain('Welcome, Asha');
     expect(text(fixture)).toContain('asha@example.com');
-    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-learning', 'tile-results']);
+    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-learning', 'tile-results']);  // no Notices tile until there is a notice
     expect(all(fixture, 'a.tile').map((a) => a.getAttribute('href'))).toEqual(['/demo/learning/tests', '/demo/learning/results']);
     expect(el(fixture, '#tile-learning').textContent).toContain('My Learning');
   });
@@ -89,6 +90,25 @@ describe('Student home', () => {
     expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
   });
 
+  it('has a Notices tile with the unread count, red with an action chip when something needs doing', async () => {
+    const note = { id: 'n', title: 'T', message: 'M', kind: 'action', link: null, source: 'manual', created_at: '2027-01-01T00:00:00+05:30', read_at: null };
+    const { fixture } = await openHome({ notices: { unread: 3, action_unread: 2, notices: [note] } });
+    expect(num(fixture, '#tile-notices [data-unread]')).toBe('3');
+    expect(num(fixture, '#tile-notices [data-action]')).toBe('2 action needed');
+    expect(el(fixture, '#tile-notices').className).toContain('alert-tile');
+    expect(el(fixture, '#tile-notices').getAttribute('href')).toBe('/demo/notices');
+    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-learning', 'tile-notices', 'tile-results']);
+  });
+
+  it('shows information notices without red, and says all read when none are unread', async () => {
+    const note = { id: 'n', title: 'T', message: 'M', kind: 'info', link: null, source: 'manual', created_at: '2027-01-01T00:00:00+05:30', read_at: '2027-01-02T00:00:00+05:30' };
+    const { fixture } = await openHome({ notices: { unread: 0, action_unread: 0, notices: [note] } });
+    expect(num(fixture, '#tile-notices [data-unread]')).toBe('0');
+    expect(all(fixture, '#tile-notices [data-allread]').length).toBe(1);
+    expect(all(fixture, '#tile-notices [data-action]').length).toBe(0);
+    expect(el(fixture, '#tile-notices').className).not.toContain('alert-tile');
+  });
+
   it('has no separate Tests, Coursework or Courses tiles any more', async () => {
     const { fixture } = await openHome({ coursework: { summary: { total: 2, done: 0, left: 2, overdue: 0, this_week: 0 }, courses: [] } });
     expect(all(fixture, '#tile-tests, #tile-coursework, #tile-courses').length).toBe(0);
@@ -120,7 +140,7 @@ describe('Student home', () => {
   });
 
   it('keeps the other tiles when one call fails', async () => {
-    const { fixture } = await openHome({ tests: 500, coursework: 500 });
+    const { fixture } = await openHome({ tests: 500, coursework: 500, notices: 500 });
     expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
     expect(num(fixture, '#tile-results [data-attempts]')).toBe('0');
     expect(text(fixture)).toContain('Welcome, Asha');

@@ -245,6 +245,9 @@ class TenantRepo:
         for access in self.list_access(old_email):
             self.put_access(new_email, {k: v for k, v in access.items() if k not in ("PK", "SK")})
             self.delete_access(old_email, access["course_id"])
+        for notice in self.list_notices(old_email):
+            self.put_notice(new_email, {k: v for k, v in notice.items() if k not in ("PK", "SK")})
+            self.table.delete_item(Key=self._notice_key(old_email, notice["id"]))
         for done in self.list_done(old_email):
             self.put_done(new_email, done["course_id"], done["subtopic_id"], done["done_at"])
             self.delete_done(old_email, done["course_id"], done["subtopic_id"])
@@ -370,6 +373,45 @@ class TenantRepo:
 
     def delete_done(self, email: str, course_id: str, subtopic_id: str) -> None:
         self.table.delete_item(Key=self._done_key(email, course_id, subtopic_id))
+
+    # ---- Notices: messages to one student (announcements and reminders). Stored with the student ----
+
+    def _notice_key(self, email: str, notice_id: str) -> dict:
+        return {"PK": self._member_key(email)["PK"], "SK": f"NOTICE#{notice_id}"}
+
+    def put_notice(self, email: str, notice: dict) -> None:
+        self.table.put_item(Item={**self._notice_key(email, notice["id"]), **notice})
+
+    def list_notices(self, email: str) -> list[dict]:
+        """Everything sent to this student, in no particular order."""
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with("NOTICE#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_notice(self, email: str, notice_id: str, fields: dict) -> None:
+        _update(self.table, self._notice_key(email, notice_id), fields)
+
+    # ---- Announcements: what the admin sent, kept as a history ----
+
+    def _announcement_key(self, announcement_id: str) -> dict:
+        return {"PK": f"{self._prefix}ANNOUNCEMENT#{announcement_id}", "SK": "META"}
+
+    def create_announcement(self, record: dict) -> None:
+        _put_new(self.table, {**self._announcement_key(record["id"]), **record, "GSI1PK": f"{self._prefix}ANNOUNCEMENTS", "GSI1SK": f"{record['created_at']}#{record['id']}"})
+
+    def list_announcements(self, limit: int = 100) -> list[dict]:
+        """The most recent announcements, newest first."""
+        response = self.table.query(
+            IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}ANNOUNCEMENTS"), ScanIndexForward=False, Limit=limit,
+        )
+        return [_plain(item) for item in response["Items"]]
 
     def delete_access(self, email: str, course_id: str) -> None:
         self.table.delete_item(Key=self._access_key(email, course_id))

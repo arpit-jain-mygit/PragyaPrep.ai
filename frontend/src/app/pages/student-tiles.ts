@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
-import { MyResults, StudentCoursework, StudentTestCard } from '../core/models';
+import { MyNotices, MyResults, StudentCoursework, StudentTestCard } from '../core/models';
 import { ToTake, toTake } from '../core/schedule';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
@@ -26,6 +26,19 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
           <span class="tchip" data-tests>{{ testsToTake() }} tests</span>
         </span>
       </a>
+
+      @if (notices(); as n) {
+        @if (n.notices.length) {
+          <a class="tile" id="tile-notices" [class.alert-tile]="n.action_unread > 0" [routerLink]="[base(), 'notices']">
+            <span class="tile-head"><app-icon name="bell" [size]="22" /> Notices</span>
+            <span class="tile-num" data-unread>{{ n.unread }}</span>
+            <span class="tchips">
+              @if (n.action_unread > 0) { <span class="tchip bad" data-action>{{ n.action_unread }} action needed</span> }
+              @if (n.unread === 0) { <span class="tchip" data-allread>all read</span> }
+            </span>
+          </a>
+        }
+      }
 
       @if (running(); as test) {
         <a class="tile" id="tile-continue" [attr.title]="test.title" [routerLink]="[base(), 'tests', test.id]">
@@ -64,6 +77,7 @@ export class StudentTiles implements OnInit {
   readonly runningCount = signal(0);
   readonly results = signal<MyResults | null>(null);
   readonly coursework = signal<StudentCoursework | null>(null);
+  readonly notices = signal<MyNotices | null>(null);
   readonly weak = signal({ count: 0, name: '', accuracy: '' });
 
   readonly testsToTake = computed(() => this.take().overdue + this.take().thisWeek + this.take().later);
@@ -90,6 +104,7 @@ export class StudentTiles implements OnInit {
       this.runningCount.set(going.length);
     });
     void this.run(async () => this.coursework.set(await this.api.myCoursework()));
+    void this.run(async () => this.notices.set(await this.api.myNotices()));
     void this.run(async () => {
       const results = await this.api.myResults();
       this.results.set(results);

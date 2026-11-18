@@ -433,3 +433,20 @@ class CourseworkCopyIn(BaseModel):
     subtopic_ids: Any = None
     keep_dates: Any = None
     keep_status: Any = None
+
+
+class AnnouncementIn(BaseModel):
+    """An announcement from the admin. Checked by hand so every problem gets a clear message."""
+
+    title: Any = None
+    message: Any = None
+    kind: Any = None
+    link: Any = None
+    audience: Any = None
+    send_email: Any = None
+
+
+class ReminderIn(BaseModel):
+    course_id: Any = None
+    emails: Any = None
+    send_email: Any = None

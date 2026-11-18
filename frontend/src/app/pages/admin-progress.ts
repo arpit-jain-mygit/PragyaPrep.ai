@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { toCsv } from '../core/csv';
 import { shortDate, timeAgo } from '../core/format';
-import { AdminCourse, ApiError, CourseProgress, CourseStuck, ProgressRow, ProgressStatus } from '../core/models';
+import { AdminCourse, ApiError, CourseProgress, CourseStuck, ProgressRow, ProgressStatus, ReminderResult } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
@@ -25,9 +25,28 @@ export const STATUS_LABELS: Record<ProgressStatus, string> = { behind: 'Behind',
         <select id="course" aria-label="Course" [ngModel]="courseId()" (ngModelChange)="pick($event)" [ngModelOptions]="{ standalone: true }" style="width: auto">
           @for (course of courses(); track course.id) { <option [value]="course.id">{{ course.name }}</option> }
         </select>
-        @if (data()) { <button class="btn secondary small" type="button" id="download-csv" (click)="download()"><app-icon name="download" [size]="16" /> CSV</button> }
+        @if (data(); as d) {
+          <button class="btn small" type="button" id="remind" [disabled]="d.summary.behind === 0 || busy()" (click)="confirmRemind.set(!confirmRemind())"><app-icon name="bell" [size]="16" /> Remind {{ d.summary.behind }}</button>
+          <button class="btn secondary small" type="button" id="download-csv" (click)="download()"><app-icon name="download" [size]="16" /> CSV</button>
+        }
       </span>
     </div>
+
+    @if (confirmRemind() && data(); as d) {
+      <div class="card" id="remind-panel" role="group" aria-label="Remind students who are behind">
+        <p style="margin-top: 0">Send a reminder to the <strong>{{ d.summary.behind }}</strong> {{ d.summary.behind === 1 ? 'student' : 'students' }} behind in {{ d.course.name }}? Each gets a notice with their own overdue items. Anyone already reminded today and who hasn't read it is skipped.</p>
+        <div class="row">
+          <label class="cw-check"><input type="checkbox" id="remind-email" [(ngModel)]="remindEmail" [ngModelOptions]="{ standalone: true }" /> Send an email too</label>
+          <button class="btn" type="button" id="remind-send" [disabled]="busy()" (click)="remind()"><app-icon name="bell" [size]="16" /> Send</button>
+          <button class="btn secondary" type="button" (click)="confirmRemind.set(false)">Cancel</button>
+        </div>
+      </div>
+    }
+    @if (reminded(); as r) {
+      <div class="alert ok" role="status" id="remind-result">
+        Reminded {{ r.reminded }} {{ r.reminded === 1 ? 'student' : 'students' }}@if (r.skipped) { · {{ r.skipped }} skipped, already reminded }@if (r.emailed) { · {{ r.emailed }} emailed }@if (r.email_failed) { · {{ r.email_failed }} emails could not be sent }
+      </div>
+    }
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
@@ -125,6 +144,10 @@ export class AdminProgress implements OnInit {
   readonly error = signal<ApiError | null>(null);
   readonly query = signal('');
   readonly onlyBehind = signal(false);
+  readonly confirmRemind = signal(false);
+  readonly busy = signal(false);
+  readonly reminded = signal<ReminderResult | null>(null);
+  remindEmail = true;
 
   date = shortDate;
   ago = timeAgo;
@@ -160,11 +183,26 @@ export class AdminProgress implements OnInit {
     this.data.set(null);
     this.stuck.set(null);
     this.error.set(null);
+    this.reminded.set(null);
+    this.confirmRemind.set(false);
     try {
       this.data.set(await this.api.courseProgress(id));
       if (this.tab() === 'stuck') await this.showStuck();
     } catch (error) {
       this.error.set(error as ApiError);
+    }
+  }
+
+  async remind(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      this.reminded.set(await this.api.sendReminders(this.courseId(), null, this.remindEmail));
+      this.confirmRemind.set(false);
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.busy.set(false);
     }
   }
 

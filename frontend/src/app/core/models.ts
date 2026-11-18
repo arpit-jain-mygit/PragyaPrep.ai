@@ -753,3 +753,58 @@ export interface StudentProgress {
   overdue_items: { title: string; topic: string; subject: string; due: string; days_late: number }[];
   tests: { id: string; title: string; state: 'upcoming' | 'open' | 'ended'; overdue: boolean; attempts_used: number; max_attempts: number; best: { marks: string; percentage: string; passed: boolean } | null }[];
 }
+
+// ---- Notices and announcements ----
+
+export type NoticeKind = 'info' | 'action';
+export type NoticeLinkTo = 'coursework' | 'tests' | 'results';
+
+export interface Notice {
+  id: string;
+  title: string;
+  message: string;
+  kind: NoticeKind;
+  link: { to: NoticeLinkTo; label: string } | null;
+  source: 'manual' | 'reminder';
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface MyNotices {
+  unread: number;
+  action_unread: number;
+  notices: Notice[];
+}
+
+export interface AnnouncementInput {
+  title: string;
+  message: string;
+  kind: NoticeKind;
+  link: NoticeLinkTo | null;
+  audience: { type: 'all' } | { type: 'course'; course_id: string } | { type: 'students'; emails: string[] };
+  send_email: boolean;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  kind: NoticeKind;
+  link: { to: NoticeLinkTo; label: string } | null;
+  source: 'manual' | 'reminder';
+  audience: { type: 'all' | 'course' | 'students'; course_name?: string; count?: number };
+  recipients: number;
+  email_requested: boolean;
+  emailed: number;
+  email_failed: number;
+  created_at: string;
+  created_by: string;
+}
+
+export interface ReminderResult {
+  reminded: number;
+  skipped: number;
+  not_behind: number;
+  emailed: number;
+  email_failed: number;
+}

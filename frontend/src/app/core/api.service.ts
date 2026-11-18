@@ -9,6 +9,10 @@ import {
   CourseAccess,
   CourseFile,
   AdminBehind,
+  Announcement,
+  AnnouncementInput,
+  MyNotices,
+  ReminderResult,
   AdminHomeCounts,
   CopyChoice,
   CourseProgress,
@@ -221,6 +225,32 @@ export class ApiService {
   }
 
   // ---- Progress (admin) ----
+
+  // ---- Announcements and notices ----
+
+  sendAnnouncement(body: AnnouncementInput): Promise<Announcement> {
+    return this.post('/api/admin/announcements', body);
+  }
+
+  announcements(): Promise<Announcement[]> {
+    return this.get('/api/admin/announcements');
+  }
+
+  sendReminders(courseId: string, emails: string[] | null, sendEmail: boolean): Promise<ReminderResult> {
+    return this.post('/api/admin/reminders', { course_id: courseId, emails, send_email: sendEmail });
+  }
+
+  myNotices(): Promise<MyNotices> {
+    return this.get('/api/my/notices');
+  }
+
+  markNoticeRead(id: string): Promise<MyNotices> {
+    return this.call(firstValueFrom(this.http.put<MyNotices>(`${this.base}/api/my/notices/${encodeURIComponent(id)}/read`, {})));
+  }
+
+  markAllNoticesRead(): Promise<MyNotices> {
+    return this.call(firstValueFrom(this.http.put<MyNotices>(`${this.base}/api/my/notices/read-all`, {})));
+  }
 
   adminHome(): Promise<AdminHomeCounts> {
     return this.get('/api/admin/home');

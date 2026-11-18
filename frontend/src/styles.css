@@ -497,3 +497,17 @@ td .cw-bar { display: inline-block; width: 5rem; vertical-align: middle; margin-
 #tile-questions { --from: #7c3aed; --to: #c026d3; }
 #tile-courses { --from: #ea580c; --to: #db2777; }
 #tile-pending.alert-tile, #tile-behind.alert-tile { --from: #dc2626; --to: #f97316; }
+
+/* Notices: the badge on the top bar link, the home tile and the list. */
+#tile-notices { --from: #0d9488; --to: #4f46e5; }
+#tile-notices.alert-tile { --from: #dc2626; --to: #f97316; }
+.notices-link { position: relative; }
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.15rem; height: 1.15rem; padding: 0 0.3rem; margin-left: 0.25rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800; background: #4f46e5; color: #fff; }
+.badge.alert { background: #dc2626; }
+.notice { margin-bottom: 0.7rem; }
+.notice.unread { border-left: 4px solid #4f46e5; }
+.notice.action.unread { border-left-color: #dc2626; }
+.notice-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: #4f46e5; flex: none; }
+.notice.action .notice-dot { background: #dc2626; }
+.notice-when { margin-left: auto; }
+.notice-text { white-space: pre-wrap; margin: 0.4rem 0 0.7rem; }

@@ -22,7 +22,7 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Question bank', 'Tests', 'Progress']);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Question bank', 'Tests', 'Progress', 'Announcements']);
     expect(text(fixture)).toContain('Asha');
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });
@@ -45,12 +45,59 @@ describe('Institute page frame', () => {
     expect(all<HTMLAnchorElement>(fixture, 'a.brand-name')[0].getAttribute('href')).toBe('/demo/login');
   });
 
-  it('shows a student only Home and My Learning', async () => {
+  it('shows a student Home, My Learning and Notices', async () => {
     const env = setupTestBed();
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My Learning']);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    await settle(fixture);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My Learning', 'Notices']);
+    expect(all(fixture, '#notice-badge').length).toBe(0);
+  });
+
+  it('shows the unread count on the Notices link, in red when something needs action', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 3, action_unread: 1, notices: [] });
+    await settle(fixture);
+    const badge = el(fixture, '#notice-badge');
+    expect(badge.textContent!.trim()).toBe('3');
+    expect(badge.className).toContain('alert');
+    expect(badge.getAttribute('aria-label')).toBe('3 unread');
+    expect(el<HTMLAnchorElement>(fixture, 'a.notices-link').getAttribute('href')).toBe('/demo/notices');
+  });
+
+  it('shows a plain badge for information only, and no badge or request for an admin', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 2, action_unread: 0, notices: [] });
+    await settle(fixture);
+    expect(el(fixture, '#notice-badge').className).not.toContain('alert');
+  });
+
+  it('does not ask an admin for notices', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectNone(`${API}/api/my/notices`);
+    expect(all(fixture, '#notice-badge').length).toBe(0);
+  });
+
+  it('keeps the page working when the notice count cannot be loaded', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(all(fixture, 'nav a').length).toBe(3);
+    expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 
   it('signs the person out and goes to the login page', async () => {
