@@ -619,3 +619,25 @@ img.avatar-photo { object-fit: cover; background: var(--line); box-shadow: 0 0 0
 :root[data-bar="light"] .nav a[data-tone="plus"] { --tone: #15803d; }
 :root[data-bar="light"] .nav a[data-tone="out"] { --tone: #374151; }
 :root[data-bar="light"] .nav a app-icon { color: var(--tone, var(--brand-text)); }
+
+/* ---- Sign-up card ---- */
+.signup-card { max-width: 36rem; margin: 0.5rem auto 1rem; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); overflow: hidden; }
+.signup-head { background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); color: #fff; padding: 1.4rem 1.5rem 1.1rem; }
+.signup-head h1 { margin: 0; font-size: 1.7rem; }
+.signup-head p { margin: 0.2rem 0 0.9rem; color: rgba(255, 255, 255, 0.9); }
+.signup-head .steps { list-style: none; display: flex; gap: 1.2rem; margin: 0; padding: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.7); }
+.signup-head .steps li { display: flex; align-items: center; gap: 0.4rem; }
+.signup-head .steps span { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.8rem; }
+.signup-head .steps .now { color: #fff; font-weight: 600; }
+.signup-head .steps .now span { background: #fff; color: #1d4ed8; border-color: #fff; }
+.signup-head .steps .done span { background: rgba(255, 255, 255, 0.3); border-color: #fff; color: #fff; }
+.signup-body { padding: 1.3rem 1.5rem 1.5rem; }
+.signup-body .persona-grid { margin: 0.4rem 0 0.6rem; gap: 0.6rem; }
+.signup-body .persona-btn { align-items: center; text-align: center; padding: 0.8rem 0.4rem; gap: 0.35rem; }
+.signup-body .persona-btn .soft { display: none; }
+.signup-body .persona-btn strong { font-size: 0.92rem; }
+.signup-body input[type='text'], .signup-body input[type='email'] { width: 100%; }
+.signup-body .hint { display: flex; gap: 0.4rem; align-items: flex-start; color: var(--muted); font-size: 0.9rem; }
+.btn.wide { width: 100%; padding: 0.75rem 1rem; font-size: 1rem; margin-top: 0.4rem; }
+.code-input { font-size: 1.6rem; letter-spacing: 0.4rem; text-align: center; }
+@media (max-width: 30rem) { .signup-head .steps { gap: 0.7rem; font-size: 0.8rem; } }
