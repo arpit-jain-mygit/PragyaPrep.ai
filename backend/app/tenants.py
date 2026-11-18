@@ -105,6 +105,9 @@ def ensure_platform_admin(repo: Repo, email: str, name: str = "Platform Admin") 
     if repo.get_tenant(PLATFORM_SLUG) is None:
         _create(repo, PLATFORM_SLUG, "PragyaPrep Platform", email, name, "platform_admin", DEFAULT_COLOR)
         return
+    platform = repo.get_tenant(PLATFORM_SLUG)
+    if platform is not None and not platform.get("admin_email"):
+        repo.update_tenant(PLATFORM_SLUG, admin_email=email)
     scoped = repo.scoped(PLATFORM_SLUG)
     if scoped.get_member(email) is None:
         first_name, _, last_name = name.strip().partition(" ")

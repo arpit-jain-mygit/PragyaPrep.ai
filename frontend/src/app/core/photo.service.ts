@@ -52,4 +52,34 @@ export class PhotoService {
       picture.release();
     }
   }
+
+  /** A screenshot to send: kept as it is if small, else scaled down (longest side 1600) to a JPEG, then written as base64 text. */
+  async screenshotText(file: Blob): Promise<string> {
+    let blob = file;
+    if (file.size > 800 * 1024 || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      const picture = await this.load(file);
+      try {
+        const scale = Math.min(1, 1600 / Math.max(picture.width, picture.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(picture.width * scale);
+        canvas.height = Math.round(picture.height * scale);
+        const context = canvas.getContext('2d');
+        if (!context) throw { status: 0, detail: "This browser can't prepare the screenshot." } as ApiError;
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(picture.image, 0, 0, canvas.width, canvas.height);
+        const made = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+        if (!made) throw { status: 0, detail: 'That screenshot could not be made small enough.' } as ApiError;
+        blob = made;
+      } finally {
+        picture.release();
+      }
+    }
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',', 2)[1] ?? '');
+      reader.onerror = () => reject({ status: 0, detail: "That screenshot couldn't be read." } as ApiError);
+      reader.readAsDataURL(blob);
+    });
+  }
 }

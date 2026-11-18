@@ -279,6 +279,10 @@ export class ApiService {
     return this.get('/api/my/coursework');
   }
 
+  sendSupport(body: { message: string; page?: string; screenshot?: string }): Promise<{ sent: boolean }> {
+    return this.post('/api/support', body);
+  }
+
   myLiveClasses(): Promise<StudentLiveCourse[]> {
     return this.get('/api/my/live-classes');
   }

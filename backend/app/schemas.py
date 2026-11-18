@@ -485,3 +485,11 @@ class LiveClassIn(BaseModel):
     description: Any = None
     materials: Any = None
     status: Any = None
+
+
+class SupportIn(BaseModel):
+    """A message to the platform admin. Checked by hand."""
+
+    message: Any = None
+    page: Any = None
+    screenshot: Any = None

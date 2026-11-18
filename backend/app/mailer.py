@@ -10,11 +10,20 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class Attachment:
+    filename: str
+    content_type: str
+    data: bytes
+
+
+@dataclass
 class Email:
     to: str
     subject: str
     body: str
     from_name: str  # shown as the sender's name, for example the institute's name
+    reply_to: str | None = None  # where a reply goes, when it should not be the sending address
+    attachments: tuple = ()  # Attachment items
 
 
 class Mailer:
@@ -30,6 +39,8 @@ class ConsoleMailer(Mailer):
         print(f"[email] From: {email.from_name}")
         print(f"[email] To: {email.to}")
         print(f"[email] Subject: {email.subject}")
+        for item in email.attachments:
+            print(f"[email] Attachment: {item.filename} ({len(item.data)} bytes)")
         print("\n".join(f"[email]   {line}" for line in email.body.splitlines()))
         print()
 
@@ -53,16 +64,19 @@ class SesMailer(Mailer):
 
     def send(self, email: Email) -> None:
         display_name = email.from_name.replace('"', "").replace("<", "").replace(">", "")
-        self.client.send_email(
-            FromEmailAddress=f'"{display_name}" <{self.sender}>',
-            Destination={"ToAddresses": [email.to]},
-            Content={
-                "Simple": {
-                    "Subject": {"Data": email.subject, "Charset": "UTF-8"},
-                    "Body": {"Text": {"Data": email.body, "Charset": "UTF-8"}},
-                }
-            },
-        )
+        simple = {
+            "Subject": {"Data": email.subject, "Charset": "UTF-8"},
+            "Body": {"Text": {"Data": email.body, "Charset": "UTF-8"}},
+        }
+        if email.attachments:
+            simple["Attachments"] = [
+                {"RawContent": a.data, "FileName": a.filename, "ContentType": a.content_type, "ContentDisposition": "ATTACHMENT", "ContentTransferEncoding": "BASE64"}
+                for a in email.attachments
+            ]
+        request = {"FromEmailAddress": f'"{display_name}" <{self.sender}>', "Destination": {"ToAddresses": [email.to]}, "Content": {"Simple": simple}}
+        if email.reply_to:
+            request["ReplyToAddresses"] = [email.reply_to]
+        self.client.send_email(**request)
 
 
 def make_mailer(settings: Settings) -> Mailer:

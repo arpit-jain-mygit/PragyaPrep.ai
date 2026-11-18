@@ -27,6 +27,28 @@ describe('Institute page frame', () => {
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
   });
 
+  it('gives admins and students a Contact support button that opens the form, but not the platform admin', async () => {
+    for (const role of ['tenant_admin', 'student'] as const) {
+      const env = setupTestBed();
+      env.sessions.save(sessionFor(role));
+      const fixture = TestBed.createComponent(TenantShell);
+      await settle(fixture);
+      expect(all(fixture, '#support-box').length).toBe(0);
+      el(fixture, '#support-open').click();
+      await settle(fixture);
+      expect(all(fixture, '#support-box').length).toBe(1);
+      el(fixture, 'button[title="Close"]').click();
+      await settle(fixture);
+      expect(all(fixture, '#support-box').length).toBe(0);
+      TestBed.resetTestingModule();
+    }
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('platform_admin'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    expect(all(fixture, '#support-open').length).toBe(0);
+  });
+
   it.each([
     ['tenant_admin', '/demo/admin/home'],
     ['student', '/demo/home'],
