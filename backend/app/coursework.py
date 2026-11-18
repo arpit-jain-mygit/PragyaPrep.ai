@@ -171,6 +171,25 @@ def tree(scoped: TenantRepo, course_id: str) -> dict:
     return {"course": {"id": course["id"], "name": course["name"]}, "counts": counts, "subjects": subjects}
 
 
+# ---- The free sample ----
+
+def free_pick(scoped: TenantRepo) -> dict | None:
+    """The one sub-topic anyone signed in can open without a course: the first published sub-topic of the first topic of the
+    first course (oldest active course that has any), in the order the plan shows them. None when nothing is published yet."""
+    courses = sorted((c for c in scoped.list_courses() if c.get("active", True)), key=lambda c: (c.get("created_at", ""), c["name"].lower()))
+    for course in courses:
+        try:
+            plan = tree(scoped, course["id"])
+        except CourseNotFound:
+            continue
+        for subject in plan["subjects"]:
+            for topic in subject["topics"]:
+                for sub in topic["subtopics"]:
+                    if sub["status"] == "published":
+                        return {"course_id": course["id"], "subtopic_id": sub["id"], "file_ids": {m["file_id"] for m in sub["materials"] if m["type"] == "file"}}
+    return None
+
+
 # ---- Changing the plan ----
 
 def _count(scoped: TenantRepo, course_id: str) -> int:

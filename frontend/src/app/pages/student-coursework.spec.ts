@@ -205,6 +205,49 @@ describe('Student coursework page', () => {
     expect(text(fixture)).toContain("This video couldn't be played");
   });
 
+  const LOCKED = (title: string) => sub({ id: `x-${title}`, title, locked: true, note: '', due: null, due_from: null, days_left: null, materials: [] });
+
+  function freeMode() {
+    const free = sub({ id: 'free1', title: 'Free one', free: true, materials: [FILE] });
+    return {
+      summary: { total: 1, done: 0, left: 1, overdue: 0, this_week: 0 },
+      courses: [
+        { id: 'c1', name: 'CAT', locked: true, progress: { total: 2, done: 0 }, overdue: 0, subjects: [{ paper_id: 'qa', name: 'Quant', due: null, progress: { total: 2, done: 0 }, topics: [{ id: 't1', title: 'Percentages', due: null, progress: { total: 2, done: 0 }, subtopics: [free, LOCKED('Paid one')] }] }] },
+        { id: 'c2', name: 'CLAT', locked: true, progress: { total: 1, done: 0 }, overdue: 0, subjects: [{ paper_id: 'lr', name: 'Logic', due: null, progress: { total: 1, done: 0 }, topics: [{ id: 't2', title: 'Puzzles', due: null, progress: { total: 1, done: 0 }, subtopics: [LOCKED('Other')] }] }] },
+      ],
+    };
+  }
+
+  it('in free mode opens the free sample, with lock icons on everything else and no progress numbers', async () => {
+    const { fixture } = await open(freeMode());
+    expect(el(fixture, '#sub-name').textContent).toBe('Free one');
+    expect(el(fixture, '#free-note').textContent).toContain('Free sample');
+    expect(el(fixture, '[data-sub="Free one"]').textContent).toContain('Free');
+    expect(all(fixture, '[data-sub="Paid one"] app-icon').length).toBe(1);
+    expect(el(fixture, '[data-course="CAT"]').querySelector('.cw-count')).toBeNull();
+    expect(all(fixture, '[data-course] .cw-bar').length).toBe(0);
+    expect(all(fixture, '[data-sub="Other"]').length).toBe(0);
+    expect(el(fixture, '#material').textContent).toContain('Percent notes');
+  });
+
+  it('shows a locked sub-topic as locked, with no material and no Mark complete', async () => {
+    const { fixture } = await open(freeMode());
+    el(fixture, '[data-sub="Paid one"]').click();
+    await settle(fixture);
+    expect(el(fixture, '#locked-note').textContent).toContain('This is locked');
+    expect(all(fixture, '#toggle-done').length).toBe(0);
+    expect(all(fixture, '#material').length).toBe(0);
+    el(fixture, '[data-course="CLAT"] .cw-course').click();
+    await settle(fixture);
+    el(fixture, '[data-subject="Logic"] .cw-row').click();
+    await settle(fixture);
+    el(fixture, '[data-topic="Puzzles"] .cw-row').click();
+    await settle(fixture);
+    el(fixture, '[data-sub="Other"]').click();
+    await settle(fixture);
+    expect(el(fixture, '#locked-note').textContent).toContain('not enrolled');
+  });
+
   it('says so when there is no coursework yet', async () => {
     const { fixture } = await open({ summary: { total: 0, done: 0, left: 0, overdue: 0, this_week: 0 }, courses: [] });
     expect(text(fixture)).toContain('No coursework yet');

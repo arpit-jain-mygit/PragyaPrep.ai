@@ -82,16 +82,19 @@ def test_only_signed_in_students_can_use_it(client, school, admin, asha):
     assert client.get(MINE, headers=admin).status_code == 403
 
 
-def test_a_student_with_no_access_sees_nothing(client, school, plan, sign_in):
+def test_a_student_with_no_access_sees_only_the_free_sample_open(client, school, plan, sign_in):
     data = mine(client, sign_in("aaptprep", "ravi@example.com"))
-    assert data == {"summary": {"total": 0, "done": 0, "left": 0, "overdue": 0, "this_week": 0}, "courses": []}
+    assert [(c["name"], c["locked"]) for c in data["courses"]] == [("CAT", True), ("CLAT", True)]
+    open_ones = [s["title"] for c in data["courses"] for sub_ in c["subjects"] for t in sub_["topics"] for s in t["subtopics"] if not s["locked"]]
+    assert open_ones == ["Concepts"]
+    assert data["summary"] == {"total": 1, "done": 0, "left": 1, "overdue": 0, "this_week": 1}
 
 
 # ---- What they see ----
 
 def test_students_see_only_published_subtopics_and_no_empty_topics_or_subjects(client, asha):
     data = mine(client, asha)
-    assert [c["name"] for c in data["courses"]] == ["CAT"]
+    assert [(c["name"], c["locked"]) for c in data["courses"]] == [("CAT", False), ("CLAT", True)]
     cat = data["courses"][0]
     assert [s["paper_id"] for s in cat["subjects"]] == [QUANT]  # Logic has only a draft, so it is left out
     topics = cat["subjects"][0]["topics"]
@@ -231,14 +234,14 @@ def test_two_courses_are_listed_by_name_with_separate_progress_for_the_same_subj
 
 def test_when_access_ends_the_coursework_disappears_and_progress_returns_with_new_access(client, admin, school, asha, repo):
     scoped = repo.scoped("aaptprep")
-    item = find(mine(client, asha), "CAT", "Concepts")
+    item = find(mine(client, asha), "CAT", "Examples")
     mark(client, asha, school["cat"], item["id"])
     access = scoped.get_access("asha@example.com", school["cat"]["id"])
     scoped.put_access("asha@example.com", {k: v for k, v in access.items() if k not in ("PK", "SK")} | {"expires_at": "2020-01-01T00:00:00+05:30"})
-    assert mine(client, asha)["courses"] == []
+    assert find(mine(client, asha), "CAT", "Examples")["locked"] is True
     assert mark(client, asha, school["cat"], item["id"], done=False).status_code == 404
     give(client, admin, "asha@example.com", school["cat"])
-    assert find(mine(client, asha), "CAT", "Concepts")["done"] is True
+    assert find(mine(client, asha), "CAT", "Examples")["done"] is True
 
 
 def test_progress_moves_with_the_student_when_their_email_is_changed(client, admin, school, asha, repo):

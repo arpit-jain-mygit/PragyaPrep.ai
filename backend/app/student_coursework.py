@@ -36,14 +36,25 @@ def _progress(total: int, done: int) -> dict:
     return {"total": total, "done": done}
 
 
+def _courses_to_show(scoped: TenantRepo, member: dict) -> list[tuple[str, bool]]:
+    """Every active course of the institute, by name, with whether this student can open it. A course they can't open is shown
+    locked, except for its free sample sub-topic."""
+    open_ids = {a["course_id"] for a in _open_courses(scoped, member)}
+    return [(c["id"], c["id"] in open_ids) for c in sorted(scoped.list_courses(), key=lambda c: c["name"].lower()) if c.get("active", True)]
+
+
 def tree(scoped: TenantRepo, member: dict) -> dict:
-    """Everything the student can see: courses, subjects, topics and sub-topics with progress, plus counts for the home tile."""
+    """Everything the student can see: courses, subjects, topics and sub-topics with progress, plus counts for the home tile.
+
+    Free mode: courses the student can't open are listed with lock icons and no content, except the free sample sub-topic
+    (the first sub-topic of the first topic of the first course), which opens for everyone. Locked sub-topics carry no note,
+    dates or material, and don't count in the home tile's numbers."""
     today = clock.today_india()
     done_rows = {(d["course_id"], d["subtopic_id"]): d["done_at"] for d in scoped.list_done(member["email"])}
+    free = coursework.free_pick(scoped)
     summary = {"total": 0, "done": 0, "left": 0, "overdue": 0, "this_week": 0}
     courses = []
-    for access in _open_courses(scoped, member):
-        course_id = access["course_id"]
+    for course_id, has_access in _courses_to_show(scoped, member):
         try:
             plan = coursework.tree(scoped, course_id)
         except coursework.CourseNotFound:
@@ -58,13 +69,18 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
                 for sub in topic["subtopics"]:
                     if sub["status"] != "published":
                         continue
+                    is_free = bool(free) and free["course_id"] == course_id and free["subtopic_id"] == sub["id"]
+                    if not has_access and not is_free:
+                        subtopics.append({"id": sub["id"], "title": sub["title"], "locked": True, "note": "", "due": None, "due_from": None, "days_left": None,
+                                          "overdue": False, "done": False, "done_at": None, "materials": []})
+                        continue
                     done_at = done_rows.get((course_id, sub["id"]))
                     due = sub["effective_due"]
                     overdue = bool(due) and not done_at and date.fromisoformat(due) < today
                     if due and not done_at and today <= date.fromisoformat(due) <= today + timedelta(days=WEEK_DAYS):
                         summary["this_week"] += 1
                     summary["overdue"] += overdue
-                    subtopics.append({
+                    subtopics.append({"locked": False, "free": is_free and not has_access,
                         "id": sub["id"], "title": sub["title"], "note": sub["note"], "due": due, "due_from": sub["due_from"],
                         "days_left": (date.fromisoformat(due) - today).days if due else None, "overdue": overdue,
                         "done": bool(done_at), "done_at": done_at, "materials": _student_material(sub["materials"]),
@@ -72,6 +88,8 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
                 if not subtopics:
                     continue
                 finished = sum(1 for s in subtopics if s["done"])
+                summary["total"] += sum(1 for s in subtopics if not s["locked"])
+                summary["done"] += finished
                 subject_total += len(subtopics)
                 subject_done += finished
                 topics.append({"id": topic["id"], "title": topic["title"], "due": topic["due"], "progress": _progress(len(subtopics), finished), "subtopics": subtopics})
@@ -83,9 +101,7 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
             subjects.append({"paper_id": subject["paper_id"], "name": subject["name"], "due": subject["due"], "progress": _progress(subject_total, subject_done), "topics": topics})
         if not subjects:
             continue
-        summary["total"] += course_total
-        summary["done"] += course_done
-        courses.append({"id": course_id, "name": plan["course"]["name"], "progress": _progress(course_total, course_done), "overdue": course_overdue, "subjects": subjects})
+        courses.append({"id": course_id, "name": plan["course"]["name"], "locked": not has_access, "progress": _progress(course_total, course_done), "overdue": course_overdue, "subjects": subjects})
     summary["left"] = summary["total"] - summary["done"]
     return {"summary": summary, "courses": courses}
 
@@ -94,7 +110,9 @@ def set_done(scoped: TenantRepo, member: dict, course_id: str, subtopic_id: str,
     """Mark a sub-topic complete or not complete. Only for a published sub-topic of a course the student can open. Returns the new tree."""
     access = scoped.get_access(member["email"], course_id)
     if access is None or not content.is_active(access):
-        raise SubtopicNotFound()
+        free = coursework.free_pick(scoped)
+        if free is None or free["course_id"] != course_id or free["subtopic_id"] != subtopic_id:
+            raise SubtopicNotFound()
     node = scoped.get_work(course_id, subtopic_id)
     if node is None or node["kind"] != "subtopic" or node.get("status") != "published":
         raise SubtopicNotFound()

@@ -21,7 +21,7 @@ interface Chosen {
   imports: [Icon, InfoTip],
   template: `
     <div class="cw-topline">
-      <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet." />
+      <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet. A padlock means the course isn't open to you yet." />
       @if (data(); as d) {
         @if (d.summary.total) {
           <span class="cw-overall" id="overall">
@@ -47,17 +47,21 @@ interface Chosen {
                 <button type="button" class="cw-row cw-course" [attr.aria-expanded]="isOpen('c:' + course.id)" (click)="toggle('c:' + course.id)">
                   <app-icon [name]="isOpen('c:' + course.id) ? 'chevron' : 'chevron-right'" [size]="16" />
                   <strong>{{ course.name }}</strong>
-                  @if (course.overdue) { <span class="status bad" title="Overdue">{{ course.overdue }}</span> }
-                  <span class="cw-count">{{ course.progress.done }}/{{ course.progress.total }}</span>
+                  @if (course.locked) {
+                    <app-icon name="lock" [size]="14" class="soft-icon" />
+                  } @else {
+                    @if (course.overdue) { <span class="status bad" title="Overdue">{{ course.overdue }}</span> }
+                    <span class="cw-count">{{ course.progress.done }}/{{ course.progress.total }}</span>
+                  }
                 </button>
-                <span class="cw-bar"><i [style.width.%]="percent(course.progress.done, course.progress.total)"></i></span>
+                @if (!course.locked) { <span class="cw-bar"><i [style.width.%]="percent(course.progress.done, course.progress.total)"></i></span> }
                 @if (isOpen('c:' + course.id)) {
                   @for (subject of course.subjects; track subject.paper_id) {
                     <div class="cw-node cw-level-1" [attr.data-subject]="subject.name">
                       <button type="button" class="cw-row" [attr.aria-expanded]="isOpen('s:' + course.id + ':' + subject.paper_id)" (click)="toggle('s:' + course.id + ':' + subject.paper_id)">
                         <app-icon [name]="isOpen('s:' + course.id + ':' + subject.paper_id) ? 'chevron' : 'chevron-right'" [size]="16" />
                         <span>{{ subject.name }}</span>
-                        <span class="cw-count">{{ subject.progress.done }}/{{ subject.progress.total }}</span>
+                        @if (!course.locked) { <span class="cw-count">{{ subject.progress.done }}/{{ subject.progress.total }}</span> }
                       </button>
                       @if (isOpen('s:' + course.id + ':' + subject.paper_id)) {
                         @for (topic of subject.topics; track topic.id) {
@@ -65,14 +69,19 @@ interface Chosen {
                             <button type="button" class="cw-row" [attr.aria-expanded]="isOpen('t:' + topic.id)" (click)="toggle('t:' + topic.id)">
                               <app-icon [name]="isOpen('t:' + topic.id) ? 'chevron' : 'chevron-right'" [size]="16" />
                               <span>{{ topic.title }}</span>
-                              <span class="cw-count">{{ topic.progress.done }}/{{ topic.progress.total }}</span>
+                              @if (!course.locked) { <span class="cw-count">{{ topic.progress.done }}/{{ topic.progress.total }}</span> }
                             </button>
                             @if (isOpen('t:' + topic.id)) {
                               @for (sub of topic.subtopics; track sub.id) {
                                 <button type="button" class="cw-row cw-leaf" [class.selected]="chosen()?.sub?.id === sub.id" [attr.aria-current]="chosen()?.sub?.id === sub.id ? 'true' : null"
                                   [attr.data-sub]="sub.title" (click)="select({ course, subject, topic, sub })">
-                                  <app-icon [name]="sub.done ? 'check' : sub.overdue ? 'flag' : 'clock'" [size]="15" [class]="sub.done ? 'ok-icon' : sub.overdue ? 'bad-icon' : 'soft-icon'" />
+                                  @if (sub.locked) {
+                                    <app-icon name="lock" [size]="15" class="soft-icon" />
+                                  } @else {
+                                    <app-icon [name]="sub.done ? 'check' : sub.overdue ? 'flag' : 'clock'" [size]="15" [class]="sub.done ? 'ok-icon' : sub.overdue ? 'bad-icon' : 'soft-icon'" />
+                                  }
                                   <span class="cw-leaf-title">{{ sub.title }}</span>
+                                  @if (sub.free) { <span class="status ok" title="Free to open">Free</span> }
                                 </button>
                               }
                             }
@@ -91,6 +100,14 @@ interface Chosen {
               <div class="card">
                 <p class="soft cw-crumb" id="crumb">{{ pick.course.name }} › {{ pick.subject.name }} › {{ pick.topic.title }}</p>
                 <h2 id="sub-name">{{ pick.sub.title }}</h2>
+                @if (pick.sub.locked) {
+                  <div class="empty-state" id="locked-note" style="padding: 1.2rem 0">
+                    <app-icon name="lock" [size]="32" />
+                    <p><strong>This is locked</strong></p>
+                    <p class="soft">It is part of a course you are not enrolled in yet. It opens as soon as your institute approves your enrolment.</p>
+                  </div>
+                } @else {
+                @if (pick.sub.free) { <p class="soft" id="free-note"><app-icon name="lock" [size]="14" /> Free sample. The rest of {{ pick.course.name }} opens once you are enrolled.</p> }
                 <p class="cw-due" id="due" [class.late]="pick.sub.overdue && !pick.sub.done" [class.done]="pick.sub.done">
                   <app-icon [name]="pick.sub.done ? 'check' : pick.sub.overdue ? 'flag' : 'calendar'" [size]="16" /> {{ dueText(pick.sub) }}
                 </p>
@@ -126,6 +143,7 @@ interface Chosen {
                     <button class="btn" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="check" [size]="16" /> Mark complete</button>
                   }
                 </div>
+                }
               </div>
             } @else {
               <div class="empty-state"><app-icon name="layers" [size]="32" /><p>Pick a sub-topic</p></div>
@@ -172,8 +190,8 @@ export class StudentCourseworkPage implements OnInit {
       this.data.set(data);
       // Start on the first sub-topic that is not done (else the first one), with its path open.
       const all = data.courses.flatMap((course) => course.subjects.flatMap((subject) => subject.topics.flatMap((topic) => topic.subtopics.map((sub) => ({ course, subject, topic, sub })))));
-      const first = all.find((x) => !x.sub.done) ?? all[0];
-      this.open.set(new Set(data.courses.map((c) => `c:${c.id}`)));
+      const first = all.find((x) => !x.sub.done && !x.sub.locked) ?? all.find((x) => !x.sub.locked) ?? all[0];
+      this.open.set(new Set(data.courses.filter((c) => !c.locked).map((c) => `c:${c.id}`)));
       if (first) this.select(first);
     } catch (error) {
       this.error.set(error as ApiError);

@@ -659,6 +659,10 @@ export interface StudentSubtopic {
   done: boolean;
   done_at: string | null;
   materials: StudentMaterial[];
+  /** In a course the student isn't enrolled in, and not the free sample: shown by title only. */
+  locked?: boolean;
+  /** The free sample sub-topic, open to everyone. */
+  free?: boolean;
 }
 
 export interface StudentTopic {
@@ -680,6 +684,8 @@ export interface StudentSubject {
 export interface StudentCourse {
   id: string;
   name: string;
+  /** The student isn't enrolled: its content is locked apart from the free sample. */
+  locked?: boolean;
   progress: Progress;
   overdue: number;
   subjects: StudentSubject[];

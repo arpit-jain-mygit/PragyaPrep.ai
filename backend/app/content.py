@@ -241,7 +241,10 @@ def file_link(
     """A short-lived link to one file. Raises NoAccess unless this student has current access to the file's course."""
     access = scoped.get_access(member["email"], course_id)
     if access is None or not is_active(access):
-        raise NoAccess()
+        # Without the course, only a file of the free sample sub-topic opens.
+        free = coursework.free_pick(scoped)
+        if free is None or free["course_id"] != course_id or file_id not in free["file_ids"]:
+            raise NoAccess()
     file = scoped.get_file(course_id, file_id)
     if file is None or file["status"] != "ready":
         raise NoAccess()
