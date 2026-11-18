@@ -17,3 +17,4 @@ tfplan
 # Build output
 backend/build/
 .pytest_cache/
+android-builds/

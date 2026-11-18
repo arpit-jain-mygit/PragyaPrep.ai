@@ -9,11 +9,13 @@ The Android app is the Angular site packaged with Capacitor. The pages are bundl
 - Icon and splash come from `frontend/assets/*.svg`; regenerate with `npx @capacitor/assets generate --android --assetPath assets`.
 
 ## You need once
-Java 17, and the Android SDK (Android Studio, or the command line tools with `platform-tools`, `platforms;android-36` and `build-tools`).
+Java 21 (`brew install openjdk@21`; Java 17 is too old for Capacitor 8 and Java 26 too new), and the Android SDK (Android Studio, or the command line tools with `platform-tools`, `platforms;android-36` and `build-tools`).
 Set `ANDROID_HOME` to the SDK folder.
 
 ## Build a test app (APK) for your phone
 ```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 cd frontend
 npx ng build
 npx cap sync android
