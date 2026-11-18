@@ -390,7 +390,8 @@ body:has(.busy-cursor), body:has(.busy-cursor) * { cursor: progress; }
 .busy-cursor.at-corner { left: auto !important; top: auto !important; right: 16px; bottom: 16px; }
 .busy-cursor svg { display: block; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18)); }
 .busy-cursor .busy-bg { fill: var(--card); fill-opacity: 0.92; stroke: var(--line); stroke-width: 1; }
-.busy-cursor text { font-size: 7.4px; font-weight: 600; fill: var(--muted); letter-spacing: 0.2px; }
+.busy-cursor .busy-label { font-size: 6.4px; font-weight: 700; fill: #fff; letter-spacing: 0; transform-box: fill-box; transform-origin: center; animation: busy-turn-back 6s linear infinite; }
 .busy-cursor .busy-spin { transform-origin: 50px 50px; animation: busy-turn 6s linear infinite; }
 @keyframes busy-turn { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .busy-cursor .busy-spin { animation: none; } }
+@keyframes busy-turn-back { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { .busy-cursor .busy-spin, .busy-cursor .busy-label { animation: none; } }

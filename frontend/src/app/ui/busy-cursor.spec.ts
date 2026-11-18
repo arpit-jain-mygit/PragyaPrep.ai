@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { busyInterceptor } from '../core/busy.interceptor';
 import { BusyService } from '../core/busy.service';
-import { BusyCursor, IIM_NAMES } from './busy-cursor';
+import { BusyCursor, IIM_BADGES } from './busy-cursor';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -79,7 +79,7 @@ describe('BusyCursor', () => {
   beforeEach(() => { BusyService.delay = 20; });
   afterEach(() => { BusyService.delay = 300; });
 
-  it('draws nothing until the server is busy, then a ring of IIM names that follows the pointer', async () => {
+  it('draws nothing until the server is busy, then a ring of IIM badges that follows the pointer', async () => {
     const fixture = TestBed.createComponent(BusyCursor);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
@@ -92,9 +92,11 @@ describe('BusyCursor', () => {
     const ring = el.querySelector('.busy-cursor') as HTMLElement;
     expect(ring.getAttribute('role')).toBe('status');
     expect(ring.classList.contains('at-corner')).toBe(true);
-    const text = el.querySelector('textPath')?.textContent ?? '';
-    for (const name of IIM_NAMES) expect(text).toContain(name);
-    expect(IIM_NAMES.length).toBe(21);
+    const labels = [...el.querySelectorAll('.busy-label')].map((l) => l.textContent?.trim());
+    expect(labels).toEqual(IIM_BADGES.map((b) => b.code));
+    expect(IIM_BADGES.length).toBe(8);
+    const spots = new Set(IIM_BADGES.map((b) => `${b.x},${b.y}`));
+    expect(spots.size).toBe(8);
 
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 50, pointerType: 'mouse' }));
     fixture.detectChanges();
