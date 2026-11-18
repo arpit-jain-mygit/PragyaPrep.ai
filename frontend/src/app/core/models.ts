@@ -200,13 +200,6 @@ export interface CourseAccess {
   active: boolean;
 }
 
-export interface MyCourse {
-  id: string;
-  name: string;
-  expires_at: string | null;
-  files: CourseFile[];
-}
-
 export interface FileLink {
   url: string;
   expires_in: number;

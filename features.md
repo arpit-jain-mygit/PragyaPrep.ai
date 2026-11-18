@@ -24,7 +24,7 @@ Parent and Mentor roles come later, also per tenant.
 1. **Register.** The student fills the registration form (below) and submits it with **Register**. The registration is **pending**.
 2. **Admin reviews the registration.** The tenant admin approves or rejects it. The student gets an email either way. Approval puts the email on the tenant's approved list ("whitelist"). It does **not** give course access yet.
 3. **Log in.** The student logs in with their email and a 6-digit emailed code (see below).
-4. **Access.** In Phase 1 the tenant admin gives the student the course by hand, from the student's details. The student then sees it under **My courses**. *(Phase 2: the student pays offline with their own UPI app and uploads a screenshot, and the admin verifies it, which grants the access.)*
+4. **Access.** In Phase 1 the tenant admin gives the student the course by hand, from the student's details. The student then sees it under **My Learning** (the course's coursework). *(Phase 2: the student pays offline with their own UPI app and uploads a screenshot, and the admin verifies it, which grants the access.)*
 5. **Learn.** The student opens the course and plays its videos and opens its PDFs.
 
 ## Registration form
@@ -136,7 +136,7 @@ The login page shows these messages straight away. When an email isn't registere
 
 ## Student
 - Register, then log in with an emailed code once approved.
-- See only the courses they have been granted, in their own tenant, under **My courses**.
+- See only the courses they have been granted, in their own tenant, in **My Learning**. There is no separate My courses page: a course's files reach students through the coursework plan (a file the admin doesn't attach to any sub-topic is not shown to students).
 - Open a course, play its MP4 videos (with seeking) and open its PDFs.
 - **Coursework:** a **Coursework** tile on the home page and a **Coursework** page with a left navigation of courses, subjects, topics and sub-topics, each with progress. The student opens the material (PDFs, videos, links), sees the finish-by date (and **overdue** when it has passed and the sub-topic isn't complete), and marks each sub-topic complete or not complete. Only published sub-topics of courses they currently have access to are shown.
 - **Take tests:** a **Tests** page lists the tests of the courses the student can open now, with the window, attempts used and best score. A test has an intro (questions, marks, marking, time, pass mark, instructions), then one question at a time with a numbered palette, passages shown with their questions, pictures, typed answers for fill-in questions, mark for review, a countdown, and Submit. Answers save as they go and a refresh resumes the attempt with the time left. The test submits itself when time runs out. The result shows marks, percentage, pass or fail and the counts, and (if the test allows it) a review of every question with the right answer, the student's answer and the reason for each option. Attempts are limited by the test; a started attempt counts.

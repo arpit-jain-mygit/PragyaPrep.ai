@@ -45,12 +45,12 @@ describe('Institute page frame', () => {
     expect(all<HTMLAnchorElement>(fixture, 'a.brand-name')[0].getAttribute('href')).toBe('/demo/login');
   });
 
-  it('shows a student only their home and courses links', async () => {
+  it('shows a student only Home and My Learning', async () => {
     const env = setupTestBed();
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My courses', 'Coursework', 'Tests']);
+    expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Home', 'My Learning']);
   });
 
   it('signs the person out and goes to the login page', async () => {

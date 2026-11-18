@@ -65,20 +65,21 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-questions').then((m) => m.AdminQuestions),
       },
       {
-        path: 'tests',
+        // My Learning: coursework, tests and results as tabs of one page.
+        path: 'learning',
         canActivate: [signedInGuard],
-        loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests),
+        loadComponent: () => import('./pages/student-learning').then((m) => m.StudentLearning),
+        children: [
+          { path: '', pathMatch: 'full', loadComponent: () => import('./pages/student-coursework').then((m) => m.StudentCourseworkPage) },
+          { path: 'tests', loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests) },
+          { path: 'results', loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults) },
+        ],
       },
-      {
-        path: 'coursework',
-        canActivate: [signedInGuard],
-        loadComponent: () => import('./pages/student-coursework').then((m) => m.StudentCourseworkPage),
-      },
-      {
-        path: 'results',
-        canActivate: [signedInGuard],
-        loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults),
-      },
+      // The earlier addresses still work, so saved links don't break.
+      { path: 'tests', pathMatch: 'full', redirectTo: 'learning/tests' },
+      { path: 'results', pathMatch: 'full', redirectTo: 'learning/results' },
+      { path: 'coursework', pathMatch: 'full', redirectTo: 'learning' },
+      { path: 'courses', pathMatch: 'full', redirectTo: 'learning' },
       {
         path: 'tests/:id',
         canActivate: [signedInGuard],
@@ -88,11 +89,6 @@ export const routes: Routes = [
         path: 'tests/:id/attempts/:number',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/student-attempt').then((m) => m.StudentAttempt),
-      },
-      {
-        path: 'courses',
-        canActivate: [signedInGuard],
-        loadComponent: () => import('./pages/my-courses').then((m) => m.MyCourses),
       },
       { path: '**', loadComponent: () => import('./pages/not-found').then((m) => m.NotFound) },
     ],

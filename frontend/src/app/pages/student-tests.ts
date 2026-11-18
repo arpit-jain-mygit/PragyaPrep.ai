@@ -6,22 +6,14 @@ import { ApiError, StudentTestCard } from '../core/models';
 import { ScheduleGroup, dueLabel, isUrgent, scheduleGroups } from '../core/schedule';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
-import { InfoTip } from '../ui/info-tip';
-import { StudentTabs } from './student-tabs';
 
 const GROUP_ICONS = { overdue: 'flag', open: 'play', upcoming: 'clock', finished: 'check' } as const;
 
 /** The tests a student can take: for the courses they can open now. */
 @Component({
   selector: 'app-student-tests',
-  imports: [RouterLink, Icon, InfoTip, StudentTabs],
+  imports: [RouterLink, Icon],
   template: `
-    <div class="page-head">
-      <h1>Tests <app-info text="Tests for your courses. You can start one while it is open, as long as you have attempts left." /></h1>
-    </div>
-
-    <app-student-tabs />
-
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
     @if (loading()) {

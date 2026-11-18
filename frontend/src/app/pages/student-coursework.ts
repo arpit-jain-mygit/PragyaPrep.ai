@@ -20,8 +20,8 @@ interface Chosen {
   selector: 'app-student-coursework',
   imports: [Icon, InfoTip],
   template: `
-    <div class="page-head">
-      <h1>Coursework <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet." /></h1>
+    <div class="cw-topline">
+      <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet." />
       @if (data(); as d) {
         @if (d.summary.total) {
           <span class="cw-overall" id="overall">

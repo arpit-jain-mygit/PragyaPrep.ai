@@ -13,7 +13,7 @@ import { Icon } from '../ui/icon';
   template: `
     <div class="page-head">
       <h1>{{ test()?.title ?? 'Test' }}</h1>
-      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests']"><app-icon name="arrow-left" [size]="16" /> Tests</a>
+      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'learning', 'tests']"><app-icon name="arrow-left" [size]="16" /> Tests</a>
     </div>
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }

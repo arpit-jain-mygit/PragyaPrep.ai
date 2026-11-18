@@ -12,7 +12,7 @@ const summary = { tests_taken: 4, attempts: 6, in_progress: 0, average: '62.5', 
 
 const NO_WORK = { summary: { total: 0, done: 0, left: 0, overdue: 0, this_week: 0 }, courses: [] };
 
-async function openHome(replies: { tests?: object[] | number; courses?: object[] | number; results?: object | number; coursework?: object | number } = {}) {
+async function openHome(replies: { tests?: object[] | number; results?: object | number; coursework?: object | number } = {}) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('student'));
   const fixture = TestBed.createComponent(StudentHome);
@@ -25,7 +25,6 @@ async function openHome(replies: { tests?: object[] | number; courses?: object[]
     else request.flush(value ?? fallback);
   };
   reply('/api/my/tests', replies.tests, []);
-  reply('/api/my/courses', replies.courses, []);
   reply('/api/my/coursework', replies.coursework, NO_WORK);
   reply('/api/my/results', replies.results, { summary: { ...summary, attempts: 0, tests_taken: 0, tests_passed: 0, average: null, best: null }, trend: [], attempts: [], subjects: [] });
   await settle(fixture);
@@ -35,40 +34,51 @@ async function openHome(replies: { tests?: object[] | number; courses?: object[]
 const num = (fixture: unknown, selector: string) => el(fixture as never, selector).textContent!.trim();
 
 describe('Student home', () => {
-  it('greets the student and shows tiles for tests, courses and results', async () => {
+  it('greets the student and shows tiles for My Learning and results', async () => {
     const { fixture } = await openHome();
     expect(text(fixture)).toContain('Welcome, Asha');
     expect(text(fixture)).toContain('asha@example.com');
-    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-tests', 'tile-courses', 'tile-results']);
-    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('href'))).toEqual(['/demo/tests', '/demo/courses', '/demo/results']);
+    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-learning', 'tile-results']);
+    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('href'))).toEqual(['/demo/learning/tests', '/demo/learning/results']);
+    expect(el(fixture, '#tile-learning').textContent).toContain('My Learning');
   });
 
-  it('counts tests to take: overdue, this week and later', async () => {
+  it('adds up coursework left and tests to take, with the split and the overdue count', async () => {
     const { fixture } = await openHome({
       tests: [
         { ...base, id: 'a', title: 'Slow', state: 'open', minutes_left: 20000 },
         { ...base, id: 'b', title: 'Urgent', state: 'open', minutes_left: 120 },
         { ...base, id: 'c', title: 'Missed', state: 'ended', overdue: true },
         { ...base, id: 'd', title: 'Opens soon', state: 'upcoming', opens_in_minutes: 4000 },
-        { ...base, id: 'e', title: 'Opens late', state: 'upcoming', opens_in_minutes: 30000 },
-        { ...base, id: 'f', title: 'Any time', state: 'open', minutes_left: null },
         { ...base, id: 'g', title: 'Already taken', state: 'open', minutes_left: 100, attempts_used: 1 },
         { ...base, id: 'h', title: 'Old', state: 'ended', attempts_used: 1 },
       ],
+      coursework: { summary: { total: 10, done: 4, left: 6, overdue: 2, this_week: 3 }, courses: [] },
     });
-    expect(num(fixture, '#tile-tests [data-total]')).toBe('6');
-    expect(num(fixture, '#tile-tests [data-overdue]')).toBe('1 overdue');
-    expect(num(fixture, '#tile-tests [data-week]')).toBe('2 this week');
-    expect(num(fixture, '#tile-tests [data-later]')).toBe('3 later');
-    expect(el(fixture, '#tile-tests').className).toContain('alert-tile');
+    expect(num(fixture, '#tile-learning [data-total]')).toBe('10');  // 4 tests + 6 coursework
+    expect(num(fixture, '#tile-learning [data-tests]')).toBe('4 tests');
+    expect(num(fixture, '#tile-learning [data-coursework]')).toBe('6 coursework');
+    expect(num(fixture, '#tile-learning [data-overdue]')).toBe('3 overdue');  // 1 test + 2 coursework
+    expect(el(fixture, '#tile-learning').className).toContain('alert-tile');
+    expect(el(fixture, '#tile-learning').getAttribute('href')).toBe('/demo/learning');
   });
 
-  it('shows zero counts and no overdue chip when there is nothing to take', async () => {
+  it('opens the Tests tab when there is no coursework left', async () => {
+    const { fixture } = await openHome({
+      tests: [{ ...base, id: 'a', title: 'Slow', state: 'open', minutes_left: 20000 }],
+      coursework: { summary: { total: 5, done: 5, left: 0, overdue: 0, this_week: 0 }, courses: [] },
+    });
+    expect(num(fixture, '#tile-learning [data-total]')).toBe('1');
+    expect(el(fixture, '#tile-learning').getAttribute('href')).toBe('/demo/learning/tests');
+  });
+
+  it('shows zero counts and no overdue chip when there is nothing to do', async () => {
     const { fixture } = await openHome();
-    expect(num(fixture, '#tile-tests [data-total]')).toBe('0');
-    expect(num(fixture, '#tile-tests [data-week]')).toBe('0 this week');
-    expect(all(fixture, '#tile-tests [data-overdue]').length).toBe(0);
-    expect(el(fixture, '#tile-tests').className).not.toContain('alert-tile');
+    expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
+    expect(num(fixture, '#tile-learning [data-tests]')).toBe('0 tests');
+    expect(num(fixture, '#tile-learning [data-coursework]')).toBe('0 coursework');
+    expect(all(fixture, '#tile-learning [data-overdue]').length).toBe(0);
+    expect(el(fixture, '#tile-learning').className).not.toContain('alert-tile');
   });
 
   it('has a Continue tile only while a test is in progress', async () => {
@@ -76,19 +86,12 @@ describe('Student home', () => {
     expect(num(fixture, '#tile-continue [data-running]')).toBe('1');
     expect(el(fixture, '#tile-continue').getAttribute('title')).toBe('Half done');
     expect(el(fixture, '#tile-continue').getAttribute('href')).toBe('/demo/tests/p');
-    expect(num(fixture, '#tile-tests [data-total]')).toBe('0');
+    expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
   });
 
-  it('counts the courses', async () => {
-    const { fixture } = await openHome({
-      courses: [
-        { id: '1', name: 'CAT', expires_at: null, files: [] },
-        { id: '2', name: 'CLAT', expires_at: null, files: [] },
-        { id: '3', name: 'IPMAT', expires_at: null, files: [] },
-      ],
-    });
-    expect(num(fixture, '#tile-courses [data-courses]')).toBe('3');
-    expect(el(fixture, '#tile-courses').textContent).toContain('Courses');
+  it('has no separate Tests, Coursework or Courses tiles any more', async () => {
+    const { fixture } = await openHome({ coursework: { summary: { total: 2, done: 0, left: 2, overdue: 0, this_week: 0 }, courses: [] } });
+    expect(all(fixture, '#tile-tests, #tile-coursework, #tile-courses').length).toBe(0);
   });
 
   it('shows the number of attempts with the average and passes, and a weak subjects tile when a subject is below 50%', async () => {
@@ -105,8 +108,10 @@ describe('Student home', () => {
     expect(num(fixture, '#tile-results [data-attempts]')).toBe('6');
     expect(el(fixture, '#tile-results').textContent).toContain('62.5% avg');
     expect(el(fixture, '#tile-results').textContent).toContain('3 of 4 passed');
+    expect(el(fixture, '#tile-results').getAttribute('href')).toBe('/demo/learning/results');
     expect(num(fixture, '#tile-weak [data-weak]')).toBe('2');
     expect(el(fixture, '#tile-weak').getAttribute('title')).toBe('Weakest: Logical Reasoning');
+    expect(el(fixture, '#tile-weak').getAttribute('href')).toBe('/demo/learning/results');
   });
 
   it('leaves out the weak subjects tile when nothing is weak', async () => {
@@ -114,28 +119,10 @@ describe('Student home', () => {
     expect(all(fixture, '#tile-weak').length).toBe(0);
   });
 
-  it('has a coursework tile with the count left, overdue and due this week, only when there is coursework', async () => {
-    const { fixture } = await openHome({ coursework: { summary: { total: 10, done: 4, left: 6, overdue: 2, this_week: 3 }, courses: [] } });
-    expect(num(fixture, '#tile-coursework [data-left]')).toBe('6');
-    expect(num(fixture, '#tile-coursework [data-cw-overdue]')).toBe('2 overdue');
-    expect(num(fixture, '#tile-coursework [data-cw-week]')).toBe('3 this week');
-    expect(el(fixture, '#tile-coursework').getAttribute('href')).toBe('/demo/coursework');
-    expect(el(fixture, '#tile-coursework').className).toContain('alert-tile');
-    expect(el(fixture, '#tile-coursework').textContent).toContain('Coursework');
-  });
-
-  it('shows all done, and no overdue chip, when everything is complete', async () => {
-    const { fixture } = await openHome({ coursework: { summary: { total: 5, done: 5, left: 0, overdue: 0, this_week: 0 }, courses: [] } });
-    expect(num(fixture, '#tile-coursework [data-left]')).toBe('0');
-    expect(all(fixture, '#tile-coursework [data-alldone]').length).toBe(1);
-    expect(all(fixture, '#tile-coursework [data-cw-overdue], #tile-coursework [data-cw-week]').length).toBe(0);
-    expect(el(fixture, '#tile-coursework').className).not.toContain('alert-tile');
-  });
-
   it('keeps the other tiles when one call fails', async () => {
-    const { fixture } = await openHome({ tests: 500, coursework: 500, courses: [{ id: '1', name: 'CAT', expires_at: null, files: [] }] });
-    expect(num(fixture, '#tile-courses [data-courses]')).toBe('1');
-    expect(num(fixture, '#tile-tests [data-total]')).toBe('0');
+    const { fixture } = await openHome({ tests: 500, coursework: 500 });
+    expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
+    expect(num(fixture, '#tile-results [data-attempts]')).toBe('0');
     expect(text(fixture)).toContain('Welcome, Asha');
   });
 

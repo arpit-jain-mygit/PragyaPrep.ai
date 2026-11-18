@@ -25,7 +25,6 @@ import {
   InstituteResult,
   InstituteUpdate,
   Member,
-  MyCourse,
   AdminAttempt,
   AttemptResult,
   AttemptView,
@@ -379,10 +378,6 @@ export class ApiService {
   }
 
   // ---- Student ----
-
-  myCourses(): Promise<MyCourse[]> {
-    return this.get('/api/my/courses');
-  }
 
   fileLink(courseId: string, fileId: string): Promise<FileLink> {
     return this.get(`/api/my/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}/link`);

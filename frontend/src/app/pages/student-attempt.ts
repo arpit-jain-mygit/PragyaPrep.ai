@@ -14,7 +14,7 @@ import { TestResult } from './test-result';
   template: `
     @if (error(); as problem) {
       <div class="alert error" role="alert">{{ problem.detail }}</div>
-      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'tests']"><app-icon name="arrow-left" [size]="16" /> Tests</a>
+      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'learning', 'tests']"><app-icon name="arrow-left" [size]="16" /> Tests</a>
     }
     @if (loading()) {
       <p class="muted">Loading…</p>

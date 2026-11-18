@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
-import { MyCourse, MyResults, StudentCoursework, StudentTestCard } from '../core/models';
+import { MyResults, StudentCoursework, StudentTestCard } from '../core/models';
 import { ToTake, toTake } from '../core/schedule';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
@@ -17,13 +17,13 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
   imports: [RouterLink, Icon],
   template: `
     <div class="tiles">
-      <a class="tile" id="tile-tests" [class.alert-tile]="take().overdue > 0" [routerLink]="[base(), 'tests']">
-        <span class="tile-head"><app-icon name="clipboard" [size]="22" /> To take</span>
-        <span class="tile-num" data-total>{{ take().overdue + take().thisWeek + take().later }}</span>
+      <a class="tile" id="tile-learning" [class.alert-tile]="overdue() > 0" [routerLink]="learningLink()">
+        <span class="tile-head"><app-icon name="book" [size]="22" /> My Learning</span>
+        <span class="tile-num" data-total>{{ total() }}</span>
         <span class="tchips">
-          @if (take().overdue > 0) { <span class="tchip bad" data-overdue>{{ take().overdue }} overdue</span> }
-          <span class="tchip" data-week>{{ take().thisWeek }} this week</span>
-          <span class="tchip" data-later>{{ take().later }} later</span>
+          @if (overdue() > 0) { <span class="tchip bad" data-overdue>{{ overdue() }} overdue</span> }
+          <span class="tchip" data-coursework>{{ courseworkLeft() }} coursework</span>
+          <span class="tchip" data-tests>{{ testsToTake() }} tests</span>
         </span>
       </a>
 
@@ -35,26 +35,7 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
         </a>
       }
 
-      @if (coursework(); as work) {
-        @if (work.summary.total > 0) {
-          <a class="tile" id="tile-coursework" [class.alert-tile]="work.summary.overdue > 0" [routerLink]="[base(), 'coursework']">
-            <span class="tile-head"><app-icon name="layers" [size]="22" /> Coursework</span>
-            <span class="tile-num" data-left>{{ work.summary.left }}</span>
-            <span class="tchips">
-              @if (work.summary.left === 0) { <span class="tchip" data-alldone>all done</span> }
-              @if (work.summary.overdue > 0) { <span class="tchip bad" data-cw-overdue>{{ work.summary.overdue }} overdue</span> }
-              @if (work.summary.left > 0) { <span class="tchip" data-cw-week>{{ work.summary.this_week }} this week</span> }
-            </span>
-          </a>
-        }
-      }
-
-      <a class="tile" id="tile-courses" [routerLink]="[base(), 'courses']">
-        <span class="tile-head"><app-icon name="book" [size]="22" /> Courses</span>
-        <span class="tile-num" data-courses>{{ courses().length }}</span>
-      </a>
-
-      <a class="tile" id="tile-results" [routerLink]="[base(), 'results']">
+      <a class="tile" id="tile-results" [routerLink]="[base(), 'learning', 'results']">
         <span class="tile-head"><app-icon name="chart" [size]="22" /> Attempts</span>
         <span class="tile-num" data-attempts>{{ results()?.summary?.attempts ?? 0 }}</span>
         @if (results()?.summary?.attempts) {
@@ -66,7 +47,7 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
       </a>
 
       @if (weak().count > 0) {
-        <a class="tile" id="tile-weak" [attr.title]="'Weakest: ' + weak().name" [routerLink]="[base(), 'results']">
+        <a class="tile" id="tile-weak" [attr.title]="'Weakest: ' + weak().name" [routerLink]="[base(), 'learning', 'results']">
           <span class="tile-head"><app-icon name="flag" [size]="22" /> Weak subjects</span>
           <span class="tile-num" data-weak>{{ weak().count }}</span>
         </a>
@@ -81,10 +62,20 @@ export class StudentTiles implements OnInit {
   readonly take = signal<ToTake>(none);
   readonly running = signal<StudentTestCard | null>(null);
   readonly runningCount = signal(0);
-  readonly courses = signal<MyCourse[]>([]);
   readonly results = signal<MyResults | null>(null);
   readonly coursework = signal<StudentCoursework | null>(null);
   readonly weak = signal({ count: 0, name: '', accuracy: '' });
+
+  readonly testsToTake = computed(() => this.take().overdue + this.take().thisWeek + this.take().later);
+  readonly courseworkLeft = computed(() => this.coursework()?.summary.left ?? 0);
+  readonly total = computed(() => this.testsToTake() + this.courseworkLeft());
+  /** Overdue coursework and overdue tests together. */
+  readonly overdue = computed(() => this.take().overdue + (this.coursework()?.summary.overdue ?? 0));
+
+  /** Opens the Coursework tab, or the Tests tab when there is no coursework left to do. */
+  learningLink(): string[] {
+    return this.courseworkLeft() > 0 ? [this.base(), 'learning'] : [this.base(), 'learning', 'tests'];
+  }
 
   base(): string {
     return `/${this.tenants.slug()}`;
@@ -98,7 +89,6 @@ export class StudentTiles implements OnInit {
       this.running.set(going[0] ?? null);
       this.runningCount.set(going.length);
     });
-    void this.run(async () => this.courses.set(await this.api.myCourses()));
     void this.run(async () => this.coursework.set(await this.api.myCoursework()));
     void this.run(async () => {
       const results = await this.api.myResults();

@@ -7,18 +7,12 @@ import { ApiError, MyResults, MyResultRow } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
-import { StudentTabs } from './student-tabs';
 
 /** A student's results across all their tests: totals, how their scores are moving, every finished attempt, and where they are strong or weak. */
 @Component({
   selector: 'app-student-results',
-  imports: [FormsModule, RouterLink, Icon, InfoTip, StudentTabs],
+  imports: [FormsModule, RouterLink, Icon, InfoTip],
   template: `
-    <div class="page-head">
-      <h1>Tests <app-info text="Your results from every test you have finished." /></h1>
-    </div>
-    <app-student-tabs />
-
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
     @if (loading()) {

@@ -43,13 +43,6 @@ async function open(data: object = DATA) {
 const rows = (fixture: Awaited<ReturnType<typeof open>>['fixture']) => all(fixture, '[data-result]').map((r) => r.getAttribute('data-result'));
 
 describe('Student results across tests', () => {
-  it('has a switch between the tests and the results, with the results marked', async () => {
-    const { fixture } = await open();
-    const tabs = all<HTMLAnchorElement>(fixture, 'app-student-tabs a');
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Tests', 'My results']);
-    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(['/demo/tests', '/demo/results']);
-  });
-
   it('shows the totals', async () => {
     const { fixture } = await open();
     expect(el(fixture, '#s-tests').textContent).toBe('2');

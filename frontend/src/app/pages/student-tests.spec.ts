@@ -24,13 +24,6 @@ async function openList(list: object[]) {
 }
 
 describe('Student tests list', () => {
-  it('has a switch to the results page', async () => {
-    const { fixture } = await openList([]);
-    const tabs = all<HTMLAnchorElement>(fixture, 'app-student-tabs a');
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Tests', 'My results']);
-    expect(tabs[1].getAttribute('href')).toBe('/demo/results');
-  });
-
   it('lists each test with its size, marking window, attempts and best score', async () => {
     const { fixture } = await openList([card({ minutes_left: 3000, attempts_used: 1, attempts_left: 2, best: { marks: '33', percentage: '55', passed: true } })]);
     const row = el(fixture, '[data-test="CAT Mock 1"]').textContent!.replace(/\s+/g, ' ');

@@ -102,7 +102,7 @@ describe('Test result', () => {
     const { fixture } = open({});
     await settle(fixture);
     const links = all<HTMLAnchorElement>(fixture, '.page-head a').map((a) => a.getAttribute('href'));
-    expect(links).toEqual(['/demo/tests/t1', '/demo/tests']);
+    expect(links).toEqual(['/demo/tests/t1', '/demo/learning/tests']);
   });
 
   it('can be shown inside another page without its own heading and links', async () => {
