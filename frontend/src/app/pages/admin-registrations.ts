@@ -31,6 +31,11 @@ export function searchText(person: Registration): string {
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
+const AVATAR_COLORS = [
+  ['#2563eb', '#7c3aed'], ['#ea580c', '#db2777'], ['#059669', '#0891b2'], ['#a21caf', '#e11d48'],
+  ['#d97706', '#dc2626'], ['#4f46e5', '#0891b2'], ['#0d9488', '#4f46e5'], ['#be185d', '#7c3aed'],
+] as const;
+
 const TABS = ['pending', 'approved', 'rejected', 'suspended', 'all'] as const;
 
 interface Notice {
@@ -78,16 +83,21 @@ interface Notice {
       <div class="empty-state" id="no-match"><app-icon name="search" [size]="32" /><p>No registrations match "{{ query() }}"</p></div>
     }
 
+    <div class="reg-tiles" id="tiles">
     @for (person of visible(); track person.email) {
-      <article class="item" [attr.data-email]="person.email">
+      <article class="item reg-tile" [class.wide]="expanded(person.email)" [attr.data-status]="person.status" [attr.data-email]="person.email">
         <div class="item-head">
-          <div>
+          <span class="avatar" [style.background]="avatar(person.email)" aria-hidden="true">{{ initials(person) }}</span>
+          <div class="who">
             <div class="item-title">{{ person.first_name }} {{ person.last_name }}</div>
-            <div class="muted small">{{ person.email }}</div>
-            <div class="small">{{ person.course_names.join(', ') }} &middot; registered {{ when(person.created_at) }}</div>
+            <div class="muted small who-email" [attr.title]="person.email">{{ person.email }}</div>
           </div>
           <span class="status" [class.ok]="person.status === 'approved'" [class.warn]="person.status === 'pending'" [class.bad]="person.status === 'rejected'">{{ person.status }}</span>
         </div>
+        <div class="tile-courses">
+          @for (name of person.course_names; track name) { <span class="tchip-sm">{{ name }}</span> }
+        </div>
+        <div class="small muted tile-meta">{{ person.mobile }}@if (person.city) { · {{ person.city }} } · registered {{ when(person.created_at) }}</div>
 
         @if (isOpen(person.email)) {
           <dl class="details">
@@ -264,6 +274,7 @@ interface Notice {
         }
       </article>
     }
+    </div>
   `,
 })
 export class AdminRegistrations implements OnInit {
@@ -324,6 +335,25 @@ export class AdminRegistrations implements OnInit {
     } catch (error) {
       this.loadError.set(error as ApiError);
     }
+  }
+
+  /** A tile opens to the full width of the page while its details, edit form or reject box are showing. */
+  expanded(email: string): boolean {
+    return this.isOpen(email) || this.editing() === email || this.rejecting() === email;
+  }
+
+  /** The letters in a tile's round badge: first and last name, else the start of the email. */
+  initials(person: Registration): string {
+    const letters = `${person.first_name?.[0] ?? ''}${person.last_name?.[0] ?? ''}`.toUpperCase();
+    return letters || (person.email[0] ?? '?').toUpperCase();
+  }
+
+  /** A steady colour for each person, from their email, so a badge never changes between visits. */
+  avatar(email: string): string {
+    let hash = 0;
+    for (const ch of email) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    const [from, to] = AVATAR_COLORS[hash % AVATAR_COLORS.length];
+    return `linear-gradient(135deg, ${from}, ${to})`;
   }
 
   async show(tab: string): Promise<void> {

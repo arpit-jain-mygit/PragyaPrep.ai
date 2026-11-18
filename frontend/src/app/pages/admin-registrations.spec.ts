@@ -132,6 +132,103 @@ describe('Registrations: import link', () => {
   });
 });
 
+describe('Registrations: tiles', () => {
+  const tile = (fixture: Parameters<typeof el>[0], email: string) => el(fixture, `[data-email="${email}"]`);
+
+  it('shows every registration as a tile in one grid', async () => {
+    const { fixture } = await open(PEOPLE);
+    expect(all(fixture, '#tiles > article.reg-tile').length).toBe(3);
+    expect(all(fixture, '#tiles > article').map((a) => a.getAttribute('data-email'))).toEqual(PEOPLE.map((p) => p.email));
+  });
+
+  it('puts the name, email, courses as chips, mobile, city and registered date on the tile', async () => {
+    const { fixture } = await open(PEOPLE);
+    const rahul = tile(fixture, 'rahul.bansal@example.org');
+    expect(rahul.querySelector('.item-title')!.textContent!.trim()).toBe('Rahul Bansal');
+    expect(rahul.querySelector('.who-email')!.textContent!.trim()).toBe('rahul.bansal@example.org');
+    expect(Array.from(rahul.querySelectorAll('.tile-courses .tchip-sm')).map((c) => c.textContent!.trim())).toEqual(['CAT', 'IPMAT']);
+    const meta = rahul.querySelector('.tile-meta')!.textContent!.replace(/\s+/g, ' ');
+    expect(meta).toContain('9123456780');
+    expect(meta).toContain('Pune');
+    expect(meta).toContain('registered');
+    expect(rahul.querySelector('.status')!.textContent!.trim()).toBe('approved');
+  });
+
+  it('shows round initials badge in a steady colour for each person', async () => {
+    const { fixture } = await open(PEOPLE);
+    const badge = (email: string) => tile(fixture, email).querySelector<HTMLElement>('.avatar')!;
+    expect(badge('rahul.bansal@example.org').textContent!.trim()).toBe('RB');
+    expect(badge('meera@example.com').textContent!.trim()).toBe('MK');
+    expect(badge('rahul.bansal@example.org').getAttribute('aria-hidden')).toBe('true');
+    expect(badge('rahul.bansal@example.org').style.background).toContain('linear-gradient');
+  });
+
+  it('colours the top edge by status', async () => {
+    const { fixture } = await open([PEOPLE[0], PEOPLE[1]]);
+    expect(tile(fixture, 'meera@example.com').getAttribute('data-status')).toBe('pending');
+    expect(tile(fixture, 'rahul.bansal@example.org').getAttribute('data-status')).toBe('approved');
+  });
+
+  it('falls back to the first letter of the email when there is no name', async () => {
+    const { fixture } = await open([registration({ email: 'zed@example.com', first_name: '', last_name: '' })]);
+    expect(el(fixture, '.avatar').textContent!.trim()).toBe('Z');
+  });
+
+  it('leaves out the city when there is none', async () => {
+    const { fixture } = await open([registration({ city: '' })]);
+    expect(el(fixture, '.tile-meta').textContent!.replace(/\s+/g, ' ')).not.toContain('· ·');
+  });
+
+  it('takes the whole row while its details are open, and goes back to one tile when closed', async () => {
+    const { fixture, http } = await open(PEOPLE);
+    expect(tile(fixture, 'meera@example.com').className).not.toContain('wide');
+    el(fixture, '[data-email="meera@example.com"] button[title="Show details"]').click();
+    await settle(fixture);
+    http.match((r) => r.url.includes('/access')).forEach((r) => r.flush([]));
+    await settle(fixture);
+    expect(tile(fixture, 'meera@example.com').className).toContain('wide');
+    expect(tile(fixture, 'rahul.bansal@example.org').className).not.toContain('wide');
+    el(fixture, '[data-email="meera@example.com"] button[title="Hide details"]').click();
+    await settle(fixture);
+    expect(tile(fixture, 'meera@example.com').className).not.toContain('wide');
+  });
+
+  it('takes the whole row while it is being edited, and goes back when cancelled', async () => {
+    const { fixture, http } = await open(PEOPLE);
+    el(fixture, '[data-email="meera@example.com"] button[title="Edit"]').click();
+    http.expectOne(`${API}/api/admin/courses`).flush([]);
+    await settle(fixture);
+    expect(tile(fixture, 'meera@example.com').className).toContain('wide');
+    el(fixture, '[data-email="meera@example.com"] button[title="Cancel"]').click();
+    await settle(fixture);
+    expect(tile(fixture, 'meera@example.com').className).not.toContain('wide');
+  });
+
+  it('takes the whole row while the reject box is showing', async () => {
+    const { fixture } = await open(PEOPLE);
+    el(fixture, '[data-email="meera@example.com"] button[title="Reject"]').click();
+    await settle(fixture);
+    expect(tile(fixture, 'meera@example.com').className).toContain('wide');
+  });
+
+  it('keeps the actions on each tile', async () => {
+    const { fixture } = await open(PEOPLE);
+    const labels = Array.from(tile(fixture, 'meera@example.com').querySelectorAll('.actions button')).map((b) => (b.getAttribute('title') ?? b.textContent!.trim()));
+    expect(labels).toContain('Show details');
+    expect(labels).toContain('Edit');
+    expect(labels.some((l) => l.includes('Approve'))).toBe(true);
+    expect(labels).toContain('Reject');
+  });
+
+  it('shows no grid when there is nothing to show', async () => {
+    const { fixture } = await open(PEOPLE);
+    type(fixture, '#search', 'nobody-matches');
+    await settle(fixture);
+    expect(all(fixture, '#tiles > article').length).toBe(0);
+    expect(all(fixture, '#no-match').length).toBe(1);
+  });
+});
+
 describe('Registrations: template download', () => {
   it('has a Template button next to Import that saves the Excel template', async () => {
     const { fixture, http } = await open([]);
@@ -185,7 +282,7 @@ describe('Registrations opened from the admin home', () => {
 describe('Admin registrations page', () => {
   it('shows every course a student chose on their card', async () => {
     const { fixture } = await open([registration({ course_ids: ['c1', 'c2'], course_names: ['CLAT', 'CAT'] })]);
-    expect(el(fixture, '.item-head div.small:not(.muted)').textContent).toContain('CLAT, CAT');
+    expect(all(fixture, '.tile-courses .tchip-sm').map((c) => c.textContent!.trim())).toEqual(['CLAT', 'CAT']);
   });
 
   it('shows each pending registration with who, which course and its status', async () => {

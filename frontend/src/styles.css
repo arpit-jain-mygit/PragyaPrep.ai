@@ -511,3 +511,20 @@ td .cw-bar { display: inline-block; width: 5rem; vertical-align: middle; margin-
 .notice.action .notice-dot { background: #dc2626; }
 .notice-when { margin-left: auto; }
 .notice-text { white-space: pre-wrap; margin: 0.4rem 0 0.7rem; }
+
+/* Registrations as tiles: a grid of compact cards; one that is open takes the whole row. */
+.reg-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr)); gap: 0.8rem; align-items: start; }
+.reg-tile { margin: 0; border-top: 4px solid var(--line); display: flex; flex-direction: column; gap: 0.5rem; }
+.reg-tile.wide { grid-column: 1 / -1; }
+.reg-tile[data-status='approved'] { border-top-color: #22c55e; }
+.reg-tile[data-status='pending'] { border-top-color: #f59e0b; }
+.reg-tile[data-status='rejected'] { border-top-color: #ef4444; }
+.reg-tile[data-status='suspended'] { border-top-color: #9ca3af; }
+.reg-tile .item-head { flex-wrap: nowrap; align-items: center; }
+.reg-tile .who { min-width: 0; flex: 1; }
+.reg-tile .item-title, .reg-tile .who-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar { display: inline-flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; color: #fff; font-weight: 800; font-size: 0.95rem; flex: none; letter-spacing: 0.02em; }
+.tile-courses { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.tile-courses .tchip-sm { margin-left: 0; background: var(--info-bg); color: var(--info); }
+.tile-meta { overflow-wrap: anywhere; }
+.reg-tile .actions { margin-top: auto; }
