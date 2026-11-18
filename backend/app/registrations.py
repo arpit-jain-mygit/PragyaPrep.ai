@@ -69,10 +69,18 @@ def _text(raw, minimum: int, maximum: int) -> str | None:
     return value if minimum <= len(value) <= maximum else None
 
 
-def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dict:
-    """Check every field and report every mistake at once, so the person can fix the form in one go."""
+BLANK_OK_FIELDS = ("birth_date", "gender", "whatsapp", "address", "city", "pin_code")
+
+
+def validate_form(form: dict, open_courses: dict[str, dict], today: date, blank_ok: frozenset = frozenset()) -> dict:
+    """Check every field and report every mistake at once, so the person can fix the form in one go.
+
+    blank_ok names fields that may stay empty: a student the admin imported without them. A value that is given is still checked."""
     errors: dict[str, str] = {}
     clean: dict = {}
+
+    def may_skip(field: str, raw) -> bool:
+        return field in blank_ok and not str(raw or "").strip()
 
     try:
         clean["email"] = normalize_email(form.get("email") or "")
@@ -87,7 +95,9 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
             clean[field] = value
 
     raw_birth = (form.get("birth_date") or "").strip()
-    if not raw_birth:
+    if may_skip("birth_date", raw_birth):
+        pass
+    elif not raw_birth:
         errors["birth_date"] = "Enter your birth date."
     else:
         try:
@@ -102,7 +112,9 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
                 clean["birth_date"] = born.isoformat()
 
     gender = (form.get("gender") or "").strip().lower()
-    if gender in GENDERS:
+    if may_skip("gender", gender):
+        pass
+    elif gender in GENDERS:
         clean["gender"] = gender
     else:
         errors["gender"] = "Choose a gender from the list."
@@ -116,7 +128,7 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
     if form.get("whatsapp_same_as_mobile"):
         if mobile is not None:
             clean["whatsapp"] = mobile
-    else:
+    elif not may_skip("whatsapp", form.get("whatsapp")):
         whatsapp = clean_mobile(form.get("whatsapp") or "")
         if whatsapp is None:
             errors["whatsapp"] = "Enter a 10-digit WhatsApp number, or tick 'same as mobile'."
@@ -124,19 +136,25 @@ def validate_form(form: dict, open_courses: dict[str, dict], today: date) -> dic
             clean["whatsapp"] = whatsapp
 
     address = _text(form.get("address"), 5, 300)
-    if address is None:
+    if may_skip("address", form.get("address")):
+        pass
+    elif address is None:
         errors["address"] = "Enter your complete address (5 to 300 characters)."
     else:
         clean["address"] = address
 
     city = _text(form.get("city"), 2, 60)
-    if city is None:
+    if may_skip("city", form.get("city")):
+        pass
+    elif city is None:
         errors["city"] = "Enter your city."
     else:
         clean["city"] = city
 
     pin_code = (form.get("pin_code") or "").strip()
-    if re.fullmatch(r"[1-9]\d{5}", pin_code):
+    if may_skip("pin_code", pin_code):
+        pass
+    elif re.fullmatch(r"[1-9]\d{5}", pin_code):
         clean["pin_code"] = pin_code
     else:
         errors["pin_code"] = "Enter a 6-digit PIN code."
@@ -355,8 +373,10 @@ def edit(
     # The student's own courses are always allowed, even if the institute has since hidden one.
     courses = {course["id"]: course for course in scoped.list_courses() if course.get("active", True) or course["id"] in current_ids}
     taken = "Someone at this institute is already registered with that email."
+    # Fields a student was imported without may stay blank; anything typed is still checked.
+    blank_ok = frozenset(name for name in BLANK_OK_FIELDS if not person.get(name))
     try:
-        clean = validate_form(form, courses, clock.today_india())
+        clean = validate_form(form, courses, clock.today_india(), blank_ok)
     except FormErrors as error:
         # Say so about a taken email in the same pass, so the admin can fix everything in one go.
         wanted = (changes.get("email") or "").strip().lower()
@@ -365,7 +385,7 @@ def edit(
         raise
 
     new_email = clean["email"]
-    fields = {name: clean[name] for name in EDITABLE[1:-1] if clean.get(name) != person.get(name)}
+    fields = {name: clean[name] for name in EDITABLE[1:-1] if name in clean and clean[name] != person.get(name)}
     if clean["course_ids"] != current_ids:
         fields["course_ids"] = clean["course_ids"]
         fields["course_names"] = [courses[course_id]["name"] for course_id in clean["course_ids"]]

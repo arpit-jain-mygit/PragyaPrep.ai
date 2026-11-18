@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
+import { TenantService } from '../core/tenant.service';
 import { GENDER_LABELS, formatDate, formatDateTime } from '../core/format';
 import { AdminCourse, ApiError, CourseAccess, DecisionAction, Registration, RegistrationEdit } from '../core/models';
 import { Icon } from '../ui/icon';
@@ -29,10 +30,11 @@ interface Notice {
 /** The admin's review queue: look at each registration, correct its details, then approve, reject, suspend or reactivate it. */
 @Component({
   selector: 'app-admin-registrations',
-  imports: [FormsModule, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>Registrations <app-info text="Review who has registered, and decide who may log in." /></h1>
+      <a class="btn secondary small" id="import-link" [routerLink]="['/', tenants.slug(), 'admin', 'import-students']"><app-icon name="upload" [size]="16" /> Import</a>
     </div>
 
     <div class="tabs" role="tablist" aria-label="Registration status">
@@ -243,6 +245,7 @@ interface Notice {
 export class AdminRegistrations implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
+  readonly tenants = inject(TenantService);
 
   readonly tabs = TABS;
   readonly active = signal<string>('pending');

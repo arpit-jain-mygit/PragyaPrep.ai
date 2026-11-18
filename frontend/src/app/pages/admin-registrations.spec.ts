@@ -18,6 +18,15 @@ function answerReload(http: ReturnType<typeof setupTestBed>['http'], status: str
   http.expectOne((r) => r.url === `${API}/api/admin/registrations` && r.params.get('status') === status).flush(list as object[]);
 }
 
+describe('Registrations: import link', () => {
+  it('has an Import button that opens the import page', async () => {
+    const { fixture } = await open([]);
+    const link = el<HTMLAnchorElement>(fixture, '#import-link');
+    expect(link.getAttribute('href')).toBe('/demo/admin/import-students');
+    expect(link.textContent).toContain('Import');
+  });
+});
+
 describe('Registrations opened from the admin home', () => {
   async function openWith(status: string | undefined, list: unknown[] = []) {
     const env = setupTestBed(status === undefined ? {} : { queryParams: { status } });

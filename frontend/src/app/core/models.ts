@@ -808,3 +808,30 @@ export interface ReminderResult {
   emailed: number;
   email_failed: number;
 }
+
+// ---- Importing students (admin) ----
+
+export interface ImportRow {
+  row: number;
+  email: string;
+  name: string;
+  courses: string[];
+  status: 'ready' | 'skipped' | 'error' | 'created';
+  message: string;
+  /** The mistakes in this row, by column heading. */
+  problems: Record<string, string>;
+}
+
+export interface StudentImport {
+  summary: { total: number; ready: number; skipped: number; errors: number; created?: number };
+  rows: ImportRow[];
+  confirmed: boolean;
+  batch: string | null;
+  created: string[];
+}
+
+export interface WelcomeResult {
+  sent: number;
+  failed: number;
+  skipped: number;
+}

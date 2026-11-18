@@ -10,6 +10,8 @@ import {
   CourseFile,
   AdminBehind,
   Announcement,
+  StudentImport,
+  WelcomeResult,
   AnnouncementInput,
   MyNotices,
   ReminderResult,
@@ -401,6 +403,23 @@ export class ApiService {
     const url = `${this.base}/api/admin/questions/import?confirm=${confirm}`;
     const headers = { 'Content-Type': 'application/octet-stream' };
     return this.call(firstValueFrom(this.http.post<QuestionImport>(url, file, { headers })));
+  }
+
+  /** The Excel template for importing many students. Returns the file, ready to save. */
+  studentImportTemplate(): Promise<Blob> {
+    return this.call(firstValueFrom(this.http.get(this.base + '/api/admin/students/import/template', { responseType: 'blob' })));
+  }
+
+  /** Send a filled-in Excel file. Without confirm, the server only checks it and says what would happen. */
+  importStudents(file: File, confirm: boolean): Promise<StudentImport> {
+    const url = `${this.base}/api/admin/students/import?confirm=${confirm}`;
+    const headers = { 'Content-Type': 'application/octet-stream' };
+    return this.call(firstValueFrom(this.http.post<StudentImport>(url, file, { headers })));
+  }
+
+  /** Email a welcome to some imported students (the server takes up to 25 at a time). */
+  sendWelcome(emails: string[]): Promise<WelcomeResult> {
+    return this.post('/api/admin/students/welcome', { emails });
   }
 
   // ---- Student: tests ----

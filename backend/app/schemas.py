@@ -450,3 +450,7 @@ class ReminderIn(BaseModel):
     course_id: Any = None
     emails: Any = None
     send_email: Any = None
+
+
+class WelcomeIn(BaseModel):
+    emails: Any = None
