@@ -14,6 +14,7 @@ import { InfoTip } from '../ui/info-tip';
     </div>
     <nav class="tabs" aria-label="My Learning">
       <a class="tab with-icon" id="tab-coursework" [routerLink]="['/', tenants.slug(), 'learning']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><app-icon name="layers" [size]="16" /> Coursework</a>
+      <a class="tab with-icon" id="tab-live" [routerLink]="['/', tenants.slug(), 'learning', 'live']" routerLinkActive="active"><app-icon name="play" [size]="16" /> Live classes</a>
       <a class="tab with-icon" id="tab-tests" [routerLink]="['/', tenants.slug(), 'learning', 'tests']" routerLinkActive="active"><app-icon name="clipboard" [size]="16" /> Tests</a>
       <a class="tab with-icon" id="tab-results" [routerLink]="['/', tenants.slug(), 'learning', 'results']" routerLinkActive="active"><app-icon name="chart" [size]="16" /> Results</a>
     </nav>

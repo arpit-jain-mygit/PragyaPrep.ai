@@ -26,6 +26,7 @@ import {
   CourseStuck,
   StudentProgress,
   StudentCoursework,
+  StudentLiveCourse,
   CopyResult,
   CourseworkPlan,
   WorkSubtopicInput,
@@ -276,6 +277,10 @@ export class ApiService {
 
   myCoursework(): Promise<StudentCoursework> {
     return this.get('/api/my/coursework');
+  }
+
+  myLiveClasses(): Promise<StudentLiveCourse[]> {
+    return this.get('/api/my/live-classes');
   }
 
   markDone(courseId: string, subtopicId: string): Promise<StudentCoursework> {

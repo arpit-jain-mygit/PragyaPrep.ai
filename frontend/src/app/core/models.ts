@@ -690,6 +690,21 @@ export interface StudentCoursework {
   courses: StudentCourse[];
 }
 
+export interface StudentLiveClass {
+  id: string;
+  title: string;
+  held_on: string;
+  held_time: string;
+  description: string;
+  materials: StudentMaterial[];
+}
+
+export interface StudentLiveCourse {
+  course_id: string;
+  course_name: string;
+  classes: StudentLiveClass[];
+}
+
 // ---- Admin home ----
 
 export interface AdminHomeCounts {

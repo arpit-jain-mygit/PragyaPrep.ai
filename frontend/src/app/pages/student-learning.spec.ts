@@ -5,15 +5,15 @@ import { all, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { StudentLearning } from './student-learning';
 
 describe('My Learning', () => {
-  it('has the title and three tabs: Coursework, Tests and Results', async () => {
+  it('has the title and four tabs: Coursework, Live classes, Tests and Results', async () => {
     const env = setupTestBed();
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(StudentLearning);
     await settle(fixture);
     expect(text(fixture)).toContain('My Learning');
     const tabs = all<HTMLAnchorElement>(fixture, 'nav.tabs a');
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Tests', 'Results']);
-    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(['/demo/learning', '/demo/learning/tests', '/demo/learning/results']);
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Results']);
+    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(['/demo/learning', '/demo/learning/live', '/demo/learning/tests', '/demo/learning/results']);
     expect(el(fixture, 'router-outlet')).not.toBeNull();
   });
 });
@@ -24,7 +24,7 @@ describe('Student routes', () => {
 
   it('puts coursework, tests and results under My Learning, coursework first', () => {
     const learning = named('learning')[0];
-    expect(learning.children!.map((c) => c.path)).toEqual(['', 'tests', 'results']);
+    expect(learning.children!.map((c) => c.path)).toEqual(['', 'live', 'tests', 'results']);
     expect(learning.canActivate?.length).toBe(1);
   });
 

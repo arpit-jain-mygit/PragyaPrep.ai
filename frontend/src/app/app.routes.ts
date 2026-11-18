@@ -101,6 +101,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/student-learning').then((m) => m.StudentLearning),
         children: [
           { path: '', pathMatch: 'full', loadComponent: () => import('./pages/student-coursework').then((m) => m.StudentCourseworkPage) },
+          { path: 'live', loadComponent: () => import('./pages/student-live-classes').then((m) => m.StudentLiveClasses) },
           { path: 'tests', loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests) },
           { path: 'results', loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults) },
         ],
