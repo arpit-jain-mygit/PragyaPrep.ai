@@ -20,11 +20,12 @@ import { PhotoPicker } from '../ui/photo-picker';
     <div class="page-head"><h1><app-icon name="building" /> My institute</h1></div>
     @if (loadError(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
     @if (me(); as m) {
-      <form class="card" (ngSubmit)="save()" novalidate>
-        <h2>Your institute</h2>
-        <p class="hint" id="public-note"><app-icon name="eye" [size]="15" /> These details are shown to your students and to visitors.</p>
+      <form (ngSubmit)="save()" novalidate>
         @if (error(); as problem) { <div class="alert error" role="alert" id="save-error">{{ problem.detail }}</div> }
         @if (saved()) { <div class="alert ok" role="status" id="saved"><app-icon name="check" [size]="16" /> Saved.</div> }
+      <section class="card" id="institute-card">
+        <h2>Your institute</h2>
+        <p class="hint" id="public-note"><app-icon name="eye" [size]="15" /> These details are shown to your students and to visitors.</p>
 
         <div class="field logo-field">
           <span class="label">Logo</span>
@@ -61,7 +62,9 @@ import { PhotoPicker } from '../ui/photo-picker';
           <p class="hint">Up to 8, separated by commas.</p>
         </div>
 
-        <hr class="section-divider" id="you-divider" />
+      </section>
+
+      <section class="card" id="you-card">
         <h2>You</h2>
         <div class="row" style="margin-bottom: 0.8rem">
           <app-photo-picker [current]="m.admin.avatar_url" [first]="firstName" [last]="lastName" [email]="m.admin.email" [disabled]="busy()" (photo)="photoChosen($event)" />
@@ -73,6 +76,7 @@ import { PhotoPicker } from '../ui/photo-picker';
           <div class="field"><label for="mobile">Your mobile</label><input id="mobile" name="mobile" type="tel" placeholder="10-digit number" [(ngModel)]="mobile" autocomplete="tel" /></div>
           <div class="field"><span class="label">Login email</span><p class="muted" id="login-email">{{ m.admin.email }}</p><p class="hint">Ask the PragyaPrep team to change it.</p></div>
         </div>
+      </section>
         <button class="btn" type="submit" id="save" [disabled]="busy()"><app-icon name="check" [size]="16" /> {{ busy() ? 'Saving…' : 'Save' }}</button>
       </form>
     } @else if (!loadError()) {

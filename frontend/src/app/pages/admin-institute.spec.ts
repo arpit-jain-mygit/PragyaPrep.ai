@@ -29,10 +29,13 @@ describe('My institute', () => {
     expect(all(fixture, 'input[name="email"]').length).toBe(0);
   });
 
-  it('separates the institute section from the admin\'s own section with a divider', async () => {
+  it('keeps the institute and the admin\'s own details in two separate cards, with one Save', async () => {
     const { fixture } = await open();
-    const divider = el(fixture, '#you-divider');
-    expect(divider.nextElementSibling?.textContent).toBe('You');
+    expect(el(fixture, '#institute-card h2').textContent).toBe('Your institute');
+    expect(el(fixture, '#you-card h2').textContent).toBe('You');
+    expect(all(fixture, '#institute-card #you-card').length).toBe(0);
+    expect(all(fixture, 'button#save').length).toBe(1);
+    expect(all(fixture, '#you-card #save').length).toBe(0);
   });
 
   it('saves everything in one go, turning the exams text into a list, and updates the top bar look', async () => {
