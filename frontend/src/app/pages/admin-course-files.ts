@@ -24,7 +24,12 @@ interface Notice {
         Files{{ course() ? ': ' + course()!.name : '' }}
         <app-info text="PDFs and MP4 videos that students with access to this course can open." />
       </h1>
-      <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'admin', 'courses']"><app-icon name="arrow-left" [size]="16" /> Courses</a>
+      <div class="row">
+        @if (files().length) {
+          <button class="btn secondary small" type="button" id="reindex" [disabled]="busy()" (click)="reindex()"><app-icon name="rotate" [size]="16" /> Read PDFs again</button>
+        }
+        <a class="btn secondary small" [routerLink]="['/', tenants.slug(), 'admin', 'courses']"><app-icon name="arrow-left" [size]="16" /> Courses</a>
+      </div>
     </div>
 
     @if (notice(); as n) { <div class="alert" [class]="'alert ' + n.kind" role="status">{{ n.text }}</div> }
@@ -72,6 +77,15 @@ interface Notice {
                 <td>{{ size(item.size) }}</td>
                 <td>
                   <span class="status" [class.ok]="item.status === 'ready'" [class.warn]="item.status !== 'ready'">{{ item.status === 'ready' ? 'ready' : 'not finished' }}</span>
+                  @if (item.kind === 'pdf' && item.status === 'ready') {
+                    @if (item.ai_status === 'ready') {
+                      <span class="status ok ai" [title]="item.ai_passages + ' passages from ' + item.ai_pages + ' pages'">Ready for AI</span>
+                    } @else if (item.ai_status === 'unreadable') {
+                      <span class="status warn ai" [title]="item.ai_note ?? ''">Couldn't read this PDF</span>
+                    } @else {
+                      <span class="status warn ai">Not read yet</span>
+                    }
+                  }
                 </td>
                 <td>{{ date(item.created_at) }}</td>
                 <td class="actions-cell">
@@ -91,6 +105,9 @@ interface Notice {
           </tbody>
         </table>
       </div>
+      @if (files().some((f) => f.ai_status === 'unreadable')) {
+        <p class="soft"><app-icon name="info" [size]="14" /> "Couldn't read this PDF" means the file has no selectable text (for example a scan). Students can still open it, but the study helper can't use it.</p>
+      }
       @if (hasUnfinished()) {
         <p class="soft"><app-icon name="info" [size]="14" /> A "not finished" file never arrived and students can't see it. Delete it and upload it again.</p>
       }
@@ -122,6 +139,20 @@ export class AdminCourseFiles implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+  }
+
+  async reindex(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    this.notice.set(null);
+    try {
+      this.files.set(await this.api.reindexFiles(this.courseId));
+      this.notice.set({ kind: 'ok', text: 'Read the PDFs again.' });
+    } catch (error) {
+      this.error.set(error as ApiError);
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   hasUnfinished(): boolean {

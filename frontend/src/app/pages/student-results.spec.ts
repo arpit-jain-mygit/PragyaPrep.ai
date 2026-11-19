@@ -156,4 +156,13 @@ describe('Student results across tests', () => {
     await settle(fixture);
     expect(text(fixture)).toContain("You don't have access to this.");
   });
+
+  it('puts the Ask AI box above strengths and weaknesses, and fills it from a weak topic', async () => {
+    const { fixture } = await open();
+    expect(el(fixture, '#study-search').textContent).toContain('Ask AI');
+    const weak = el<HTMLButtonElement>(fixture, '[data-ask="Magnetism"]');
+    weak.click();
+    await settle(fixture);
+    expect(el<HTMLInputElement>(fixture, '#study-q').value).toBe('Magnetism');
+  });
 });

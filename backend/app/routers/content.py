@@ -76,6 +76,20 @@ def finish_upload(
         raise HTTPException(status_code=422, detail=str(error))
 
 
+@router.post("/api/admin/courses/{course_id}/files/reindex", response_model=list[FileOut])
+def reindex_files(
+    course_id: str,
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    storage: ContentStorage = Depends(get_storage),
+    admin: dict = Depends(require_roles(TENANT_ADMIN)),
+):
+    """Read the text of every PDF of the course again (for files uploaded before reading existed)."""
+    try:
+        return content.reindex_course(scoped, storage, course_id)
+    except content.CourseNotFound:
+        raise HTTPException(status_code=404, detail=NO_COURSE)
+
+
 @router.delete("/api/admin/courses/{course_id}/files/{file_id}", status_code=204)
 def remove_file(
     course_id: str,

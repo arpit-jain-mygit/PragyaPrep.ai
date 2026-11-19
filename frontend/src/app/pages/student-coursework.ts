@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatSize, shortDate } from '../core/format';
 import { ApiError, StudentCourse, StudentCoursework, StudentMaterial, StudentSubject, StudentSubtopic, StudentTopic } from '../core/models';
+import { AskAi } from '../ui/ask-ai';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
@@ -22,7 +23,7 @@ interface Chosen {
  */
 @Component({
   selector: 'app-student-coursework',
-  imports: [Icon, InfoTip],
+  imports: [AskAi, Icon, InfoTip],
   template: `
     <div class="cw-topline">
       <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet. A padlock means the course isn't open to you yet." />
@@ -37,6 +38,8 @@ interface Chosen {
     </div>
 
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
+
+    <app-ask-ai />
 
     @if (loading()) {
       <p class="muted">Loading…</p>

@@ -3,3 +3,4 @@ mangum
 pydantic-settings
 pyjwt
 openpyxl
+pypdf

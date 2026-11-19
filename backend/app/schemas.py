@@ -249,6 +249,10 @@ class FileOut(BaseModel):
     size: int | None = None
     status: str
     created_at: str = ""
+    ai_status: str | None = None  # 'ready' (the study helper can use it), 'unreadable', or None (not checked yet)
+    ai_pages: int | None = None
+    ai_passages: int | None = None
+    ai_note: str | None = None
 
 
 class FileStartIn(BaseModel):

@@ -40,6 +40,7 @@ import {
   ParentImport,
   ParentInput,
   StudentCoursework,
+  StudySearch,
   StudentLiveCourse,
   CopyResult,
   CourseworkPlan,
@@ -398,6 +399,11 @@ export class ApiService {
     return this.get('/api/my/coursework');
   }
 
+  /** Passages of the student's coursework that match the words of a question. No AI: keyword matching only. */
+  studySearch(query: string): Promise<StudySearch> {
+    return this.get(`/api/my/study/search?q=${encodeURIComponent(query)}`);
+  }
+
   // ---- Parents ----
 
   parents(): Promise<AdminParent[]> {
@@ -545,6 +551,11 @@ export class ApiService {
 
   courseFiles(courseId: string): Promise<CourseFile[]> {
     return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/files`);
+  }
+
+  /** Read the text of every PDF of the course again. */
+  reindexFiles(courseId: string): Promise<CourseFile[]> {
+    return this.post(`/api/admin/courses/${encodeURIComponent(courseId)}/files/reindex`);
   }
 
   startUpload(courseId: string, body: { filename: string; size: number; title: string }): Promise<FileStart> {

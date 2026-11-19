@@ -301,6 +301,51 @@ class TenantRepo:
     def delete_file(self, course_id: str, file_id: str) -> None:
         self.table.delete_item(Key=self._file_key(course_id, file_id))
 
+    # ---- Passages: the readable text of a course's PDFs, cut into pieces the study helper can search ----
+
+    def _course_passage_key(self, course_id: str, file_id: str, number: int) -> dict:
+        return {"PK": self._course_key(course_id)["PK"], "SK": f"PASS#{file_id}#{number:05d}"}
+
+    def put_course_passages(self, course_id: str, file_id: str, passages: list[dict]) -> None:
+        """Save the passages of one file (numbered from 0), replacing what was there before."""
+        self.delete_course_passages(course_id, file_id)
+        # One item at a time: the API role may not call BatchWriteItem, and a PDF has only a few hundred passages.
+        for number, passage in enumerate(passages):
+            self.table.put_item(Item={**self._course_passage_key(course_id, file_id, number), "file_id": file_id, "course_id": course_id, **passage})
+
+    def list_course_passages(self, course_id: str) -> list[dict]:
+        """Every passage of a course, in file and reading order."""
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._course_key(course_id)["PK"]) & Key("SK").begins_with("PASS#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def delete_course_passages(self, course_id: str, file_id: str) -> None:
+        start = None
+        while True:
+            args = {
+                "KeyConditionExpression": Key("PK").eq(self._course_key(course_id)["PK"]) & Key("SK").begins_with(f"PASS#{file_id}#"),
+                "ProjectionExpression": "PK, SK",
+            }
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            for item in response["Items"]:
+                self.table.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return
+
+    def set_file_reading(self, course_id: str, file_id: str, fields: dict) -> None:
+        """Record on a file row whether its text could be read (ai_status, ai_passages, ai_pages, ai_note)."""
+        _update(self.table, self._file_key(course_id, file_id), fields)
+
     # ---- Coursework: the learning plan of a course (topics, sub-topics, finish-by dates), stored under the course's own key ----
 
     def _work_key(self, course_id: str, node_id: str) -> dict:

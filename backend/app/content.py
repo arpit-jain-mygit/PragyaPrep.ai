@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from app import clock, coursework, live_classes
+from app import clock, course_text, coursework, live_classes
 from app.config import Settings
 from app.repo import TenantRepo, now_iso
 from app.storage import ContentStorage
@@ -53,7 +53,8 @@ def looks_like(kind: str, head: bytes) -> bool:
 # ---- Files, for the admin ----
 
 def public_file(file: dict) -> dict:
-    return {key: file.get(key) for key in ("id", "course_id", "title", "kind", "content_type", "size", "status", "created_at")}
+    keys = ("id", "course_id", "title", "kind", "content_type", "size", "status", "created_at", "ai_status", "ai_pages", "ai_passages", "ai_note")
+    return {key: file.get(key) for key in keys}
 
 
 def start_upload(
@@ -114,7 +115,39 @@ def finish_upload(scoped: TenantRepo, storage: ContentStorage, course_id: str, f
         raise ValidationError(f"That isn't a real {file['kind'].upper()} file, so it was removed.")
 
     scoped.finish_file(course_id, file_id, arrived)
+    if file["kind"] == "pdf":
+        index_file(scoped, storage, course_id, file_id)
     return scoped.get_file(course_id, file_id)
+
+
+def index_file(scoped: TenantRepo, storage: ContentStorage, course_id: str, file_id: str) -> dict:
+    """Read a PDF's text and save its passages. The file row says whether the study helper can use it. A PDF that can't be
+    read is kept (students can still open it) but marked, so the admin knows the helper won't see it."""
+    file = scoped.get_file(course_id, file_id)
+    if file is None:
+        raise FileNotFound()
+    if file["kind"] != "pdf" or file.get("status") != "ready":
+        return file
+    try:
+        result = course_text.read_pdf(storage.read(file["key"]))
+    except course_text.NotReadable as problem:
+        scoped.delete_course_passages(course_id, file_id)
+        scoped.set_file_reading(course_id, file_id, {"ai_status": "unreadable", "ai_pages": 0, "ai_passages": 0, "ai_note": str(problem), "ai_checked_at": now_iso()})
+    else:
+        scoped.put_course_passages(course_id, file_id, [{"number": n, "page": p["page"], "text": p["text"]} for n, p in enumerate(result["passages"])])
+        scoped.set_file_reading(course_id, file_id, {"ai_status": "ready", "ai_pages": result["pages"], "ai_passages": len(result["passages"]), "ai_note": "", "ai_checked_at": now_iso()})
+    return scoped.get_file(course_id, file_id)
+
+
+def reindex_course(scoped: TenantRepo, storage: ContentStorage, course_id: str) -> list[dict]:
+    """Read again every ready PDF of a course. Used for files uploaded before reading existed."""
+    if scoped.get_course(course_id) is None:
+        raise CourseNotFound()
+    return [content_file(index_file(scoped, storage, course_id, f["id"])) for f in scoped.list_files(course_id) if f["kind"] == "pdf" and f.get("status") == "ready"]
+
+
+def content_file(file: dict) -> dict:
+    return public_file(file)
 
 
 def list_files(scoped: TenantRepo, course_id: str) -> list[dict]:
@@ -133,6 +166,7 @@ def delete_file(scoped: TenantRepo, storage: ContentStorage, course_id: str, fil
     if file is None:
         raise FileNotFound()
     scoped.delete_file(course_id, file_id)
+    scoped.delete_course_passages(course_id, file_id)
     if not key_in_use(scoped, file["key"]):
         storage.delete(file["key"])
     coursework.drop_file(scoped, course_id, file_id)

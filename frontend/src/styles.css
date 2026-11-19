@@ -727,3 +727,14 @@ img.qimg { cursor: zoom-in; }
 .seg button:hover:not(.on) { background: var(--info-bg); }
 .seg button.on { background: var(--brand); color: var(--brand-text); font-weight: 600; }
 .seg button.on strong { color: inherit; }
+
+/* Student search over the coursework: a search line, then the best passages first. */
+.study-search { margin-bottom: 1rem; }
+.study-search h2 { display: flex; align-items: center; gap: 0.4rem; font-size: 1.05rem; margin: 0 0 0.6rem; }
+.study-search-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.study-search-form input { flex: 1 1 14rem; min-width: 0; }
+.study-hits { list-style: none; padding: 0; margin: 0.6rem 0 0; display: grid; gap: 0.6rem; }
+.study-hit { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.7rem 0.8rem; }
+.study-crumb { margin: 0 0 0.3rem; font-size: 0.82rem; }
+.study-snippet { margin: 0 0 0.5rem; line-height: 1.5; }
+.study-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; font-size: 0.85rem; }

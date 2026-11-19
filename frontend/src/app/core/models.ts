@@ -207,6 +207,11 @@ export interface CourseFile {
   size: number | null;
   status: 'uploading' | 'ready';
   created_at: string;
+  /** Whether the study helper can use this PDF's text: 'ready', 'unreadable', or null (not checked, or not a PDF). */
+  ai_status?: 'ready' | 'unreadable' | null;
+  ai_pages?: number | null;
+  ai_passages?: number | null;
+  ai_note?: string | null;
 }
 
 /** A signed form from the API: the file is posted to S3 with these fields, the file itself last. */
@@ -1117,4 +1122,23 @@ export interface StudentQuick {
   batches: string[];
   parents: { name: string; email: string }[];
   deletion_requested: boolean;
+}
+
+/** One passage that answers a student's search: where it sits in the plan, the page, and a short snippet. */
+export interface StudyHit {
+  course_id: string;
+  course: string;
+  subject: string;
+  topic: string;
+  subtopic: string;
+  file_id: string;
+  file: string;
+  page: number;
+  snippet: string;
+  score: number;
+}
+
+export interface StudySearch {
+  query: string;
+  hits: StudyHit[];
 }

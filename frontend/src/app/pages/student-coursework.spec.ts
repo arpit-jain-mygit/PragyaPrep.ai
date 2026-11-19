@@ -360,4 +360,48 @@ describe('Student coursework page: opened from the Today card', () => {
     expect(all(fixture, '#cw-filter').length).toBe(0);
     expect(titles(fixture).length).toBe(5);
   });
+
+  describe('search over the coursework', () => {
+    const HIT = {
+      course_id: 'c1', course: 'CAT', subject: 'Quantitative Ability', topic: 'Percentages', subtopic: 'Concepts',
+      file_id: 'f1', file: 'Percent notes', page: 2, snippet: 'Kochi is a natural harbour at the head of the Vembanad lagoon.', score: 9.5,
+    };
+
+    async function searchFor(env: Awaited<ReturnType<typeof open>>, q: string) {
+      const input = el<HTMLInputElement>(env.fixture, '#study-q');
+      input.value = q;
+      input.dispatchEvent(new Event('input'));
+      el(env.fixture, '#study-go').click();
+      env.http.expectOne((r) => r.url.startsWith(`${API}/api/my/study/search`)).flush({ query: q, hits: q.includes('lagoon') ? [HIT] : [] });
+      await settle(env.fixture);
+    }
+
+    it('shows the best passage with its place in the plan and its page', async () => {
+      const env = await open();
+      await searchFor(env, 'Vembanad lagoon');
+      expect(el(env.fixture, '#study-count').textContent).toContain('1 match');
+      const hit = el(env.fixture, '.study-hit');
+      expect(hit.textContent).toContain('CAT › Quantitative Ability › Percentages › Concepts');
+      expect(hit.textContent).toContain('Kochi is a natural harbour');
+      expect(hit.textContent).toContain('Percent notes, page 2');
+    });
+
+    it('says so when nothing in the coursework matches', async () => {
+      const env = await open();
+      await searchFor(env, 'photosynthesis');
+      expect(el(env.fixture, '#study-none').textContent).toContain('No match in your coursework.');
+      expect(all(env.fixture, '.study-hit').length).toBe(0);
+    });
+
+    it('does not call the server for a single letter, and asks for a word or two', async () => {
+      const env = await open();
+      const input = el<HTMLInputElement>(env.fixture, '#study-q');
+      input.value = 'a';
+      input.dispatchEvent(new Event('input'));
+      el(env.fixture, '#study-go').click();
+      await settle(env.fixture);
+      env.http.expectNone((r) => r.url.includes('/api/my/study/search'));
+      expect(el(env.fixture, '#study-error').textContent).toContain('Type a word or two from your question.');
+    });
+  });
 });

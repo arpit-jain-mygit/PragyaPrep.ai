@@ -5,13 +5,14 @@ import { ApiService } from '../core/api.service';
 import { formatDate } from '../core/format';
 import { ApiError, MyResults, MyResultRow } from '../core/models';
 import { TenantService } from '../core/tenant.service';
+import { AskAi } from '../ui/ask-ai';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
 /** A student's results across all their tests: totals, how their scores are moving, every finished attempt, and where they are strong or weak. */
 @Component({
   selector: 'app-student-results',
-  imports: [FormsModule, RouterLink, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, AskAi, Icon, InfoTip],
   template: `
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
@@ -44,6 +45,8 @@ import { InfoTip } from '../ui/info-tip';
           </div>
         }
 
+        <app-ask-ai [prefill]="askTopic()" />
+
         <h2>Strengths and weaknesses <app-info text="How many of the questions you met in each subject and topic you answered correctly, from all your finished tests. Weakest first." /></h2>
         @for (subject of d.subjects; track subject.id) {
           <div class="card subject-card" [attr.data-subject]="subject.id">
@@ -57,6 +60,7 @@ import { InfoTip } from '../ui/info-tip';
                 <span class="topic-name">{{ topic.topic }}</span>
                 <span class="meter" [class.hard]="level(topic.accuracy) === 'weak'" [class.mid]="level(topic.accuracy) === 'ok'"><i [style.width.%]="topic.accuracy"></i></span>
                 <span class="soft topic-score">{{ topic.correct }} of {{ topic.questions }} · {{ topic.accuracy }}%</span>
+                <button class="btn small secondary" type="button" [attr.data-ask]="topic.topic" (click)="askAbout(topic.topic)"><app-icon name="help" [size]="14" /> Ask AI</button>
                 @if (level(topic.accuracy) === 'weak') {
                   <button class="btn small" type="button" [attr.data-weak]="topic.topic" [disabled]="making()" (click)="practise(subject.id, topic.topic)"><app-icon name="play" [size]="14" /> Practise this</button>
                 } @else if (level(topic.accuracy) === 'ok') {
@@ -113,6 +117,8 @@ export class StudentResults implements OnInit {
   private readonly router = inject(Router);
   readonly date = formatDate;
   readonly making = signal(false);
+  /** The topic last sent to the Ask AI box. Setting it again with the same topic still refills the box. */
+  readonly askTopic = signal('');
 
   readonly data = signal<MyResults | null>(null);
   readonly loading = signal(false);
@@ -147,6 +153,15 @@ export class StudentResults implements OnInit {
   }
 
   /** Make a practice test on this topic and open it. */
+  /** Put a topic into the Ask AI box and bring the box into view. */
+  askAbout(topic: string): void {
+    this.askTopic.set('');
+    queueMicrotask(() => {
+      this.askTopic.set(topic);
+      document.getElementById('study-search')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   async practise(paper: string, topic: string): Promise<void> {
     if (this.making()) return;
     this.making.set(true);

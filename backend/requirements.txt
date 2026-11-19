@@ -8,3 +8,4 @@ uvicorn[standard]
 pytest
 moto[dynamodb,s3]
 openpyxl
+pypdf
