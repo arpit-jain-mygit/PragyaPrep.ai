@@ -43,9 +43,10 @@ interface Chosen {
         <div class="empty-state" id="no-coursework"><app-icon name="layers" [size]="32" /><p>No coursework yet</p></div>
       } @else {
         @if (filter() !== 'all') {
-          <div class="alert info" id="cw-filter" role="status">
-            Showing only {{ filterLabel() }}.
-            <button type="button" class="linklike" id="cw-show-all" (click)="clearFilter()">Show everything</button>
+          <div class="filter-bar" id="cw-filter" role="status">
+            <app-icon name="filter" [size]="18" />
+            <span><strong id="cw-filter-count">{{ matchCount() }} {{ matchCount() === 1 ? 'item' : 'items' }}</strong> {{ filterLabel() }}</span>
+            <button type="button" class="btn secondary small" id="cw-show-all" (click)="clearFilter()"><app-icon name="x" [size]="14" /> Show everything</button>
           </div>
           @if (!view().length) { <div class="empty-state" id="cw-filter-empty"><app-icon name="check" [size]="32" /><p>Nothing here. You are all caught up.</p></div> }
         }
@@ -196,7 +197,7 @@ export class StudentCourseworkPage implements OnInit {
 
   /** Which sub-topics to show: everything, only those due this week, only the overdue ones, or only those not done yet. Set by the link that opened the page. */
   readonly filter = signal<'all' | 'week' | 'overdue' | 'pending'>('all');
-  readonly filterLabel = computed(() => ({ all: 'everything', week: 'items due this week', overdue: 'overdue items', pending: 'items not done yet' })[this.filter()]);
+  readonly filterLabel = computed(() => ({ all: '', week: 'due this week', overdue: 'overdue', pending: 'not done yet' })[this.filter()]);
 
   readonly data = signal<StudentCoursework | null>(null);
   readonly loading = signal(false);
@@ -243,6 +244,9 @@ export class StudentCourseworkPage implements OnInit {
     }
     return out;
   });
+
+  /** How many sub-topics the filter lets through. */
+  readonly matchCount = computed(() => this.view().reduce((n, c) => n + c.subjects.reduce((m, sj) => m + sj.topics.reduce((k, t) => k + t.subtopics.length, 0), 0), 0));
 
   ngOnInit(): void {
     const show = this.route.snapshot.queryParamMap.get('show');

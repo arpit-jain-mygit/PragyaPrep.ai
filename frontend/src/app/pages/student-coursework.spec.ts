@@ -305,7 +305,8 @@ describe('Student coursework page: opened from the Today card', () => {
   it('shows only the sub-topics due this week, with a note and a way back', async () => {
     const { fixture } = await open(MIXED, { show: 'week' });
     expect(titles(fixture)).toEqual(['Due this week']);
-    expect(el(fixture, '#cw-filter').textContent).toContain('items due this week');
+    expect(el(fixture, '#cw-filter-count').textContent).toBe('1 item');
+    expect(el(fixture, '#cw-filter').textContent).toContain('due this week');
     expect(el(fixture, '#sub-name').textContent).toBe('Due this week');
     el<HTMLButtonElement>(fixture, '#cw-show-all').click();
     await settle(fixture);
@@ -316,11 +317,13 @@ describe('Student coursework page: opened from the Today card', () => {
   it('shows only the overdue ones', async () => {
     const { fixture } = await open(MIXED, { show: 'overdue' });
     expect(titles(fixture)).toEqual(['Late one']);
+    expect(el(fixture, '#cw-filter').textContent!.replace(/\s+/g, ' ')).toContain('1 item overdue');
   });
 
   it('shows everything not done when asked for the pending ones', async () => {
     const { fixture } = await open(MIXED, { show: 'pending' });
     expect(titles(fixture)).toEqual(['Due this week', 'Due later', 'Late one', 'No date']);
+    expect(el(fixture, '#cw-filter-count').textContent).toBe('4 items');
   });
 
   it('says so when nothing matches', async () => {

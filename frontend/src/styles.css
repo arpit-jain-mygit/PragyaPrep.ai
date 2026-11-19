@@ -719,3 +719,9 @@ img.qimg { cursor: zoom-in; }
   body:has(.topbar[data-role="student"]) .footer, body:has(.topbar[data-role="parent"]) .footer { padding-bottom: 5.5rem; }
 }
 
+
+/* ---- A bar that says a list is filtered, with one button to clear it ---- */
+.filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 0.8rem; background: var(--info-bg); border: 1px solid var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; margin: 0 0 1rem; color: var(--ink); }
+.filter-bar app-icon { color: var(--brand); }
+.filter-bar .btn { margin-left: auto; }
+@media (max-width: 30rem) { .filter-bar .btn { margin-left: 0; } }
