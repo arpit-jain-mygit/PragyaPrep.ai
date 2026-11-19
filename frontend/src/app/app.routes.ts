@@ -38,6 +38,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-announcements').then((m) => m.AdminAnnouncements),
       },
       {
+        path: 'admin/study-log',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-study-log').then((m) => m.AdminStudyLog),
+      },
+      {
         path: 'notices',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/student-notices').then((m) => m.StudentNotices),

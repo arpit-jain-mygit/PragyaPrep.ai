@@ -95,6 +95,7 @@ The login page shows these messages straight away. When an email isn't registere
 - Keep a **question bank** (see below).
 - Build **tests** from the question bank (see below).
 - Choose the **subjects (subjects)** each course covers, from the fixed list, with a tick list on the course form. Known course names (CUET, IPMAT, CAT, CLAT) start with their usual subjects, and the admin can change them. This is stored for the student side later.
+- Ask AI log: see every question students asked in Ask AI, with how well the notes covered it. Filter to questions the notes did not answer, or with low coverage. Students' emails are hidden until the admin ticks to show them. Rows are deleted after 30 days.
 - *(Phase 2)* Review payments: verify or reject a screenshot, with a reason, and upload the payment QR code.
 - *(Phase 2)* Edit the institute's own branding. Today only the platform admin changes the name, colour and logo.
 

@@ -163,6 +163,22 @@ def take_access_away(
 
 # ---- What a student sees ----
 
+@router.get("/api/admin/courses/{course_id}/files/{file_id}/link", response_model=FileLinkOut)
+def admin_open_file(
+    course_id: str,
+    file_id: str,
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    storage: ContentStorage = Depends(get_storage),
+    settings: Settings = Depends(get_settings),
+    admin: dict = Depends(require_roles(TENANT_ADMIN)),
+):
+    """A link to one file for the institute's admin, so they can open a passage the Ask AI log refers to."""
+    try:
+        return content.admin_file_link(scoped, storage, settings, course_id, file_id)
+    except content.NoAccess:
+        raise HTTPException(status_code=404, detail=NO_FILE)
+
+
 @router.get("/api/my/courses", response_model=list[MyCourseOut])
 def my_courses(scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
     """The courses this student can open now, with their files."""

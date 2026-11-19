@@ -1162,3 +1162,32 @@ export interface StudyAnswer {
   citations: StudyCitation[];
   hits: StudyHit[];
 }
+
+/** Where a logged passage is in the coursework, and the page to open it at. */
+export interface AskLogSource {
+  course_id: string;
+  course: string;
+  subject: string;
+  topic: string;
+  subtopic: string;
+  file_id: string;
+  file: string;
+  page: number;
+}
+
+/** One question a student asked in Ask AI, as the admin sees it. The student's name and email appear only when asked for. */
+export interface AskLogRow {
+  id: string;
+  created_at: string;
+  question: string;
+  best_coverage: number;
+  matches: number;
+  answered: boolean;
+  sources: AskLogSource[];
+  student_name?: string;
+  student_email?: string;
+}
+
+export interface AskLog {
+  rows: AskLogRow[];
+}

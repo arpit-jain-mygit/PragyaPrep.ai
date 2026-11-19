@@ -31,6 +31,7 @@ Each entry records what we chose, what we turned down, and what it costs us. Sec
 25. [Institute logos](#25-institute-logos)
 26. [Hosting the website (step M7)](#26-hosting-the-website-step-m7)
 27. [Question bank (step Q1)](#27-question-bank-step-q1)
+28. [Ask AI log for the admin (step AL1)](#28-ask-ai-log-for-the-admin-step-al1)
 
 ---
 
@@ -933,3 +934,27 @@ The payment images are small, so storage is negligible. Emails cost cents (secti
 
 - Mock tests are built (they will read published questions, and may need an index by subject and topic).
 - An institute asks for its own subjects or topics, or for images and formulas in questions.
+
+## 28. Ask AI log for the admin (step AL1)
+
+**Status:** built and tested (11 backend tests and 5 frontend tests; full suites 1,569 backend and 830 frontend). Live check on dev pending: a student's question has to be asked once after the deploy.
+
+**Chosen:** every question a student asks in Ask AI is saved as one row with the best match score (as a share of the question's words), how many passages matched, whether the app answered, the time, and the student's email. The admin page lists the rows newest first, with two filters: **not covered** (the app did not answer) and **low coverage** (no passage reached the 30% line where passages are shown). Students' emails are left out of the list unless the admin ticks **Show which student asked**. DynamoDB deletes each row 30 days after it was asked, using the table's existing time-to-live field. Saving a row never stops a student's answer.
+
+**Alternatives considered:** a separate analytics store (more to run, and the data is small); saving the full passage text with each row (large, and the notes are already stored); showing student names by default (more personal data than an admin needs to see what the notes miss).
+
+### 28.1 Decisions
+- **Scores, not answers, are the main signal.** The best match score shows whether the notes cover a question, which is what the admin needs to fix the notes.
+- **Email hidden by default.** The admin sees what was asked without seeing who asked. Showing it is one tick away, so it is still available when needed.
+- **30-day expiry.** Enough to review a month of questions, and short enough that personal questions do not pile up.
+- **Logging on the answer endpoint only.** The search box calls the answer endpoint, so every question is logged once.
+
+### 28.2 Trade-offs
+- The log holds the student's own words, which can include personal details. The 30-day limit and the hidden emails reduce this, but they do not remove it.
+- The admin list reads up to 500 recent rows and filters them in the server. This is fine for one institute, but a very busy institute would need a filter index.
+- Rows that are not yet deleted by DynamoDB can still show for some hours after 30 days (its clean-up is not instant).
+
+### 28.3 Revisit when
+- The institute asks for a longer or shorter retention, or to export the log.
+- A student asks for their own questions to be deleted (a right-to-delete request needs its own action).
+- The log passes a few thousand rows per institute, or the filters feel slow.

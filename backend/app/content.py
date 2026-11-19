@@ -284,3 +284,12 @@ def file_link(
         raise NoAccess()
     url = storage.presigned_download(file["key"], file["content_type"], settings.file_url_seconds)
     return {"url": url, "expires_in": settings.file_url_seconds, "content_type": file["content_type"], "title": file["title"]}
+
+
+def admin_file_link(scoped: TenantRepo, storage: ContentStorage, settings: Settings, course_id: str, file_id: str) -> dict:
+    """A short-lived link to one ready file, for the institute's admin. Admins see every file of their institute."""
+    file = scoped.get_file(course_id, file_id)
+    if file is None or file["status"] != "ready":
+        raise NoAccess()
+    url = storage.presigned_download(file["key"], file["content_type"], settings.file_url_seconds)
+    return {"url": url, "expires_in": settings.file_url_seconds, "content_type": file["content_type"], "title": file["title"]}

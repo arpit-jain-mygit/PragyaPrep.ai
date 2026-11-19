@@ -493,6 +493,30 @@ class TenantRepo:
     def delete_access(self, email: str, course_id: str) -> None:
         self.table.delete_item(Key=self._access_key(email, course_id))
 
+    # ---- Ask AI log: one row per question a student asked, for the admin to review ----
+
+    def _ask_log_key(self, log_id: str) -> dict:
+        return {"PK": f"{self._prefix}ASKLOG#{log_id}", "SK": "META"}
+
+    def create_ask_log(self, record: dict) -> None:
+        """Save one logged question. 'ttl' is set by the caller, so DynamoDB deletes the row when it passes."""
+        _put_new(
+            self.table,
+            {
+                **self._ask_log_key(record["id"]),
+                **record,
+                "GSI1PK": f"{self._prefix}ASKLOGS",
+                "GSI1SK": f"{record['created_at']}#{record['id']}",
+            },
+        )
+
+    def list_ask_logs(self, limit: int = 500) -> list[dict]:
+        """The most recent logged questions, newest first."""
+        response = self.table.query(
+            IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}ASKLOGS"), ScanIndexForward=False, Limit=limit,
+        )
+        return [_plain(item) for item in response["Items"]]
+
     # ---- Test attempts: stored with the student, so a student can only ever reach their own ----
 
     def _attempt_key(self, email: str, test_id: str, number: int) -> dict:

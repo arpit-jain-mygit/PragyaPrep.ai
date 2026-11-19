@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app import student_coursework, study_answer
+from app import student_coursework, study_answer, study_log
 from app import study_search as study_search_module
 from app.deps import STUDENT, get_tenant_repo, require_roles
 from app.repo import TenantRepo
@@ -53,6 +53,9 @@ def study_ask(body: AskIn, scoped: TenantRepo = Depends(get_tenant_repo), studen
     """Ask a question about the coursework. An answer is written only when the notes clearly cover it; otherwise the
     student gets the passages and no answer."""
     try:
-        return study_answer.answer(scoped, student, body.question)
+        reply = study_answer.answer(scoped, student, body.question)
     except study_search_module.QueryTooShort:
         raise HTTPException(status_code=422, detail="Type a word or two from your question.")
+    # Keep a record for the admin's review. This never stops the student's answer.
+    study_log.record(scoped, student, body.question, reply)
+    return reply

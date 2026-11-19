@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
 import {
+  AskLog,
   FreeSample,
   FreeState,
   SignupForm,
@@ -408,6 +409,17 @@ export class ApiService {
   /** Ask a question. An answer comes back only when the notes clearly cover it; the passages come back either way. */
   studyAsk(question: string): Promise<StudyAnswer> {
     return this.post('/api/my/study/ask', { question });
+  }
+
+  /** The admin's Ask AI log. The student's name and email are included only when showStudent is true. */
+  studyLog(filter: string, showStudent: boolean, below: number | null, sort: string): Promise<AskLog> {
+    const limit = below === null ? '' : `&below=${below}`;
+    return this.get(`/api/admin/study-log?filter=${encodeURIComponent(filter)}&show_student=${showStudent}&sort=${encodeURIComponent(sort)}${limit}`);
+  }
+
+  /** A short-lived link to one file, for the admin to open a passage from the Ask AI log. */
+  adminFileLink(courseId: string, fileId: string): Promise<FileLink> {
+    return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}/link`);
   }
 
   // ---- Parents ----
