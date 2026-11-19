@@ -23,7 +23,7 @@ import { Sparkle } from './sparkle';
         <button class="btn" type="submit" id="study-go" [disabled]="searching()"><app-icon name="search" [size]="16" /> {{ searching() ? 'Searching…' : 'Ask' }}</button>
       </form>
       @if (searchError(); as problem) { <p class="error-text" role="alert" id="study-error">{{ problem.detail }}</p> }
-      @if (answer(); as reply) {
+      @if (showAnswer && answer(); as reply) {
         @if (reply.answered && reply.answer) {
           <div class="study-answer" id="study-answer">
             <p class="study-answer-label"><app-sparkle [size]="16" /> Answer from your coursework</p>
@@ -71,6 +71,10 @@ export class AskAi {
 
   /** Text to put in the box, such as a weak topic's name. Changing it replaces what is typed. */
   readonly prefill = input('');
+
+  /** Off until the answer is written by a real AI model. The fake model's text was worse than the passages, so students see
+   *  only the passages for now. The server still checks the answer; this only hides it on screen. */
+  readonly showAnswer: boolean = false;
 
   query = '';
   readonly searching = signal(false);

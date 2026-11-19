@@ -387,7 +387,7 @@ describe('Student coursework page: opened from the Today card', () => {
       expect(hit.textContent).toContain('Percent notes, page 2');
     });
 
-    it('shows the answer with its source when the notes clearly cover the question', async () => {
+    it('hides the fake-model answer for now, even when the notes clearly cover the question', async () => {
       const env = await open();
       await searchFor(env, 'Vembanad lagoon', {
         answered: true,
@@ -395,16 +395,15 @@ describe('Student coursework page: opened from the Today card', () => {
         citations: [{ course_id: 'c1', file_id: 'f1', file: 'Percent notes', page: 2, subtopic: 'Concepts' }],
         hits: [HIT],
       });
-      expect(el(env.fixture, '#study-answer').textContent).toContain('Kochi is a natural harbour');
-      expect(el(env.fixture, '#study-answer').textContent).toContain('Percent notes, page 2');
-      expect(all(env.fixture, '#study-not-covered').length).toBe(0);
+      expect(all(env.fixture, '#study-answer').length).toBe(0);
+      expect(all(env.fixture, '.study-hit').length).toBe(1);
     });
 
-    it('says the notes do not clearly answer, and still lists the closest passages', async () => {
+    it('shows only the passages when the notes do not clearly answer', async () => {
       const env = await open();
       await searchFor(env, 'Vembanad lagoon', { answered: false, answer: null, citations: [], hits: [HIT] });
       expect(all(env.fixture, '#study-answer').length).toBe(0);
-      expect(el(env.fixture, '#study-not-covered').textContent).toContain("don't clearly answer");
+      expect(all(env.fixture, '#study-not-covered').length).toBe(0);
       expect(all(env.fixture, '.study-hit').length).toBe(1);
     });
 
