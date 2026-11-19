@@ -14,7 +14,7 @@ import { Icon } from './icon';
   imports: [FormsModule, Icon],
   template: `
     <section class="card study-search" id="study-search" aria-labelledby="ask-ai-title">
-      <h2 id="ask-ai-title"><app-icon name="help" [size]="18" /> Ask AI</h2>
+      <h2 id="ask-ai-title"><app-icon name="sparkle" [size]="18" /> Ask AI</h2>
       <p class="soft">Finds the parts of your coursework that answer your question.</p>
       <form (ngSubmit)="search()" novalidate class="study-search-form">
         <label class="sr-only" for="study-q">Your question</label>

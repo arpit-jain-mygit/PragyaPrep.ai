@@ -60,7 +60,7 @@ import { InfoTip } from '../ui/info-tip';
                 <span class="topic-name">{{ topic.topic }}</span>
                 <span class="meter" [class.hard]="level(topic.accuracy) === 'weak'" [class.mid]="level(topic.accuracy) === 'ok'"><i [style.width.%]="topic.accuracy"></i></span>
                 <span class="soft topic-score">{{ topic.correct }} of {{ topic.questions }} · {{ topic.accuracy }}%</span>
-                <button class="btn small secondary" type="button" [attr.data-ask]="topic.topic" (click)="askAbout(topic.topic)"><app-icon name="help" [size]="14" /> Ask AI</button>
+                <button class="btn small secondary" type="button" [attr.data-ask]="topic.topic" (click)="askAbout(topic.topic)"><app-icon name="sparkle" [size]="14" /> Ask AI</button>
                 @if (level(topic.accuracy) === 'weak') {
                   <button class="btn small" type="button" [attr.data-weak]="topic.topic" [disabled]="making()" (click)="practise(subject.id, topic.topic)"><app-icon name="play" [size]="14" /> Practise this</button>
                 } @else if (level(topic.accuracy) === 'ok') {
