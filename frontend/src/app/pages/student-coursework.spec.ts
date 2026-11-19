@@ -32,8 +32,8 @@ function data(overrides: { subs?: object[]; extra?: object[]; summary?: object }
   };
 }
 
-async function open(reply: object = data()) {
-  const env = setupTestBed();
+async function open(reply: object = data(), queryParams: Record<string, string> = {}) {
+  const env = setupTestBed({ queryParams });
   env.sessions.save(sessionFor('student'));
   const fixture = TestBed.createComponent(StudentCourseworkPage);
   fixture.detectChanges();
@@ -280,5 +280,57 @@ describe('Student coursework page', () => {
     env.http.expectOne(`${API}/api/my/coursework`).flush({ detail: 'Nope.' }, { status: 500, statusText: 'x' });
     await settle(fixture);
     expect(text(fixture)).toContain('Nope.');
+  });
+});
+
+
+describe('Student coursework page: opened from the Today card', () => {
+  const MIXED = data({
+    subs: [
+      sub({ id: 'a', title: 'Done already', done: true, done_at: '2027-01-14T10:00:00+05:30', days_left: 3 }),
+      sub({ id: 'b', title: 'Due this week', days_left: 3 }),
+      sub({ id: 'c', title: 'Due later', days_left: 20, due: '2027-02-04' }),
+      sub({ id: 'd', title: 'Late one', days_left: -4, overdue: true, due: '2027-01-11' }),
+      sub({ id: 'e', title: 'No date', due: null, due_from: null, days_left: null }),
+    ],
+  });
+  const titles = (fixture: Parameters<typeof all>[0]) => all(fixture, '[data-sub]').map((b) => b.getAttribute('data-sub'));
+
+  it('shows everything when opened normally', async () => {
+    const { fixture } = await open(MIXED);
+    expect(all(fixture, '#cw-filter').length).toBe(0);
+    expect(titles(fixture)).toEqual(['Done already', 'Due this week', 'Due later', 'Late one', 'No date']);
+  });
+
+  it('shows only the sub-topics due this week, with a note and a way back', async () => {
+    const { fixture } = await open(MIXED, { show: 'week' });
+    expect(titles(fixture)).toEqual(['Due this week']);
+    expect(el(fixture, '#cw-filter').textContent).toContain('items due this week');
+    expect(el(fixture, '#sub-name').textContent).toBe('Due this week');
+    el<HTMLButtonElement>(fixture, '#cw-show-all').click();
+    await settle(fixture);
+    expect(all(fixture, '#cw-filter').length).toBe(0);
+    expect(titles(fixture).length).toBe(5);
+  });
+
+  it('shows only the overdue ones', async () => {
+    const { fixture } = await open(MIXED, { show: 'overdue' });
+    expect(titles(fixture)).toEqual(['Late one']);
+  });
+
+  it('shows everything not done when asked for the pending ones', async () => {
+    const { fixture } = await open(MIXED, { show: 'pending' });
+    expect(titles(fixture)).toEqual(['Due this week', 'Due later', 'Late one', 'No date']);
+  });
+
+  it('says so when nothing matches', async () => {
+    const { fixture } = await open(data({ subs: [sub({ id: 'x', title: 'Far away', days_left: 30, due: '2027-02-14' })] }), { show: 'week' });
+    expect(el(fixture, '#cw-filter-empty').textContent).toContain('all caught up');
+  });
+
+  it('ignores an unknown filter word', async () => {
+    const { fixture } = await open(MIXED, { show: 'nonsense' });
+    expect(all(fixture, '#cw-filter').length).toBe(0);
+    expect(titles(fixture).length).toBe(5);
   });
 });

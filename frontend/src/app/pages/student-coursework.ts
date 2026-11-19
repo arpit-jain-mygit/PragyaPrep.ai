@@ -1,5 +1,6 @@
 import { isNative, openInApp } from '../core/native';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatSize, shortDate } from '../core/format';
 import { ApiError, StudentCourse, StudentCoursework, StudentMaterial, StudentSubject, StudentSubtopic, StudentTopic } from '../core/models';
@@ -41,9 +42,16 @@ interface Chosen {
       @if (!d.courses.length) {
         <div class="empty-state" id="no-coursework"><app-icon name="layers" [size]="32" /><p>No coursework yet</p></div>
       } @else {
+        @if (filter() !== 'all') {
+          <div class="alert info" id="cw-filter" role="status">
+            Showing only {{ filterLabel() }}.
+            <button type="button" class="linklike" id="cw-show-all" (click)="clearFilter()">Show everything</button>
+          </div>
+          @if (!view().length) { <div class="empty-state" id="cw-filter-empty"><app-icon name="check" [size]="32" /><p>Nothing here. You are all caught up.</p></div> }
+        }
         <div class="cw-student">
           <nav class="card cw-nav" id="nav" aria-label="Coursework">
-            @for (course of d.courses; track course.id) {
+            @for (course of view(); track course.id) {
               <div class="cw-node" [attr.data-course]="course.name">
                 <button type="button" class="cw-row cw-course" [attr.aria-expanded]="isOpen('c:' + course.id)" (click)="toggle('c:' + course.id)">
                   <app-icon [name]="isOpen('c:' + course.id) ? 'chevron' : 'chevron-right'" [size]="16" />
@@ -184,6 +192,11 @@ interface Chosen {
 })
 export class StudentCourseworkPage implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+
+  /** Which sub-topics to show: everything, only those due this week, only the overdue ones, or only those not done yet. Set by the link that opened the page. */
+  readonly filter = signal<'all' | 'week' | 'overdue' | 'pending'>('all');
+  readonly filterLabel = computed(() => ({ all: 'everything', week: 'items due this week', overdue: 'overdue items', pending: 'items not done yet' })[this.filter()]);
 
   readonly data = signal<StudentCoursework | null>(null);
   readonly loading = signal(false);
@@ -208,8 +221,37 @@ export class StudentCourseworkPage implements OnInit {
     return null;
   });
 
+  /** The tree to show: all of it, or only the courses, subjects and topics that still hold a sub-topic matching the filter. */
+  readonly view = computed<StudentCourse[]>(() => {
+    const courses = this.data()?.courses ?? [];
+    const mode = this.filter();
+    if (mode === 'all') return courses;
+    const wanted = (sub: StudentSubtopic): boolean =>
+      !sub.locked && !sub.done && (mode === 'pending' || (mode === 'overdue' ? sub.overdue : sub.days_left !== null && sub.days_left >= 0 && sub.days_left <= 7));
+    const out: StudentCourse[] = [];
+    for (const course of courses) {
+      const subjects: StudentSubject[] = [];
+      for (const subject of course.subjects) {
+        const topics: StudentTopic[] = [];
+        for (const topic of subject.topics) {
+          const subtopics = topic.subtopics.filter(wanted);
+          if (subtopics.length) topics.push({ ...topic, subtopics });
+        }
+        if (topics.length) subjects.push({ ...subject, topics });
+      }
+      if (subjects.length) out.push({ ...course, subjects });
+    }
+    return out;
+  });
+
   ngOnInit(): void {
+    const show = this.route.snapshot.queryParamMap.get('show');
+    if (show === 'week' || show === 'overdue' || show === 'pending') this.filter.set(show);
     void this.load();
+  }
+
+  clearFilter(): void {
+    this.filter.set('all');
   }
 
   private async load(): Promise<void> {
@@ -218,9 +260,9 @@ export class StudentCourseworkPage implements OnInit {
       const data = await this.api.myCoursework();
       this.data.set(data);
       // Start on the first sub-topic that is not done (else the first one), with its path open.
-      const all = data.courses.flatMap((course) => course.subjects.flatMap((subject) => subject.topics.flatMap((topic) => topic.subtopics.map((sub) => ({ course, subject, topic, sub })))));
+      const all = this.view().flatMap((course) => course.subjects.flatMap((subject) => subject.topics.flatMap((topic) => topic.subtopics.map((sub) => ({ course, subject, topic, sub })))));
       const first = all.find((x) => !x.sub.done && !x.sub.locked) ?? all.find((x) => !x.sub.locked) ?? all[0];
-      this.open.set(new Set(data.courses.filter((c) => !c.locked).map((c) => `c:${c.id}`)));
+      this.open.set(new Set(this.view().filter((c) => !c.locked).map((c) => `c:${c.id}`)));
       if (first) this.select(first);
     } catch (error) {
       this.error.set(error as ApiError);
@@ -230,7 +272,7 @@ export class StudentCourseworkPage implements OnInit {
   }
 
   isOpen(key: string): boolean {
-    return this.open().has(key);
+    return this.filter() !== 'all' || this.open().has(key); // while a filter is on, everything that matches is shown open
   }
 
   toggle(key: string): void {

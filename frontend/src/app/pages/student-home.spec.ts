@@ -239,6 +239,8 @@ describe('Student home', () => {
     expect(el(fixture, '[data-today="overdue"]').textContent).toContain('2 overdue items');
     expect(el(fixture, '[data-today="week"]').textContent).toContain('3 coursework items due this week');
     expect(el(fixture, '[data-today="notices"]').textContent).toContain('1 notice needs your action');
+    expect(el(fixture, '[data-today="week"] a').getAttribute('href')).toBe('/demo/learning?show=week');
+    expect(el(fixture, '[data-today="overdue"] a').getAttribute('href')).toBe('/demo/learning?show=overdue');
     expect(el(fixture, '[data-ring] text').textContent).toBe('40%');
   });
 });
