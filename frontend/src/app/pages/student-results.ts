@@ -6,13 +6,14 @@ import { formatDate } from '../core/format';
 import { ApiError, MyResults, MyResultRow } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { AskAi } from '../ui/ask-ai';
+import { Sparkle } from '../ui/sparkle';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
 /** A student's results across all their tests: totals, how their scores are moving, every finished attempt, and where they are strong or weak. */
 @Component({
   selector: 'app-student-results',
-  imports: [FormsModule, RouterLink, AskAi, Icon, InfoTip],
+  imports: [FormsModule, RouterLink, AskAi, Icon, InfoTip, Sparkle],
   template: `
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
@@ -60,7 +61,7 @@ import { InfoTip } from '../ui/info-tip';
                 <span class="topic-name">{{ topic.topic }}</span>
                 <span class="meter" [class.hard]="level(topic.accuracy) === 'weak'" [class.mid]="level(topic.accuracy) === 'ok'"><i [style.width.%]="topic.accuracy"></i></span>
                 <span class="soft topic-score">{{ topic.correct }} of {{ topic.questions }} · {{ topic.accuracy }}%</span>
-                <button class="btn small secondary" type="button" [attr.data-ask]="topic.topic" (click)="askAbout(topic.topic)"><app-icon name="sparkle" [size]="14" /> Ask AI</button>
+                <button class="btn small secondary" type="button" [attr.data-ask]="topic.topic" (click)="askAbout(topic.topic)"><app-sparkle [size]="18" /> Ask AI</button>
                 @if (level(topic.accuracy) === 'weak') {
                   <button class="btn small" type="button" [attr.data-weak]="topic.topic" [disabled]="making()" (click)="practise(subject.id, topic.topic)"><app-icon name="play" [size]="14" /> Practise this</button>
                 } @else if (level(topic.accuracy) === 'ok') {

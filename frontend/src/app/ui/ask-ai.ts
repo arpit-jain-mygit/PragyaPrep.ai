@@ -4,6 +4,7 @@ import { isNative, openInApp } from '../core/native';
 import { ApiService } from '../core/api.service';
 import { ApiError, StudyHit } from '../core/models';
 import { Icon } from './icon';
+import { Sparkle } from './sparkle';
 
 /**
  * "Ask AI": a question box that finds the parts of the student's coursework that answer it. For now it returns matching
@@ -11,10 +12,10 @@ import { Icon } from './icon';
  */
 @Component({
   selector: 'app-ask-ai',
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, Sparkle],
   template: `
     <section class="card study-search" id="study-search" aria-labelledby="ask-ai-title">
-      <h2 id="ask-ai-title"><app-icon name="sparkle" [size]="18" /> Ask AI</h2>
+      <h2 id="ask-ai-title"><app-sparkle [size]="26" /> Ask AI</h2>
       <p class="soft">Finds the parts of your coursework that answer your question.</p>
       <form (ngSubmit)="search()" novalidate class="study-search-form">
         <label class="sr-only" for="study-q">Your question</label>
