@@ -77,6 +77,16 @@ def listing(scoped: TenantRepo) -> list[dict]:
     return [shown(scoped, p) for p in sorted(people, key=lambda p: _name(p).lower())]
 
 
+def listing_page(scoped: TenantRepo, limit: int, offset: int = 0) -> tuple[list[dict], int | None]:
+    """One page of parents, by name, from `offset`, and the offset of the next page (None when there are no more).
+    Only the parents on the page get their children looked up."""
+    people = [m for m in scoped.all_members_by_status("approved") if m.get("role") == PARENT]
+    ordered = sorted(people, key=lambda p: _name(p).lower())
+    page = ordered[offset:offset + limit]
+    next_offset = offset + limit if offset + limit < len(ordered) else None
+    return [shown(scoped, p) for p in page], next_offset
+
+
 def _welcome_email(tenant: dict, settings: Settings, parent: dict, child_names: list[str]) -> Email:
     name = tenant["branding"]["display_name"]
     who = child_names[0] if len(child_names) == 1 else ", ".join(child_names[:-1]) + " and " + child_names[-1]

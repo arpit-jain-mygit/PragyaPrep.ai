@@ -30,6 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Next-Cursor"],  # the page reads this header to ask for the next page of registrations
     )
 
     @app.get("/api/health")

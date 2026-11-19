@@ -1,4 +1,6 @@
 """Question bank. Only an institute's admin can see or change its questions."""
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 
@@ -45,6 +47,7 @@ def papers():
     "/api/admin/questions", response_model=list[QuestionOut], dependencies=[Depends(require_roles(TENANT_ADMIN))]
 )
 def list_questions(
+    response: Response,
     paper: str | None = Query(None),
     topic: str | None = Query(None),
     status: str | None = Query(None),
@@ -52,11 +55,24 @@ def list_questions(
     pictures: str | None = Query(None, description="yes: only questions with pictures. no: only questions without."),
     kind: str | None = Query(None, description="mcq or fill_in"),
     passage: str | None = Query(None, description="A passage id, or 'none' for questions without one"),
+    limit: int | None = Query(None, ge=1, le=200, description="How many to return. Leave out for all of them."),
+    before: str | None = Query(None, description="The cursor from the X-Next-Cursor header of the last page."),
     scoped: TenantRepo = Depends(get_tenant_repo),
     storage: ContentStorage = Depends(get_storage),
 ):
+    """The question bank, filtered. Pages: pass limit, then the X-Next-Cursor header as `before` for the next page."""
+    found = questions.list_questions(scoped, paper, topic, status, difficulty, pictures, kind, passage)
     texts = _texts(scoped)
-    return [_present(item, storage, texts) for item in questions.list_questions(scoped, paper, topic, status, difficulty, pictures, kind, passage)]
+    if limit is None:
+        return [_present(item, storage, texts) for item in found]
+    try:
+        offset = max(0, int(before)) if before else 0
+    except ValueError:
+        raise HTTPException(status_code=422, detail="The page cursor is not valid.")
+    page = found[offset:offset + limit]
+    response.headers["X-Next-Cursor"] = str(offset + limit) if offset + limit < len(found) else ""
+    # Only the page is turned into its final form (for example, picture links are made just for these rows).
+    return [_present(item, storage, texts) for item in page]
 
 
 # ---- Reading passages ----
@@ -203,7 +219,10 @@ async def import_questions(
 
     imported = 0
     if confirm:
+        # Passages first, one at a time (several questions can share one). Then the questions themselves, many at a time, so a large
+        # file still finishes inside the request's time limit.
         made: dict[str, str] = {}  # a new passage is saved the first time a question uses it
+        planned: list[tuple[dict, dict | None]] = []
         for item in list(result["ready"]):
             try:
                 passage = item["passage"]
@@ -216,14 +235,30 @@ async def import_questions(
                             else passages.ensure_by_text(scoped, passage["text"], admin["email"])
                         )
                     passage = {"id": made[key]}
-                questions.create_question(
-                    scoped, {**item["question"], "images": item["images"], "passage": passage["id"] if passage else None}, admin["email"]
-                )
-                imported += 1
+                planned.append((item, passage))
             except ValidationError as error:
                 result["ready"].remove(item)
                 result["problems"].append({"row": item["row"], "errors": {"Passage": str(error)}})
-            except questions.QuestionErrors as error:
+
+        def save(pair):
+            item, passage = pair
+            try:
+                questions.create_question(
+                    scoped, {**item["question"], "images": item["images"], "passage": passage["id"] if passage else None}, admin["email"]
+                )
+                return item, None
+            except (ValidationError, questions.QuestionErrors) as error:
+                return item, error
+
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            outcomes = list(pool.map(save, planned))
+        for item, error in outcomes:
+            if error is None:
+                imported += 1
+            elif isinstance(error, ValidationError):
+                result["ready"].remove(item)
+                result["problems"].append({"row": item["row"], "errors": {"Passage": str(error)}})
+            else:
                 # A picture was taken between the preview and now. The row is reported, not imported.
                 result["ready"].remove(item)
                 result["problems"].append({"row": item["row"], "errors": {"Pictures": next(iter(error.errors.values()))}})

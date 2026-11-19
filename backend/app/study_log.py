@@ -55,9 +55,13 @@ def record(scoped: TenantRepo, student: dict, question: str, reply: dict) -> Non
         logger.exception("could not save an Ask AI log row")
 
 
-def list_for_admin(scoped: TenantRepo, match: str = "all", show_student: bool = False, limit: int = 200, sort: str = "newest") -> list[dict]:
+def list_for_admin(
+    scoped: TenantRepo, match: str = "all", show_student: bool = False, limit: int = 200, sort: str = "newest", offset: int = 0
+) -> tuple[list[dict], int | None]:
     """Logged questions. 'match' keeps only rows whose best match is under a limit. Students' names and emails are
-    removed unless show_student is asked for. Rows come newest first, or lowest best match first."""
+    removed unless show_student is asked for. Rows come newest first, or lowest best match first.
+
+    Returns one page (from `offset`, `limit` rows long) and the offset of the next page, or None when there are no more."""
     if match not in MATCH_LIMITS:
         raise ValueError(f"unknown match: {match!r}")
     if sort not in SORTS:
@@ -76,4 +80,6 @@ def list_for_admin(scoped: TenantRepo, match: str = "all", show_student: bool = 
     if sort == "worst":
         # Lowest best match first. Rows already come newest first, and the sort keeps that order for ties.
         rows.sort(key=lambda row: row["best_coverage"])
-    return rows[:limit]
+    page = rows[offset:offset + limit]
+    next_offset = offset + limit if offset + limit < len(rows) else None
+    return page, next_offset

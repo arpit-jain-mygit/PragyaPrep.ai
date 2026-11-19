@@ -200,15 +200,28 @@ def test_extra_columns_after_the_template_columns_are_ignored(client, admin):
     assert post(client, admin, workbook([{**good_row(), "My notes": "hi"}], columns=columns)).json()["ready"][0]["row"] == 2
 
 
-def test_too_many_rows_are_refused(client, admin):
-    rows = [good_row(Question=f"Question {n}") for n in range(qi.MAX_ROWS + 1)]
+def test_too_many_rows_are_refused(client, admin, monkeypatch):
+    monkeypatch.setattr(qi, "MAX_ROWS", 40)
+    rows = [good_row(Question=f"Question {n}") for n in range(41)]
     response = post(client, admin, workbook(rows))
-    assert response.status_code == 422 and "at most 500" in response.json()["detail"]
+    assert response.status_code == 422 and "at most 40" in response.json()["detail"]
+    assert len(post(client, admin, workbook(rows[:40])).json()["ready"]) == 40
 
 
-def test_exactly_the_maximum_is_accepted(client, admin):
-    rows = [good_row(Question=f"Question {n}") for n in range(qi.MAX_ROWS)]
-    assert len(post(client, admin, workbook(rows)).json()["ready"]) == qi.MAX_ROWS
+def test_the_limits_are_generous_enough_for_thousands_of_rows():
+    assert qi.MAX_ROWS >= 10000 and qi.MAX_BYTES >= 5 * 1024 * 1024
+
+
+def test_a_large_file_is_checked_and_every_question_is_saved(client, admin, repo):
+    rows = [good_row(Question=f"Large file question {n}") for n in range(1200)]
+    content = workbook(rows)
+    preview = post(client, admin, content).json()
+    assert len(preview["ready"]) == 1200 and preview["imported"] == 0
+    done = post(client, admin, content, confirm=True).json()
+    assert done["imported"] == 1200 and not done["problems"]
+    assert repo.scoped("aaptprep").count_questions()["published"] + repo.scoped("aaptprep").count_questions()["draft"] >= 1200
+    again = post(client, admin, content, confirm=True).json()
+    assert again["imported"] == 0 and len(again["duplicates"]) == 1200  # the same file twice adds nothing
 
 
 # ---- Privacy ----

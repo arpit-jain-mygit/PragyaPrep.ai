@@ -201,3 +201,25 @@ def test_another_institute_cannot_see_our_results(client, admin, asha, basic, ma
     other = sign_in("other-school", "boss@example.com")
     assert client.get(f"{RESULTS}/{basic['id']}/results", headers=other).status_code == 404
     assert client.get(f"{RESULTS}/{basic['id']}/results/asha@example.com/1", headers=other).status_code == 404
+
+
+def test_the_attempts_come_in_pages_and_the_summary_covers_all_of_them(client, admin, asha, ravi, basic, fake_clock):
+    play(client, asha, basic, [1, 1, 1], typed="Paris", minutes=7, fake_clock=fake_clock)
+    play(client, ravi, basic, [0, 0, None], minutes=3, fake_clock=fake_clock)
+    pages, before = [], None
+    for _ in range(10):
+        url = f"{RESULTS}/{basic['id']}/results?limit=1" + (f"&before={before}" if before else "")
+        response = client.get(url, headers=admin)
+        assert response.status_code == 200, response.text
+        pages.append([r["email"] for r in response.json()["attempts"]])
+        # the summary is the same on every page: it counts all the attempts, not just this page
+        assert response.json()["summary"]["attempts"] == 2
+        before = response.headers.get("X-Next-Cursor") or None
+        if before is None:
+            break
+    assert sorted(e for p in pages for e in p) == ["asha@example.com", "ravi@example.com"]
+    assert [len(p) for p in pages] == [1, 1]
+
+
+def test_a_bad_results_page_cursor_is_refused(client, admin, asha, basic):
+    assert client.get(f"{RESULTS}/{basic['id']}/results?limit=1&before=zz", headers=admin).status_code == 422

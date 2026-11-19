@@ -1,5 +1,5 @@
 """Tests built from the question bank. Only an institute's admin can see or change them."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app import attempts, questions, quizzes
 from app.deps import TENANT_ADMIN, get_storage, get_tenant_repo, require_roles
@@ -78,12 +78,26 @@ def change_test(
 
 
 @router.get("/api/admin/tests/{test_id}/results")
-def test_results(test_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
-    """How students did at a test: a summary, every attempt, and how each question went."""
+def test_results(
+    test_id: str,
+    response: Response,
+    limit: int | None = Query(None, ge=1, le=200, description="How many attempts to return. Leave out for all of them."),
+    before: str | None = Query(None, description="The cursor from the X-Next-Cursor header of the last page."),
+    scoped: TenantRepo = Depends(get_tenant_repo),
+):
+    """How students did at a test: a summary, the attempts, and how each question went.
+
+    Pages of attempts: pass limit, then the X-Next-Cursor header as `before` for the next page. The summary is the same on every page."""
     try:
-        return attempts.admin_results(scoped, test_id)
+        offset = max(0, int(before)) if before else 0
+    except ValueError:
+        raise HTTPException(status_code=422, detail="The page cursor is not valid.")
+    try:
+        payload, next_offset = attempts.admin_results(scoped, test_id, limit, offset)
     except attempts.TestNotAvailable:
         raise HTTPException(status_code=404, detail="We couldn't find that test.")
+    response.headers["X-Next-Cursor"] = str(next_offset) if next_offset is not None else ""
+    return payload
 
 
 @router.get("/api/admin/tests/{test_id}/results/{email}/{number}")

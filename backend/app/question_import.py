@@ -15,8 +15,11 @@ from app import passages as passage_rules, questions
 from app.papers import BY_ID, PAPERS
 from app.tenants import ValidationError
 
-MAX_ROWS = 500
-MAX_BYTES = 2 * 1024 * 1024
+# One import is one request: the whole file is read, checked and saved inside it. These limits keep that inside the server's time
+# limit (60 seconds) and the 6 MB largest upload a request can carry.
+MAX_ROWS = 10000
+MAX_BYTES = 5 * 1024 * 1024
+TEMPLATE_ROWS = 2000  # the blank template carries its dropdowns this far down
 SHEET = "Questions"
 COLUMNS = [
     "Subject", "Topic", "Question",
@@ -61,7 +64,7 @@ def build_template() -> bytes:
         for row, topic in enumerate(paper["topics"], start=2):
             lists.cell(row=row, column=column, value=topic)
     last = get_column_letter(len(PAPERS))
-    rows = MAX_ROWS + 1
+    rows = TEMPLATE_ROWS + 1
 
     def dropdown(formula: str, column: str, message: str) -> None:
         check = DataValidation(type="list", formula1=formula, allow_blank=True, showErrorMessage=True, errorTitle="Not allowed", error=message)
@@ -92,7 +95,7 @@ def build_template() -> bytes:
         ("3. Give four different options (A to D) and a reason for every option: why it is correct, or why it is wrong.", False),
         ("4. Correct: type A, B, C or D.", False),
         ("5. Difficulty: easy, medium or hard (blank means medium). Status: draft or published (blank means draft).", False),
-        ("6. Up to 500 questions per file. Save as .xlsx and upload it on the Question bank page. You will see a preview first, and nothing is saved until you confirm.", False),
+        (f"6. Up to {MAX_ROWS:,} questions per file (under {MAX_BYTES // (1024 * 1024)} MB). Save as .xlsx and upload it on the Question bank page. You will see a preview first, and nothing is saved until you confirm.", False),
         ("7. A question that is already in the bank (same subject, topic and wording) is skipped, so uploading a file twice does no harm.", False),
         ("8. Pictures (optional): first choose your PNG or JPG pictures (up to 1 MB each) in the picture step on the upload card. Then type each picture's file name, for example circuit1.png, in 'Question image' or 'Image A' to 'Image D'. A picture can be on one question only. An option that is only a picture may leave its option text empty, but still needs its reason.", False),
         ("9. Fill-in questions (one box the student types the answer into): set Type to fill_in, leave the four options, their reasons and Correct empty, and fill in Answer, Answer type and Explanation. Answer type 'text': type the answer, and add other accepted spellings after a | sign, for example Mumbai|Bombay (capitals and extra spaces don't matter). Answer type 'number': type the number; the optional Tolerance says how far off a student's number may be, for example 0.01. Leave Type empty for multiple choice. A fill-in question can have a Question image but no option pictures.", False),
@@ -130,7 +133,7 @@ def _rows(content: bytes) -> tuple[list[tuple[int, dict]], dict[str, dict]]:
     """The filled-in rows of the Questions sheet as (row number, {column: text}), and the Passages sheet as
     {lower-case title: {"title", "text", "row"}}. Blank rows are left out."""
     if len(content) > MAX_BYTES:
-        raise ValidationError("That file is too big. Keep it under 2 MB.")
+        raise ValidationError(f"That file is too big. Keep it under {MAX_BYTES // (1024 * 1024)} MB.")
     if not content.startswith(b"PK"):
         raise ValidationError("That isn't an Excel (.xlsx) file. Download the template and fill it in.")
     try:

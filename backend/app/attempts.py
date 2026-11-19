@@ -419,8 +419,11 @@ def _names(scoped: TenantRepo, emails: set[str]) -> dict[str, str]:
     return names
 
 
-def admin_results(scoped: TenantRepo, test_id: str) -> dict:
-    """Everything the admin's results page shows for one test: a summary, every attempt, and how each question went."""
+def admin_results(scoped: TenantRepo, test_id: str, limit: int | None = None, offset: int = 0) -> tuple[dict, int | None]:
+    """Everything the admin's results page shows for one test: a summary, the attempts, and how each question went.
+
+    The summary and question figures always cover every attempt. With a limit, only one page of attempts is returned,
+    from `offset`, and the offset of the next page is returned too (None when there are no more)."""
     test = scoped.get_test(test_id)
     if test is None:
         raise TestNotAvailable()
@@ -456,6 +459,10 @@ def admin_results(scoped: TenantRepo, test_id: str) -> dict:
         "pass_rate": _fmt((Decimal(sum(1 for a in done if a["passed"])) * 100 / len(done)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) if done else None,
         "distribution": buckets,
     }
+    next_offset = None
+    if limit is not None:
+        next_offset = offset + limit if offset + limit < len(rows) else None
+        rows = rows[offset:offset + limit]
     return {
         "test": {
             "id": test["id"], "title": test["title"], "question_count": len(test.get("question_ids") or []), "pass_percentage": test["pass_percentage"],
@@ -464,7 +471,7 @@ def admin_results(scoped: TenantRepo, test_id: str) -> dict:
         "summary": summary,
         "attempts": rows,
         "questions": _question_stats(scoped, test, done),
-    }
+    }, next_offset
 
 
 def _question_stats(scoped: TenantRepo, test: dict, done: list[dict]) -> list[dict]:

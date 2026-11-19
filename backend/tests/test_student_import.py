@@ -175,13 +175,25 @@ def test_a_bad_file_is_refused_with_a_clear_message(client, school, admin, conte
     assert response.status_code == 422 and message in response.json()["detail"]
 
 
-def test_a_file_over_the_row_limit_is_refused(client, school, admin):
-    response = upload(client, admin, sheet([row(f"s{i}@example.com") for i in range(501)]))
-    assert response.status_code == 422 and "at most 500" in response.json()["detail"]
-    assert upload(client, admin, sheet([row(f"s{i}@example.com") for i in range(500)])).json()["summary"]["ready"] == 500
+def test_a_file_over_the_row_limit_is_refused(client, school, admin, monkeypatch):
+    monkeypatch.setattr(student_import, "MAX_ROWS", 30)
+    response = upload(client, admin, sheet([row(f"s{i}@example.com") for i in range(31)]))
+    assert response.status_code == 422 and "at most 30" in response.json()["detail"]
+    assert upload(client, admin, sheet([row(f"s{i}@example.com") for i in range(30)])).json()["summary"]["ready"] == 30
 
 
-def test_a_file_over_two_megabytes_is_refused(client, school, admin, monkeypatch):
+def test_a_thousand_students_in_one_file_are_all_created_with_their_courses(client, school, admin, repo):
+    assert student_import.MAX_ROWS >= 5000
+    rows = [row(f"bulk{i}@example.net", mobile=f"9{i:09d}"[:10], courses="CAT" if i % 2 else "CAT; CLAT") for i in range(1000)]
+    content = sheet(rows)
+    assert upload(client, admin, content).json()["summary"]["ready"] == 1000
+    done = upload(client, admin, content, confirm=True).json()
+    assert done["summary"]["created"] == 1000
+    scoped = repo.scoped("aaptprep")
+    assert len(scoped.list_access("bulk999@example.net")) == 1 and len(scoped.list_access("bulk998@example.net")) == 2
+
+
+def test_a_file_over_the_size_limit_is_refused(client, school, admin, monkeypatch):
     monkeypatch.setattr(student_import, "MAX_BYTES", 100)
     assert "too big" in upload(client, admin, sheet([row()])).json()["detail"]
 

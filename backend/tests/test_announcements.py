@@ -285,3 +285,26 @@ def test_another_institutes_students_are_never_reached(client, school, admin, st
     repo.scoped("other").create_member(person_)
     assert announce(client, admin).json()["recipients"] == 4
     assert repo.scoped("other").list_notices("o@example.com") == []
+
+
+def test_the_history_comes_in_pages_newest_first_with_a_cursor(client, school, admin, students, fake_clock):
+    sent = []
+    for number in range(1, 6):
+        fake_clock.advance(60)  # each one a minute later, so the order is clear
+        sent.append(announce(client, admin, title=f"Notice {number}").json()["id"])
+
+    pages, before = [], None
+    for _ in range(10):
+        url = SEND + "?limit=2" + (f"&before={before}" if before else "")
+        response = client.get(url, headers=admin)
+        assert response.status_code == 200, response.text
+        pages.append([h["id"] for h in response.json()])
+        before = response.headers.get("X-Next-Cursor") or None
+        if before is None:
+            break
+    assert [len(p) for p in pages] == [2, 2, 1]
+    assert [i for p in pages for i in p] == list(reversed(sent))
+
+
+def test_a_bad_announcement_page_limit_is_refused(client, admin):
+    assert client.get(SEND + "?limit=0", headers=admin).status_code == 422

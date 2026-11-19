@@ -196,6 +196,15 @@ class TenantRepo:
         )
         return [_plain(item) for item in response["Items"]]
 
+    def members_by_status_page(self, status: str, before: str | None, limit: int) -> list[dict]:
+        """One page of people with this status, newest first, only those whose sort key is smaller than `before`.
+        The sort key is 'created_at#email', so `before` is the last key the caller already has."""
+        condition = Key("GSI1PK").eq(f"{self._prefix}MEMBERS#{status}")
+        if before:
+            condition = condition & Key("GSI1SK").lt(before)
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=condition, ScanIndexForward=False, Limit=limit)
+        return [_plain(item) for item in response["Items"]]
+
     def all_members_by_status(self, status: str) -> list[dict]:
         """Everyone with this status, following the pages of results to the end."""
         items, start = [], None
@@ -483,11 +492,12 @@ class TenantRepo:
     def create_announcement(self, record: dict) -> None:
         _put_new(self.table, {**self._announcement_key(record["id"]), **record, "GSI1PK": f"{self._prefix}ANNOUNCEMENTS", "GSI1SK": f"{record['created_at']}#{record['id']}"})
 
-    def list_announcements(self, limit: int = 100) -> list[dict]:
-        """The most recent announcements, newest first."""
-        response = self.table.query(
-            IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}ANNOUNCEMENTS"), ScanIndexForward=False, Limit=limit,
-        )
+    def list_announcements(self, limit: int = 100, before: str | None = None) -> list[dict]:
+        """The most recent announcements, newest first. With `before`, only those with a smaller sort key ('created_at#id')."""
+        condition = Key("GSI1PK").eq(f"{self._prefix}ANNOUNCEMENTS")
+        if before:
+            condition = condition & Key("GSI1SK").lt(before)
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=condition, ScanIndexForward=False, Limit=limit)
         return [_plain(item) for item in response["Items"]]
 
     def delete_access(self, email: str, course_id: str) -> None:

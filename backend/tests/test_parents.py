@@ -177,3 +177,29 @@ def test_a_welcome_email_failure_does_not_stop_the_import(client, admin, mailer,
     monkeypatch.setattr(mailer, "send", lambda email: (_ for _ in ()).throw(RuntimeError("down")))
     done = upload(client, admin, sheet(["meena@example.com", "Meena", "Rao", "asha@example.com", ""]), confirm=True).json()
     assert done["summary"]["created"] == 1 and done["summary"]["emailed"] == 0
+
+
+def test_the_parent_list_comes_in_pages_by_name_and_nobody_is_missed(client, repo, admin, school):
+    names = ["Dev", "Anil", "Kiran", "Bina", "Esha"]
+    for index, first in enumerate(names):
+        repo.scoped("aaptprep").create_member({
+            "email": f"parent{index}@example.com", "role": "parent", "status": "approved",
+            "first_name": first, "last_name": "Parent", "children": [], "mobile": "",
+        })
+    pages, before = [], None
+    for _ in range(10):
+        url = "/api/admin/parents?limit=2" + (f"&before={before}" if before else "")
+        response = client.get(url, headers=admin)
+        assert response.status_code == 200, response.text
+        pages.append([p["name"] for p in response.json()])
+        before = response.headers.get("X-Next-Cursor") or None
+        if before is None:
+            break
+    assert [len(p) for p in pages] == [2, 2, 1]
+    flat = [name for page in pages for name in page]
+    assert flat == sorted(flat, key=str.lower)
+    assert len(flat) == 5
+
+
+def test_a_bad_parent_page_cursor_is_refused(client, admin, school):
+    assert client.get("/api/admin/parents?limit=2&before=xyz", headers=admin).status_code == 422

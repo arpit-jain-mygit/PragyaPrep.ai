@@ -291,14 +291,61 @@ def register(settings: Settings, repo: Repo, tenant: dict, form: dict, ip: str, 
 
 # ---- The admin's review queue ----
 
-def list_registrations(scoped: TenantRepo, status: str) -> list[dict]:
-    """Students with this status, newest first. 'all' lists every status."""
+def list_registrations(
+    scoped: TenantRepo, status: str, before: str | None = None, limit: int | None = None
+) -> tuple[list[dict], str | None]:
+    """Students with this status, newest first. 'all' lists every status.
+
+    Without a limit, every student comes back and the cursor is None.
+    With a limit, one page comes back, plus a cursor to pass as `before` for the next page (None when there are no more).
+    Each status is its own index partition, so the pages of all statuses are merged in sort-key order.
+    """
     if status != "all" and status not in STATUSES:
         raise ValidationError("Status must be pending, approved, rejected, suspended or all.")
     wanted = STATUSES if status == "all" else (status,)
-    people = [person for state in wanted for person in scoped.all_members_by_status(state)]
-    students = [person for person in people if person.get("role") == "student"]
-    return sorted(students, key=lambda person: person.get("created_at", ""), reverse=True)
+    if limit is None:
+        people = [person for state in wanted for person in scoped.all_members_by_status(state)]
+        students = [person for person in people if person.get("role") == "student"]
+        return sorted(students, key=_sort_key, reverse=True), None
+
+    students: list[dict] = []
+    cursor = before
+    finished = False
+    while len(students) < limit:
+        page, exhausted = _merged_page(scoped, wanted, cursor, limit)
+        students += [person for person in page if person.get("role") == "student"]
+        if exhausted:
+            finished = True  # every status has been read to its end
+            break
+        cursor = _sort_key(page[-1])
+    more = not finished or len(students) > limit
+    students = students[:limit]
+    if not more or not students:
+        return students, None
+    # Anyone left over was read but not returned, so the next page starts from the last one returned.
+    return students, _sort_key(students[-1])
+
+
+def _sort_key(person: dict) -> str:
+    """The key the members index sorts by: 'created_at#email'. Newer keys are bigger strings."""
+    return person.get("GSI1SK") or f"{person.get('created_at', '')}#{person.get('email', '')}"
+
+
+def _merged_page(scoped: TenantRepo, statuses: tuple[str, ...], before: str | None, limit: int) -> tuple[list[dict], bool]:
+    """Up to `limit` people across the statuses, newest first, older than `before`.
+
+    Returns (the people, whether every status has been read to its end). Taking the newest `limit` of the
+    merged results never skips anyone: the next page starts from the oldest one taken.
+    """
+    everyone: list[dict] = []
+    exhausted = True
+    for state in statuses:
+        rows = scoped.members_by_status_page(state, before, limit)
+        if len(rows) == limit:
+            exhausted = False
+        everyone += rows
+    everyone.sort(key=_sort_key, reverse=True)
+    return everyone[:limit], exhausted and len(everyone) <= limit
 
 
 def decide(

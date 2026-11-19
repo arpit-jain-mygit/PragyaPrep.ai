@@ -16,8 +16,22 @@ NO_PARENT = "We couldn't find that parent."
 
 
 @router.get("/api/admin/parents")
-def list_parents(scoped: TenantRepo = Depends(get_tenant_repo)):
-    return parents.listing(scoped)
+def list_parents(
+    response: Response,
+    limit: int | None = Query(None, ge=1, le=100, description="How many to return. Leave out for all of them."),
+    before: str | None = Query(None, description="The cursor from the X-Next-Cursor header of the last page."),
+    scoped: TenantRepo = Depends(get_tenant_repo),
+):
+    """Parents by name. Pages: pass limit, then the X-Next-Cursor header as `before` for the next page."""
+    if limit is None:
+        return parents.listing(scoped)
+    try:
+        offset = max(0, int(before)) if before else 0
+    except ValueError:
+        raise HTTPException(status_code=422, detail="The page cursor is not valid.")
+    rows, cursor = parents.listing_page(scoped, limit, offset)
+    response.headers["X-Next-Cursor"] = str(cursor) if cursor is not None else ""
+    return rows
 
 
 @router.post("/api/admin/parents", status_code=201)

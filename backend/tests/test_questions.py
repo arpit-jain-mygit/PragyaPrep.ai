@@ -242,3 +242,26 @@ def test_every_listed_topic_is_accepted_for_its_paper(client, admin):
     paper = BY_ID["general-aptitude"]
     for topic in paper["topics"]:
         assert client.post(URL, json=question(paper=paper["id"], topic=topic), headers=admin).status_code == 201
+
+
+def test_the_question_bank_comes_in_pages_with_a_cursor_and_nothing_is_missed(client, admin):
+    made = []
+    for number in range(5):
+        response = client.post("/api/admin/questions", json=question(text=f"Question number {number}?"), headers=admin)
+        assert response.status_code == 201, response.text
+        made.append(response.json()["id"])
+    pages, before = [], None
+    for _ in range(10):
+        url = "/api/admin/questions?limit=2" + (f"&before={before}" if before else "")
+        response = client.get(url, headers=admin)
+        assert response.status_code == 200, response.text
+        pages.append([q["id"] for q in response.json()])
+        before = response.headers.get("X-Next-Cursor") or None
+        if before is None:
+            break
+    assert [len(p) for p in pages] == [2, 2, 1]
+    assert sorted(i for p in pages for i in p) == sorted(made)
+
+
+def test_a_bad_question_page_cursor_is_refused(client, admin):
+    assert client.get("/api/admin/questions?limit=2&before=abc", headers=admin).status_code == 422

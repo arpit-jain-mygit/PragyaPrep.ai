@@ -1,5 +1,5 @@
 """Announcements and reminders from the institute's admin, and each student's notices."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app import announcements, coursework
 from app.config import Settings
@@ -32,8 +32,16 @@ def send_announcement(
 
 
 @router.get("/api/admin/announcements", dependencies=[Depends(require_roles(TENANT_ADMIN))])
-def sent_announcements(scoped: TenantRepo = Depends(get_tenant_repo)):
-    return announcements.history(scoped)
+def sent_announcements(
+    response: Response,
+    limit: int = Query(100, ge=1, le=100),
+    before: str | None = Query(None, description="The cursor from the X-Next-Cursor header of the last page."),
+    scoped: TenantRepo = Depends(get_tenant_repo),
+):
+    """Sent announcements, newest first. Pass limit, then the X-Next-Cursor header as `before` for the next page."""
+    rows, cursor = announcements.history(scoped, limit, before)
+    response.headers["X-Next-Cursor"] = cursor or ""
+    return rows
 
 
 @router.post("/api/admin/reminders")

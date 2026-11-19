@@ -156,8 +156,11 @@ def announce(scoped: TenantRepo, tenant: dict, settings: Settings, mailer: Maile
     return record
 
 
-def history(scoped: TenantRepo) -> list[dict]:
-    return scoped.list_announcements()
+def history(scoped: TenantRepo, limit: int = 100, before: str | None = None) -> tuple[list[dict], str | None]:
+    """Announcements, newest first. Returns one page and the cursor for the next page (None when there are no more)."""
+    rows = scoped.list_announcements(limit=limit, before=before)
+    cursor = rows[-1]["GSI1SK"] if len(rows) == limit and rows else None
+    return rows, cursor
 
 
 def remind(

@@ -145,3 +145,42 @@ def test_worst_matches_can_be_listed_first(client, plan, admin, asha):
 
 def test_an_unknown_sort_is_refused(client, admin):
     assert client.get(LOG, params={"sort": "random"}, headers=admin).status_code == 422
+
+
+def walk_log(client, admin_headers, limit, **params):
+    """Follow the cursors through the log, one page at a time. Returns every page in order."""
+    pages, before = [], None
+    for _ in range(50):  # a safety stop, so a broken cursor cannot loop forever
+        query = {**params, "limit": limit, **({"before": before} if before else {})}
+        response = client.get(LOG, params=query, headers=admin_headers)
+        assert response.status_code == 200, response.text
+        pages.append(response.json()["rows"])
+        before = response.headers.get("X-Next-Cursor") or None
+        if before is None:
+            return pages
+    raise AssertionError("the cursor never ran out")
+
+
+def test_the_log_comes_in_pages_and_every_question_appears_once(client, plan, admin, asha):
+    ask(client, asha, CONFIDENT)
+    ask(client, asha, NOT_COVERED)
+    ask(client, asha, WEAK)
+    pages = walk_log(client, admin, limit=2)
+    assert [len(page) for page in pages] == [2, 1]
+    questions = [row["question"] for page in pages for row in page]
+    assert sorted(questions) == sorted([CONFIDENT, NOT_COVERED, WEAK])
+
+
+def test_paging_keeps_the_order_and_the_filter(client, plan, admin, asha):
+    ask(client, asha, CONFIDENT)
+    ask(client, asha, NOT_COVERED)
+    ask(client, asha, WEAK)
+    pages = walk_log(client, admin, limit=1, sort="worst", match="under_75")
+    scores = [page[0]["best_coverage"] for page in pages]
+    assert scores == sorted(scores)
+    assert all(score < 0.75 for score in scores)
+    assert len(scores) == 2  # the confident question is left out by the filter
+
+
+def test_a_bad_page_cursor_is_refused(client, admin):
+    assert client.get(LOG, params={"before": "abc"}, headers=admin).status_code == 422

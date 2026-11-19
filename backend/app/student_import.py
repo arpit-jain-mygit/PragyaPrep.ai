@@ -23,8 +23,11 @@ from app.registrations import GENDERS, MAX_AGE, MIN_AGE, _text, clean_mobile
 from app.repo import ConflictError, TenantRepo, now_iso
 from app.tenants import ValidationError, normalize_email
 
-MAX_ROWS = 500
-MAX_BYTES = 2 * 1024 * 1024
+# One import is one request: the whole file is read, checked and saved inside it. These limits keep that inside the server's time
+# limit (60 seconds) and the 6 MB largest upload a request can carry.
+MAX_ROWS = 5000
+MAX_BYTES = 5 * 1024 * 1024
+TEMPLATE_ROWS = 2000  # the blank template carries its dropdowns and text formats this far down
 MAX_WELCOME = 25  # welcome emails per request, so a request stays well inside its time limit
 SHEET = "Students"
 REQUIRED = ["Email", "First name", "Last name", "Mobile", "Courses"]
@@ -48,10 +51,10 @@ def build_template(course_names: list[str]) -> bytes:
         sheet.column_dimensions[get_column_letter(index)].width = 32 if name in ("Email", "Address", "Courses") else 16
     sheet.freeze_panes = "A2"
     for column in "DH":  # mobile and WhatsApp numbers are text, so a leading zero or +91 is kept
-        for row in range(2, MAX_ROWS + 2):
+        for row in range(2, TEMPLATE_ROWS + 2):
             sheet[f"{column}{row}"].number_format = "@"
     check = DataValidation(type="list", formula1='"male,female,other,prefer not to say"', allow_blank=True, showErrorMessage=True, errorTitle="Not allowed", error="Choose from the list.")
-    check.add(f"G2:G{MAX_ROWS + 1}")
+    check.add(f"G2:G{TEMPLATE_ROWS + 1}")
     sheet.add_data_validation(check)
 
     lists = book.create_sheet("Courses")
@@ -94,7 +97,7 @@ def _cell(value) -> str:
 def _rows(content_bytes: bytes) -> list[tuple[int, dict]]:
     """The filled-in rows of the Students sheet as (row number, {column: text}). Blank rows are left out."""
     if len(content_bytes) > MAX_BYTES:
-        raise ValidationError("That file is too big. Keep it under 2 MB.")
+        raise ValidationError(f"That file is too big. Keep it under {MAX_BYTES // (1024 * 1024)} MB.")
     if not content_bytes.startswith(b"PK"):
         raise ValidationError("That isn't an Excel (.xlsx) file. Download the template and fill it in.")
     try:

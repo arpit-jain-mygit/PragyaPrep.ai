@@ -1,5 +1,5 @@
 """Registration. Anyone can register with an institute. Its admin reviews the registrations."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
 
 from app import avatars, plan_limits, registrations
@@ -77,16 +77,24 @@ def finish_registration_photo(
 
 @router.get("/api/admin/registrations", response_model=list[RegistrationOut])
 def review_queue(
+    response: Response,
     status: str = Query("pending", description="pending, approved, rejected, suspended or all"),
+    limit: int | None = Query(None, ge=1, le=100, description="How many to return. Leave out for everyone."),
+    before: str | None = Query(None, description="The next-page cursor from the X-Next-Cursor header of the last page."),
     scoped: TenantRepo = Depends(get_tenant_repo),
     storage: ContentStorage = Depends(get_storage),
     admin: dict = Depends(require_roles(TENANT_ADMIN)),
 ):
-    """The registrations waiting for a decision (or any other status), newest first."""
+    """The registrations waiting for a decision (or any other status), newest first.
+
+    Pages: pass limit, and then the X-Next-Cursor header of each reply as `before` for the next page.
+    The header is empty when there are no more pages."""
     try:
-        return [avatars.with_url(storage, person) for person in registrations.list_registrations(scoped, status)]
+        people, cursor = registrations.list_registrations(scoped, status, before, limit)
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=str(error))
+    response.headers["X-Next-Cursor"] = cursor or ""
+    return [avatars.with_url(storage, person) for person in people]
 
 
 def _decision(action: str, email: str, body: DecisionIn | None, tenant, scoped, mailer, admin, storage) -> DecisionOut:
