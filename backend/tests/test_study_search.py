@@ -171,3 +171,31 @@ def test_the_snippet_is_the_window_with_the_most_question_words(client, admin, s
     sub(client, admin, cat, percent["id"], "Harbours", note="Harbours", status="published", materials=[{"type": "file", "file_id": "harbours"}])
     hit = next(h for h in search(client, asha, "natural harbour Vembanad lagoon").json()["hits"] if h["file"] == "Harbour notes")
     assert "Vembanad" in hit["snippet"] and "lagoon" in hit["snippet"]
+
+
+# ---- Coverage: when the best passage covers enough of the question to be worth an answer ----
+
+def test_a_question_fully_covered_by_one_passage_is_confident(client, admin, school, repo, plan, asha):
+    cat = school["cat"]["id"]
+    ports = topic(client, admin, cat, "Ports")
+    give_file(repo, cat, "kochi", "Ports notes", [(2, "Kochi is a natural harbour at the head of the Vembanad lagoon in Kerala.")])
+    sub(client, admin, cat, ports["id"], "Kochi", note="Kochi", status="published", materials=[{"type": "file", "file_id": "kochi"}])
+    body = search(client, asha, "Which port is a natural harbour at the head of the Vembanad lagoon?").json()
+    assert body["hits"][0]["file"] == "Ports notes"
+    assert body["hits"][0]["coverage"] >= 0.6
+    assert body["confident"] is True
+
+
+def test_a_question_with_one_loose_common_word_is_not_confident(client, plan, asha):
+    body = search(client, asha, "state of mind").json()
+    assert body["confident"] is False
+
+
+def test_no_match_is_never_confident(client, plan, asha):
+    body = search(client, asha, "photosynthesis in leaves").json()
+    assert body["hits"] == [] and body["confident"] is False
+
+
+def test_coverage_is_a_fraction_of_the_question(client, plan, asha):
+    hit = search(client, asha, "Uttar Pradesh population").json()["hits"][0]
+    assert 0 < hit["coverage"] <= 1

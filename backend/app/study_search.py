@@ -32,6 +32,9 @@ MAX_QUERY = 200
 SNIPPET_WORDS = 40  # about two lines of a phone screen either side of the match
 SELF_CHECK_MARK = "answer:"  # the self-check lists in the notes write each answer this way
 SELF_CHECK_FACTOR = 0.5  # a self-check passage counts for half as much as a note
+# Coverage: the share of the question's words (weighted by rarity) that the best passage contains. Below this, the answer step
+# is not run and the student sees "not in your coursework". Start strict; tune it on real questions.
+MIN_COVERAGE = 0.6
 
 
 class QueryTooShort(Exception):
@@ -95,6 +98,11 @@ def _snippet(text: str, wanted: list[str], weights: dict[str, float]) -> str:
     return prefix + " ".join(words[start:end]) + suffix
 
 
+def is_confident(hits: list[dict]) -> bool:
+    """True when the best passage covers enough of the question to be worth an answer. No hits means no."""
+    return bool(hits) and hits[0]["coverage"] >= MIN_COVERAGE
+
+
 def search(scoped: TenantRepo, member: dict, query: str) -> list[dict]:
     """The best matching passages this student may read, best first. Empty when nothing matches."""
     text = " ".join(str(query or "").split())[:MAX_QUERY]
@@ -134,8 +142,11 @@ def search(scoped: TenantRepo, member: dict, query: str) -> list[dict]:
         if SELF_CHECK_MARK in passage["text"].lower():
             score *= SELF_CHECK_FACTOR
         snippet = _snippet(passage["text"], wanted, weights)
+        present = set(item["terms"])
+        coverage = sum(weights[w] for w in wanted if w in present) / sum(weights.values())
         for place in item["places"]:
             hits.append({
+                "coverage": round(coverage, 2),
                 "course_id": item["course_id"], "course": item["course"], **place, "file_id": item["file_id"], "file": item["file"], "page": passage["page"],
                 "snippet": snippet, "score": round(score, 2),
             })

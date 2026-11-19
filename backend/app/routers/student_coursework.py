@@ -40,4 +40,4 @@ def study_search(q: str = "", scoped: TenantRepo = Depends(get_tenant_repo), stu
         hits = study_search_module.search(scoped, student, q)
     except study_search_module.QueryTooShort:
         raise HTTPException(status_code=422, detail="Type a word or two from your question.")
-    return {"query": q, "hits": hits}
+    return {"query": q, "hits": hits, "confident": study_search_module.is_confident(hits)}
