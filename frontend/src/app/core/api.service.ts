@@ -123,6 +123,15 @@ export class ApiService {
     return this.call(firstValueFrom(this.http.get<T>(this.base + path, { params })));
   }
 
+  /** One page of a long list. `next` is the cursor for the page after it, from the X-Next-Cursor header, or null when none are left. */
+  private async getPage<T>(path: string, params: Record<string, string>, before: string | null): Promise<{ body: T; next: string | null }> {
+    const query = before ? { ...params, before } : params;
+    const response = await this.call(
+      firstValueFrom(this.http.get<T>(this.base + path, { params: query, observe: 'response' })),
+    );
+    return { body: response.body as T, next: response.headers.get('X-Next-Cursor') || null };
+  }
+
   private post<T>(path: string, body: unknown = {}): Promise<T> {
     return this.call(firstValueFrom(this.http.post<T>(this.base + path, body)));
   }
@@ -301,6 +310,12 @@ export class ApiService {
     return this.get('/api/admin/registrations', { status });
   }
 
+  /** One page of registrations. `next` is the cursor for the page after it, or null when there are no more. */
+  async registrationPage(status: string, before: string | null, limit: number): Promise<{ people: Registration[]; next: string | null }> {
+    const page = await this.getPage<Registration[] | null>('/api/admin/registrations', { status, limit: String(limit) }, before);
+    return { people: page.body ?? [], next: page.next };
+  }
+
   decide(action: DecisionAction, email: string, reason?: string): Promise<DecisionResult> {
     // The email goes in the address, so characters like + must be escaped.
     const path = `/api/admin/registrations/${encodeURIComponent(email)}/${action}`;
@@ -416,6 +431,16 @@ export class ApiService {
     return this.get(`/api/admin/study-log?match=${encodeURIComponent(match)}&show_student=${showStudent}&sort=${encodeURIComponent(sort)}`);
   }
 
+  /** One page of the Ask AI log. `next` is the cursor for the page after it, or null when there are no more. */
+  async studyLogPage(match: string, showStudent: boolean, sort: string, before: string | null, limit: number): Promise<{ rows: AskLog['rows']; next: string | null }> {
+    const page = await this.getPage<AskLog>(
+      '/api/admin/study-log',
+      { match, show_student: String(showStudent), sort, limit: String(limit) },
+      before,
+    );
+    return { rows: page.body.rows, next: page.next };
+  }
+
   /** A short-lived link to one file, for the admin to open a passage from the Ask AI log. */
   adminFileLink(courseId: string, fileId: string): Promise<FileLink> {
     return this.get(`/api/admin/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}/link`);
@@ -425,6 +450,12 @@ export class ApiService {
 
   parents(): Promise<AdminParent[]> {
     return this.get('/api/admin/parents');
+  }
+
+  /** One page of parents, by name. `next` is the cursor for the page after it, or null when there are no more. */
+  async parentPage(before: string | null, limit: number): Promise<{ items: AdminParent[]; next: string | null }> {
+    const page = await this.getPage<AdminParent[] | null>('/api/admin/parents', { limit: String(limit) }, before);
+    return { items: page.body ?? [], next: page.next };
   }
 
   addParent(body: ParentInput): Promise<AdminParent[]> {
@@ -517,6 +548,12 @@ export class ApiService {
 
   announcements(): Promise<Announcement[]> {
     return this.get('/api/admin/announcements');
+  }
+
+  /** One page of sent announcements. `next` is the cursor for the page after it, or null when there are no more. */
+  async announcementPage(before: string | null, limit: number): Promise<{ items: Announcement[]; next: string | null }> {
+    const page = await this.getPage<Announcement[] | null>('/api/admin/announcements', { limit: String(limit) }, before);
+    return { items: page.body ?? [], next: page.next };
   }
 
   sendReminders(courseId: string, emails: string[] | null, sendEmail: boolean): Promise<ReminderResult> {
@@ -615,6 +652,18 @@ export class ApiService {
     return this.get(`/api/admin/questions${query.size ? '?' + query : ''}`);
   }
 
+  /** One page of the question bank for a filter. `next` is the cursor for the page after it, or null when there are no more. */
+  async questionPage(
+    filter: { paper?: string; topic?: string; status?: string; pictures?: string; kind?: string; passage?: string },
+    before: string | null,
+    limit: number,
+  ): Promise<{ items: Question[]; next: string | null }> {
+    const params: Record<string, string> = { limit: String(limit) };
+    for (const [name, value] of Object.entries(filter)) if (value) params[name] = value;
+    const page = await this.getPage<Question[] | null>('/api/admin/questions', params, before);
+    return { items: page.body ?? [], next: page.next };
+  }
+
   updatePassage(id: string, body: { title?: string; text?: string }): Promise<Passage> {
     return this.patch(`/api/admin/passages/${encodeURIComponent(id)}`, body);
   }
@@ -674,6 +723,12 @@ export class ApiService {
   /** How students did at a test: a summary, every attempt, and how each question went. */
   testResults(id: string): Promise<TestResults> {
     return this.get(`/api/admin/tests/${encodeURIComponent(id)}/results`);
+  }
+
+  /** One page of a test's attempts, with the summary. `next` is the cursor for the page after it, or null when there are no more. */
+  async testResultsPage(id: string, before: string | null, limit: number): Promise<{ data: TestResults; next: string | null }> {
+    const page = await this.getPage<TestResults>(`/api/admin/tests/${encodeURIComponent(id)}/results`, { limit: String(limit) }, before);
+    return { data: page.body, next: page.next };
   }
 
   /** One student's attempt with every answer, the right answers and the reasons. */

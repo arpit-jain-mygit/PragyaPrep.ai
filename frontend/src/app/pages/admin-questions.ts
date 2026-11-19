@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Choice } from '../ui/choice';
 import { ApiService } from '../core/api.service';
@@ -380,6 +380,8 @@ function draftFrom(question: Question): Draft {
         } @empty {
           <div class="empty-state"><app-icon name="help" [size]="32" /><p>No questions yet</p></div>
         }
+        @if (next()) { <div #sentinel id="sentinel" style="height: 1px" aria-hidden="true"></div> }
+        @if (loadingMore()) { <p class="muted center" id="loading-more">Loading…</p> }
       }
     }
   `,
@@ -406,6 +408,13 @@ export class AdminQuestions implements OnInit {
   readonly papers = signal<Paper[]>([]);
   readonly tab = signal<'questions' | 'upload'>('questions');
   readonly questions = signal<Question[]>([]);
+  /** How many questions to fetch at a time. More are fetched as the admin scrolls near the end. */
+  static readonly PAGE_SIZE = 25;
+  /** The cursor for the next page of questions, or null when all of them for this filter are loaded. */
+  readonly next = signal<string | null>(null);
+  readonly loadingMore = signal(false);
+  /** The bottom of the list. When it comes near the screen, the next page is fetched. */
+  readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   /** The questions with those of one passage kept together, so the passage is shown once above them. */
   readonly ordered = computed(() => {
     const groups = new Map<string, Question[]>();
@@ -458,7 +467,9 @@ export class AdminQuestions implements OnInit {
     this.loading.set(true);
     try {
       this.papers.set(await this.api.papers());
-      this.questions.set(await this.api.questions());
+      const page = await this.api.questionPage(this.filter, null, AdminQuestions.PAGE_SIZE);
+      this.questions.set(page.items);
+      this.next.set(page.next);
     } catch (error) {
       this.error.set(error as ApiError);
     } finally {
@@ -598,14 +609,57 @@ export class AdminQuestions implements OnInit {
     }
   }
 
+  /** Start the list again from its first page (new filter, or after a change). */
   async load(): Promise<void> {
+    const wanted = JSON.stringify(this.filter);
     try {
       this.selected.set([]);
       this.deleteAsk.set(false);
-      this.questions.set(await this.api.questions(this.filter));
+      this.next.set(null);
+      const page = await this.api.questionPage(this.filter, null, AdminQuestions.PAGE_SIZE);
+      if (wanted !== JSON.stringify(this.filter)) return; // the filter changed while this was loading
+      this.questions.set(page.items);
+      this.next.set(page.next);
     } catch (error) {
       this.error.set(error as ApiError);
     }
+  }
+
+  /** Add the next page to the bottom of the list. Does nothing if a page is loading or none are left. */
+  async loadMore(): Promise<void> {
+    const cursor = this.next();
+    if (!cursor || this.loadingMore()) return;
+    const wanted = JSON.stringify(this.filter);
+    this.loadingMore.set(true);
+    try {
+      const page = await this.api.questionPage(this.filter, cursor, AdminQuestions.PAGE_SIZE);
+      if (wanted !== JSON.stringify(this.filter)) return;
+      const known = new Set(this.questions().map((question) => question.id));
+      this.questions.update((list) => [...list, ...page.items.filter((question) => !known.has(question.id))]);
+      this.next.set(page.next);
+    } catch (error) {
+      // Keep the cursor, so scrolling again can retry; show what went wrong.
+      this.error.set(error as ApiError);
+    } finally {
+      this.loadingMore.set(false);
+    }
+  }
+
+  constructor() {
+    // Watch the bottom of the list. Each time a page is added, the watch starts again, so a short page keeps filling.
+    effect((onCleanup) => {
+      const element = this.sentinel()?.nativeElement;
+      const cursor = this.next();
+      if (!element || !cursor || typeof IntersectionObserver === 'undefined') return;
+      const watcher = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) void this.loadMore();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      watcher.observe(element);
+      onCleanup(() => watcher.disconnect());
+    });
   }
 
   /** Questions were imported from a file: say how many and show the fresh list. */

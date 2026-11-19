@@ -29,7 +29,7 @@ async function open(questions: object[] = [Q1]) {
   fixture.detectChanges();
   env.http.expectOne(`${API}/api/admin/papers`).flush(PAPERS);
   await settle(fixture);
-  env.http.expectOne(`${API}/api/admin/questions`).flush(questions);
+  env.http.expectOne(`${API}/api/admin/questions?limit=25`).flush(questions);
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -99,7 +99,7 @@ describe('Admin question bank page', () => {
     expect(request.request.body.options.length).toBe(4);
     request.flush({ ...Q1, id: 'q2' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
     await settle(fixture);
     expect(text(fixture)).toContain('Added the question.');
     expect(all(fixture, '#question-form').length).toBe(0);
@@ -134,7 +134,7 @@ describe('Admin question bank page', () => {
     expect(request.request.body.text).toBe('New wording');
     request.flush({ ...Q1, text: 'New wording' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([{ ...Q1, text: 'New wording' }]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([{ ...Q1, text: 'New wording' }]);
     await settle(fixture);
     expect(text(fixture)).toContain('Saved the question.');
     expect(text(fixture)).toContain('New wording');
@@ -150,7 +150,7 @@ describe('Admin question bank page', () => {
     expect(request.request.method).toBe('DELETE');
     request.flush(null);
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([]);
     await settle(fixture);
     expect(text(fixture)).toContain('Deleted the question.');
   });
@@ -169,15 +169,15 @@ describe('Admin question bank page', () => {
     const { fixture, http } = await open();
     pick(fixture, '#f-subject', 'physics');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics`).flush([Q1]);
     await settle(fixture);
     pick(fixture, '#f-topic', 'Optics');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Optics`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics&topic=Optics`).flush([Q1]);
     await settle(fixture);
     pick(fixture, '#f-status', 'draft');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Optics&status=draft`).flush([]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics&topic=Optics&status=draft`).flush([]);
     await settle(fixture);
     expect(text(fixture)).toContain('No questions yet');
   });
@@ -206,7 +206,7 @@ describe('Admin question bank: adding several in a row', () => {
     expect(first.request.method).toBe('POST');
     first.flush({ ...Q1, id: 'q2' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Magnetism`).flush([{ ...Q1, id: 'q2', topic: 'Magnetism' }]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics&topic=Magnetism`).flush([{ ...Q1, id: 'q2', topic: 'Magnetism' }]);
     await settle(fixture);
 
     expect(all(fixture, '#question-form').length).toBe(1);
@@ -232,7 +232,7 @@ describe('Admin question bank: adding several in a row', () => {
       clickButton(fixture, 'Save and add another');
       http.expectOne(`${API}/api/admin/questions`).flush({ ...Q1, id: `n${round}` });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Magnetism`).flush([]);
+      http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics&topic=Magnetism`).flush([]);
       await settle(fixture);
     }
     expect(el(fixture, '#working-on').textContent).toContain('2 added');
@@ -266,7 +266,7 @@ describe('Admin question bank: adding several in a row', () => {
     clickButton(fixture, 'Save and close');
     http.expectOne(`${API}/api/admin/questions`).flush({ ...Q1, id: 'q9' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
     await settle(fixture);
     expect(all(fixture, '#question-form').length).toBe(0);
     expect(text(fixture)).toContain('Added the question.');
@@ -283,7 +283,7 @@ describe('Admin question bank: upload from Excel', () => {
     const upload = fixture.debugElement.query((d) => d.name === 'app-question-upload').componentInstance;
     upload.imported.emit(3);
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
     await settle(fixture);
     expect(text(fixture)).toContain('Imported 3 questions.');
     expect(all(fixture, '[data-question]').length).toBe(1);
@@ -324,7 +324,7 @@ describe('Admin question bank: pictures', () => {
     expect(request.request.body.pictures).toBeUndefined();
     request.flush({ ...Q1, id: 'q2' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([]);
   });
 
   it('sends no images field at all when there are no pictures', async () => {
@@ -350,7 +350,7 @@ describe('Admin question bank: pictures', () => {
     expect(request.request.body.images).toEqual({ question: 'p1', C: null });
     request.flush({ ...Q1, id: 'q1' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
   });
 
   it('sends no images when the pictures were not touched while editing', async () => {
@@ -433,27 +433,27 @@ describe('Admin question bank: finding questions with pictures', () => {
     const { fixture, http } = await open();
     pick(fixture, '#f-pictures', 'yes');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?pictures=yes`).flush([]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&pictures=yes`).flush([]);
     await settle(fixture);
     expect(text(fixture)).toContain('No questions yet');
     pick(fixture, '#f-pictures', 'no');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?pictures=no`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&pictures=no`).flush([Q1]);
     await settle(fixture);
     pick(fixture, '#f-pictures', '');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
   });
 
   it('combines the pictures filter with paper and topic', async () => {
     const { fixture, http } = await open();
     pick(fixture, '#f-subject', 'physics');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics`).flush([Q1]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics`).flush([Q1]);
     await settle(fixture);
     pick(fixture, '#f-pictures', 'yes');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics&pictures=yes`).flush([]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics&pictures=yes`).flush([]);
   });
 });
 
@@ -599,7 +599,7 @@ describe('Admin question bank: fill-in questions', () => {
     const { fixture, http } = await open();
     type(fixture, '#f-kind', 'fill_in');
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?kind=fill_in`).flush([FILL]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&kind=fill_in`).flush([FILL]);
     await settle(fixture);
     expect(all(fixture, '[data-question]').length).toBe(1);
   });
@@ -612,7 +612,7 @@ describe('Admin question bank: fill-in questions', () => {
     clickButton(fixture, 'Save and add another');
     http.expectOne(`${API}/api/admin/questions`).flush({ ...FILL, id: 'n1' });
     await settle(fixture);
-    http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Optics`).flush([]);
+    http.expectOne(`${API}/api/admin/questions?limit=25&paper=physics&topic=Optics`).flush([]);
     await settle(fixture);
     expect(chosen(fixture, '#q-kind')).toBe('fill_in');
     expect(chosen(fixture, '#q-answer-type')).toBe('number');
@@ -654,7 +654,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(request.request.body).toEqual({ ids: ['q2', 'q3'], status: 'published' });
       request.flush({ changed: 2, unchanged: 0, missing: 0 });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([Q1, { ...Q2, status: 'published' }, { ...Q3, status: 'published' }]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1, { ...Q2, status: 'published' }, { ...Q3, status: 'published' }]);
       await settle(fixture);
       expect(text(fixture)).toContain('Published 2 questions.');
       expect(text(fixture)).not.toContain('selected');
@@ -668,7 +668,7 @@ describe('Admin question bank: fill-in questions', () => {
       clickButton(fixture, 'Publish selected');
       http.expectOne(`${API}/api/admin/questions/status`).flush({ changed: 1, unchanged: 1, missing: 0 });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([Q1, Q2]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1, Q2]);
       await settle(fixture);
       expect(text(fixture)).toContain('Published 1 question. 1 already published.');
     });
@@ -682,7 +682,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(request.request.body).toEqual({ ids: ['q1'], status: 'draft' });
       request.flush({ changed: 1, unchanged: 0, missing: 0 });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([{ ...Q1, status: 'draft' }]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([{ ...Q1, status: 'draft' }]);
       await settle(fixture);
       expect(text(fixture)).toContain('Moved to draft: 1 question.');
     });
@@ -699,7 +699,7 @@ describe('Admin question bank: fill-in questions', () => {
       await settle(fixture);
       pick(fixture, '#f-status', 'draft');
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions?status=draft`).flush([Q2]);
+      http.expectOne(`${API}/api/admin/questions?limit=25&status=draft`).flush([Q2]);
       await settle(fixture);
       expect(text(fixture)).not.toContain('selected');
     });
@@ -755,7 +755,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(request.request.body).toEqual({ ids: ['q2', 'q3'], confirm: 'DELETE' });
       request.flush({ deleted: 2, missing: 0 });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
       await settle(fixture);
       expect(text(fixture)).toContain('Deleted 2 questions.');
       expect(text(fixture)).not.toContain('Second question');
@@ -828,7 +828,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(request.request.body.passage_text).toBe(TEXT);
       request.flush({ ...Q1, id: 'n', passage: 'p1', passage_text: TEXT });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([]);
     });
 
     it('sends no passage field when the box is empty', async () => {
@@ -841,7 +841,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect('passage_text' in request.request.body).toBe(false);
       request.flush({ ...Q1, id: 'n' });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([]);
     });
 
     it('keeps the passage filled after Save and add another, so the next question needs no pasting', async () => {
@@ -888,12 +888,12 @@ describe('Admin question bank: fill-in questions', () => {
       const { fixture, http } = await open([A, B]);
       pick(fixture, '#f-passage', 'any');
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions?passage=any`).flush([A]);
+      http.expectOne(`${API}/api/admin/questions?limit=25&passage=any`).flush([A]);
       await settle(fixture);
       expect(all(fixture, '.question').length).toBe(1);
       pick(fixture, '#f-passage', 'none');
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions?passage=none`).flush([B]);
+      http.expectOne(`${API}/api/admin/questions?limit=25&passage=none`).flush([B]);
     });
 
     it('edits the passage for the whole group from its header', async () => {
@@ -909,7 +909,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(request.request.body).toEqual({ text: 'Fixed text.' });
       request.flush({ id: 'p1', title: 't', text: 'Fixed text.', questions: 2 });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([{ ...A, passage_text: 'Fixed text.' }, { ...C, passage_text: 'Fixed text.' }]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([{ ...A, passage_text: 'Fixed text.' }, { ...C, passage_text: 'Fixed text.' }]);
       await settle(fixture);
       expect(text(fixture)).toContain('Saved the passage.');
       expect(el(fixture, '[data-passage-head]').textContent).toContain('Fixed text.');
@@ -960,7 +960,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(all(fixture, '#question-upload').length).toBe(1);
       fixture.debugElement.query((d) => d.name === 'app-question-upload').componentInstance.imported.emit(2);
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush([Q1]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1]);
       await settle(fixture);
       expect(all(fixture, '[role=tab]')[0].getAttribute('aria-selected')).toBe('true');
       expect(all(fixture, '[data-question]').length).toBe(1);
@@ -983,7 +983,7 @@ describe('Admin question bank: fill-in questions', () => {
         request.flush({ changed: size - (size === 50 ? 5 : 0), unchanged: size === 50 ? 5 : 0, missing: 0 });
         await settle(fixture);
       }
-      http.expectOne(`${API}/api/admin/questions`).flush(many(450));
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush(many(450));
       await settle(fixture);
       expect(text(fixture)).toContain('Published 445 questions. 5 already published.');
     });
@@ -998,7 +998,7 @@ describe('Admin question bank: fill-in questions', () => {
       expect(text(fixture)).toContain('Publishing… 200 of 450');
       http.expectOne(`${API}/api/admin/questions/status`).flush({ detail: 'Server trouble.' }, { status: 500, statusText: 'x' });
       await settle(fixture);
-      http.expectOne(`${API}/api/admin/questions`).flush(many(450));
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush(many(450));
       await settle(fixture);
       expect(text(fixture)).toContain('Server trouble.');
       expect(text(fixture)).toContain('Published 200 before the problem. Run it again to finish.');
@@ -1020,7 +1020,7 @@ describe('Admin question bank: fill-in questions', () => {
         request.flush({ deleted: size - (size === 50 ? 2 : 0), missing: 0, blocked: size === 50 ? 2 : 0 });
         await settle(fixture);
       }
-      http.expectOne(`${API}/api/admin/questions`).flush([]);
+      http.expectOne(`${API}/api/admin/questions?limit=25`).flush([]);
       await settle(fixture);
       expect(text(fixture)).toContain('Deleted 248 questions. 2 stayed because a published test uses them.');
     });
@@ -1048,5 +1048,27 @@ describe('Admin question bank: fill-in questions', () => {
     http.expectOne(`${API}/api/admin/questions/template`).flush(new Blob(['{}']), { status: 500, statusText: 'x' });
     await settle(fixture);
     expect(all(fixture, '.alert.error').length).toBe(1);
+  });
+});
+
+describe('Admin question bank: paging', () => {
+  it('adds the next page to the list when the admin scrolls near the end, and shows the marker only while more are left', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminQuestions);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/admin/papers`).flush(PAPERS);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/admin/questions?limit=25`).flush([Q1], { headers: { 'X-Next-Cursor': '1' } });
+    await settle(fixture);
+    expect(all(fixture, '#sentinel').length).toBe(1);
+    expect(text(fixture)).not.toContain('Load more');
+
+    const more = fixture.componentInstance.loadMore();
+    env.http.expectOne(`${API}/api/admin/questions?limit=25&before=1`).flush([{ ...Q1, id: 'q2', text: 'The second one' }], { headers: {} });
+    await more;
+    fixture.detectChanges();
+    expect(fixture.componentInstance.questions().map((q) => q.id)).toEqual([Q1.id, 'q2']);
+    expect(all(fixture, '#sentinel').length).toBe(0);
   });
 });

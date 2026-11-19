@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Choice } from '../ui/choice';
 import { ApiService } from '../core/api.service';
@@ -107,13 +107,40 @@ import { InfoTip } from '../ui/info-tip';
         </tbody>
       </table>
     </div>
+    @if (next()) { <div #sentinel id="sentinel" style="height: 1px" aria-hidden="true"></div> }
+    @if (loadingMore()) { <p class="muted center" id="loading-more">Loading…</p> }
   `,
 })
 export class AdminAnnouncements implements OnInit {
+  /** How many sent announcements to fetch at a time. More are fetched as the admin scrolls near the end. */
+  static readonly PAGE_SIZE = 25;
+
+  constructor() {
+    // Watch the bottom of the history. Each time a page is added, the watch starts again, so a short page keeps filling.
+    effect((onCleanup) => {
+      const element = this.sentinel()?.nativeElement;
+      const cursor = this.next();
+      if (!element || !cursor || typeof IntersectionObserver === 'undefined') return;
+      const watcher = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) void this.loadMore();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      watcher.observe(element);
+      onCleanup(() => watcher.disconnect());
+    });
+  }
+
   private readonly api = inject(ApiService);
 
   readonly courses = signal<AdminCourse[]>([]);
   readonly history = signal<Announcement[]>([]);
+  /** The cursor for the next page of history, or null when all of it is loaded. */
+  readonly next = signal<string | null>(null);
+  readonly loadingMore = signal(false);
+  /** The bottom of the history table. When it comes near the screen, the next page is fetched. */
+  readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   readonly busy = signal(false);
   readonly error = signal<ApiError | null>(null);
   readonly done = signal<Announcement | null>(null);
@@ -131,11 +158,33 @@ export class AdminAnnouncements implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [courses, history] = await Promise.all([this.api.adminCourses(), this.api.announcements()]);
+      const [courses, page] = await Promise.all([
+        this.api.adminCourses(),
+        this.api.announcementPage(null, AdminAnnouncements.PAGE_SIZE),
+      ]);
       this.courses.set(courses.filter((c) => c.active));
-      this.history.set(history);
+      this.history.set(page.items);
+      this.next.set(page.next);
     } catch (error) {
       this.error.set(error as ApiError);
+    }
+  }
+
+  /** Add the next page of history to the bottom of the table. Does nothing if a page is loading or none are left. */
+  async loadMore(): Promise<void> {
+    const cursor = this.next();
+    if (!cursor || this.loadingMore()) return;
+    this.loadingMore.set(true);
+    try {
+      const page = await this.api.announcementPage(cursor, AdminAnnouncements.PAGE_SIZE);
+      const known = new Set(this.history().map((item) => item.id));
+      this.history.update((list) => [...list, ...page.items.filter((item) => !known.has(item.id))]);
+      this.next.set(page.next);
+    } catch (error) {
+      // Keep the cursor, so scrolling again can retry; show what went wrong.
+      this.error.set(error as ApiError);
+    } finally {
+      this.loadingMore.set(false);
     }
   }
 

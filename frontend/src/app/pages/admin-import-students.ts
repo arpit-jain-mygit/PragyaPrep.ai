@@ -57,7 +57,7 @@ const LABELS: Record<ImportRow['status'], string> = { ready: 'Ready', skipped: '
       </div>
       <div class="form-panel">
         <div class="field">
-          <label for="file">Excel file <app-info text="The filled-in template (.xlsx), up to 500 students." /></label>
+          <label for="file">Excel file <app-info text="The filled-in template (.xlsx), up to 5,000 students (5 MB)." /></label>
           <input id="file" name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="chosen($event)" [disabled]="busy()" />
         </div>
         @if (busy() && !preview()) { <p class="muted" role="status">Checking…</p> }

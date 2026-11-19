@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
@@ -120,14 +120,41 @@ const blank = (): ParentInput => ({ first_name: '', last_name: '', email: '', mo
           </tbody>
         </table>
       </div>
+      @if (next()) { <div #sentinel id="sentinel" style="height: 1px" aria-hidden="true"></div> }
+      @if (loadingMore()) { <p class="muted center" id="loading-more">Loading…</p> }
     }
   `,
 })
 export class AdminParents implements OnInit {
+  /** How many parents to fetch at a time. More are fetched as the admin scrolls near the end. */
+  static readonly PAGE_SIZE = 25;
+
+  constructor() {
+    // Watch the bottom of the list. Each time a page is added, the watch starts again, so a short page keeps filling.
+    effect((onCleanup) => {
+      const element = this.sentinel()?.nativeElement;
+      const cursor = this.next();
+      if (!element || !cursor || typeof IntersectionObserver === 'undefined') return;
+      const watcher = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) void this.loadMore();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      watcher.observe(element);
+      onCleanup(() => watcher.disconnect());
+    });
+  }
+
   private readonly api = inject(ApiService);
   readonly tenants = inject(TenantService);
 
   readonly parents = signal<AdminParent[]>([]);
+  /** The cursor for the next page of parents, or null when all of them are loaded. */
+  readonly next = signal<string | null>(null);
+  readonly loadingMore = signal(false);
+  /** The bottom of the list. When it comes near the screen, the next page is fetched. */
+  readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal<ApiError | null>(null);
@@ -139,10 +166,35 @@ export class AdminParents implements OnInit {
   private sheet: File | null = null;
   blank = blank;
 
+  /** Start the list again from its first page. */
+  async reloadParents(): Promise<void> {
+    const page = await this.api.parentPage(null, AdminParents.PAGE_SIZE);
+    this.parents.set(page.items);
+    this.next.set(page.next);
+  }
+
+  /** Add the next page of parents to the bottom of the list. Does nothing if a page is loading or none are left. */
+  async loadMore(): Promise<void> {
+    const cursor = this.next();
+    if (!cursor || this.loadingMore()) return;
+    this.loadingMore.set(true);
+    try {
+      const page = await this.api.parentPage(cursor, AdminParents.PAGE_SIZE);
+      const known = new Set(this.parents().map((parent) => parent.email));
+      this.parents.update((list) => [...list, ...page.items.filter((parent) => !known.has(parent.email))]);
+      this.next.set(page.next);
+    } catch (error) {
+      // Keep the cursor, so scrolling again can retry; show what went wrong.
+      this.error.set(error as ApiError);
+    } finally {
+      this.loadingMore.set(false);
+    }
+  }
+
   async ngOnInit(): Promise<void> {
     this.loading.set(true);
     try {
-      this.parents.set(await this.api.parents());
+      await this.reloadParents();
     } catch (error) {
       this.error.set(error as ApiError);
     } finally {
@@ -227,7 +279,7 @@ export class AdminParents implements OnInit {
     const file = this.sheet;
     await this.run(async () => {
       this.preview.set(await this.api.importParents(file, true));
-      this.parents.set(await this.api.parents());
+      await this.reloadParents();
     });
   }
 }

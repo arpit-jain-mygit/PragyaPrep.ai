@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
@@ -69,9 +69,9 @@ interface Notice {
 
     @if (items().length > 0) {
       <div class="filters">
-        <input type="search" id="search" placeholder="Search name, email, mobile, city, course…" aria-label="Search registrations" [ngModel]="query()" (ngModelChange)="query.set($event ?? '')" [ngModelOptions]="{ standalone: true }" />
-        @if (query()) { <button class="icon-btn" type="button" id="clear-search" title="Clear search" (click)="query.set('')"><app-icon name="x" /><span class="sr-only">Clear search</span></button> }
-        <span class="soft" id="showing">{{ visible().length === items().length ? items().length + ' shown' : 'Showing ' + visible().length + ' of ' + items().length }}</span>
+        <input type="search" id="search" placeholder="Search name, email, mobile, city, course…" aria-label="Search registrations" [ngModel]="query()" (ngModelChange)="setQuery($event ?? '')" [ngModelOptions]="{ standalone: true }" />
+        @if (query()) { <button class="icon-btn" type="button" id="clear-search" title="Clear search" (click)="setQuery('')"><app-icon name="x" /><span class="sr-only">Clear search</span></button> }
+        <span class="soft" id="showing">{{ visible().length === items().length ? items().length + (next() ? '+' : '') + ' shown' : 'Showing ' + visible().length + ' of ' + items().length + (next() ? '+' : '') }}</span>
       </div>
     }
 
@@ -281,9 +281,14 @@ interface Notice {
       </article>
     }
     </div>
+    @if (loadingMore()) { <p class="muted center" id="loading-more">Loading…</p> }
+    @if (next()) { <div #sentinel id="sentinel" style="height: 1px" aria-hidden="true"></div> }
   `,
 })
 export class AdminRegistrations implements OnInit {
+  /** How many registrations to fetch at a time. More are fetched as the admin scrolls near the end. */
+  static readonly PAGE_SIZE = 25;
+
   /** The student whose quick look is open in the side drawer. */
   readonly quick = signal<string | null>(null);
 
@@ -294,6 +299,11 @@ export class AdminRegistrations implements OnInit {
   readonly tabs = TABS;
   readonly active = signal<string>('pending');
   readonly items = signal<Registration[]>([]);
+  /** The cursor for the next page, or null when every registration in this list is loaded. */
+  readonly next = signal<string | null>(null);
+  readonly loadingMore = signal(false);
+  /** The bottom of the list. When it comes near the screen, the next page is fetched. */
+  readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   /** What the admin typed in the search box. Every word must be found somewhere in a registration's details. */
   readonly query = signal('');
   readonly visible = computed(() => {
@@ -323,6 +333,23 @@ export class AdminRegistrations implements OnInit {
   readonly date = formatDate;
   readonly when = formatDateTime;
   readonly gender = (value: string) => GENDER_LABELS[value] ?? value;
+
+  constructor() {
+    // Watch the bottom of the list. Each time a page is added, the watch starts again, so a short page keeps filling.
+    effect((onCleanup) => {
+      const element = this.sentinel()?.nativeElement;
+      const cursor = this.next();
+      if (!element || !cursor || typeof IntersectionObserver === 'undefined') return;
+      const watcher = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) void this.loadMore();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      watcher.observe(element);
+      onCleanup(() => watcher.disconnect());
+    });
+  }
 
   ngOnInit(): void {
     // The home page's tiles open a particular list, for example ?status=approved.
@@ -382,16 +409,52 @@ export class AdminRegistrations implements OnInit {
     await this.load();
   }
 
+  /** Start the list again from its first page (new status, or after a decision). */
   async load(): Promise<void> {
+    const tab = this.active();
     this.loading.set(true);
     this.loadError.set(null);
+    this.next.set(null);
     try {
-      this.items.set(await this.api.registrations(this.active()));
+      const reply = await this.api.registrationPage(tab, null, AdminRegistrations.PAGE_SIZE);
+      if (tab !== this.active()) return; // the admin switched tabs while this was loading
+      this.items.set(reply.people);
+      this.next.set(reply.next);
     } catch (error) {
       this.items.set([]);
       this.loadError.set(error as ApiError);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Add the next page to the bottom of the list. Does nothing if a page is already loading or none are left. */
+  async loadMore(): Promise<void> {
+    const cursor = this.next();
+    if (!cursor || this.loadingMore() || this.loading()) return;
+    const tab = this.active();
+    this.loadingMore.set(true);
+    try {
+      const reply = await this.api.registrationPage(tab, cursor, AdminRegistrations.PAGE_SIZE);
+      if (tab !== this.active()) return;
+      const known = new Set(this.items().map((person) => person.email));
+      this.items.update((list) => [...list, ...reply.people.filter((person) => !known.has(person.email))]);
+      this.next.set(reply.next);
+    } catch (error) {
+      // Keep the cursor, so scrolling again can retry; show what went wrong.
+      this.loadError.set(error as ApiError);
+    } finally {
+      this.loadingMore.set(false);
+    }
+  }
+
+  /** Searching only looks at rows already loaded, so a search first loads the rest of the list. */
+  async setQuery(value: string): Promise<void> {
+    this.query.set(value);
+    if (!value.trim()) return;
+    while (this.next() && !this.loadError()) {
+      if (this.loadingMore()) break;
+      await this.loadMore();
     }
   }
 

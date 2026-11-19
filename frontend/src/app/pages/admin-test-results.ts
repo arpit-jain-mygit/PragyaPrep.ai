@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
@@ -117,6 +117,8 @@ type Sort = keyof typeof SORTS;
             </tbody>
           </table>
         </div>
+        @if (next()) { <div #sentinel id="sentinel" style="height: 1px" aria-hidden="true"></div> }
+        @if (loadingMore()) { <p class="muted center" id="loading-more">Loading…</p> }
 
         <h2 style="margin-top: 1.25rem">Question analysis <app-info text="How many students got each question right, and the wrong option chosen most often. Only finished attempts count." /></h2>
         <div class="row" style="margin-bottom: 0.4rem">
@@ -148,6 +150,39 @@ type Sort = keyof typeof SORTS;
   `,
 })
 export class AdminTestResults implements OnInit {
+  /** How many attempts to fetch at a time. More are fetched as the admin scrolls near the end. */
+  static readonly PAGE_SIZE = 25;
+
+  constructor() {
+    // Filters and sorting look at every attempt (for example "best score per student"), so the rest of the list
+    // is loaded as soon as one of them is used. The bottom watch loads pages while the list is plain.
+    effect(() => {
+      const f = this.filter();
+      const s = this.sort();
+      const narrowed = f.search.trim() !== '' || f.result !== '' || f.best || s !== 'newest';
+      if (narrowed && untracked(() => this.next())) void this.loadEverything();
+    });
+    effect((onCleanup) => {
+      const element = this.sentinel()?.nativeElement;
+      const cursor = this.next();
+      if (!element || !cursor || typeof IntersectionObserver === 'undefined') return;
+      const watcher = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) void this.loadMore();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      watcher.observe(element);
+      onCleanup(() => watcher.disconnect());
+    });
+  }
+
+  /** The cursor for the next page of attempts, or null when all of them are loaded. */
+  readonly next = signal<string | null>(null);
+  readonly loadingMore = signal(false);
+  /** The bottom of the attempts table. When it comes near the screen, the next page is fetched. */
+  readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
+
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   readonly tenants = inject(TenantService);
@@ -215,11 +250,41 @@ export class AdminTestResults implements OnInit {
   private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      this.data.set(await this.api.testResults(this.route.snapshot.paramMap.get('id') ?? ''));
+      const page = await this.api.testResultsPage(this.route.snapshot.paramMap.get('id') ?? '', null, AdminTestResults.PAGE_SIZE);
+      this.data.set(page.data);
+      this.next.set(page.next);
     } catch (error) {
       this.error.set(error as ApiError);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Add the next page of attempts to the table. Does nothing if a page is loading or none are left. */
+  async loadMore(): Promise<void> {
+    const cursor = this.next();
+    const current = this.data();
+    if (!cursor || !current || this.loadingMore()) return;
+    this.loadingMore.set(true);
+    try {
+      const page = await this.api.testResultsPage(this.route.snapshot.paramMap.get('id') ?? '', cursor, AdminTestResults.PAGE_SIZE);
+      const known = new Set(current.attempts.map((row) => row.number + '|' + row.email));
+      const fresh = page.data.attempts.filter((row) => !known.has(row.number + '|' + row.email));
+      this.data.set({ ...current, attempts: [...current.attempts, ...fresh] });
+      this.next.set(page.next);
+    } catch (error) {
+      // Keep the cursor, so scrolling again can retry; show what went wrong.
+      this.error.set(error as ApiError);
+    } finally {
+      this.loadingMore.set(false);
+    }
+  }
+
+  /** Load every remaining page, so filters, sorting and the download see all the attempts. */
+  async loadEverything(): Promise<void> {
+    while (this.next() && !this.error()) {
+      if (this.loadingMore()) break;
+      await this.loadMore();
     }
   }
 
@@ -282,7 +347,8 @@ export class AdminTestResults implements OnInit {
   }
 
   /** The attempts table as a spreadsheet file. */
-  download(): void {
+  async download(): Promise<void> {
+    await this.loadEverything();
     const d = this.data();
     if (!d) return;
     const rows: (string | number | null)[][] = [

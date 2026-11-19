@@ -31,7 +31,7 @@ async function open(data: object = DATA) {
   env.sessions.save(sessionFor('tenant_admin'));
   const fixture = TestBed.createComponent(AdminTestResults);
   fixture.detectChanges();
-  env.http.expectOne(`${API}/api/admin/tests/t1/results`).flush(data);
+  env.http.expectOne(`${API}/api/admin/tests/t1/results?limit=25`).flush(data);
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -193,6 +193,7 @@ describe('Admin test results', () => {
     (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = vi.fn();
     const link = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { expect(this.download).toBe('cat-mock-1-results.csv'); });
     clickButton(fixture, 'Download CSV');
+    await settle(fixture); // the download waits for any remaining pages first
     expect(link).toHaveBeenCalled();
     const content = await new Promise<string>((resolve) => {
       const reader = new FileReader();
@@ -219,7 +220,7 @@ describe('Admin test results', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(AdminTestResults);
     fixture.detectChanges();
-    env.http.expectOne(`${API}/api/admin/tests/nope/results`).flush({ detail: "We couldn't find that test." }, { status: 404, statusText: 'x' });
+    env.http.expectOne(`${API}/api/admin/tests/nope/results?limit=25`).flush({ detail: "We couldn't find that test." }, { status: 404, statusText: 'x' });
     await settle(fixture);
     expect(text(fixture)).toContain("We couldn't find that test.");
   });

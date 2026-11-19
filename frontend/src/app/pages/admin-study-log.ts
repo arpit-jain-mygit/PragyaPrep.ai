@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
@@ -111,6 +111,8 @@ const GREEN_FROM = 0.75;
           </tbody>
         </table>
       </div>
+      @if (next()) { <div #sentinel id="sentinel" style="height: 1px" aria-hidden="true"></div> }
+      @if (loadingMore()) { <p class="muted center" id="loading-more">Loading…</p> }
     }
 
     @if (openedRow(); as opened) {
@@ -137,12 +139,20 @@ const GREEN_FROM = 0.75;
   `,
 })
 export class AdminStudyLog implements OnInit {
+  /** How many questions to fetch at a time. More are fetched as the admin scrolls near the end. */
+  static readonly PAGE_SIZE = 25;
+
   private readonly api = inject(ApiService);
 
   readonly match = signal('all');
   readonly sort = signal('newest');
   readonly showStudent = signal(false);
   readonly rows = signal<AskLogRow[]>([]);
+  /** The cursor for the next page, or null when every question for these settings is loaded. */
+  readonly next = signal<string | null>(null);
+  readonly loadingMore = signal(false);
+  /** The bottom of the table. When it comes near the screen, the next page is fetched. */
+  readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   readonly loading = signal(true);
   readonly error = signal<ApiError | null>(null);
   readonly openingKey = signal<string | null>(null);
@@ -155,6 +165,23 @@ export class AdminStudyLog implements OnInit {
 
   closeSources(): void {
     this.openedRow.set(null);
+  }
+
+  constructor() {
+    // Watch the bottom of the table. Each time a page is added, the watch starts again, so a short page keeps filling.
+    effect((onCleanup) => {
+      const element = this.sentinel()?.nativeElement;
+      const cursor = this.next();
+      if (!element || !cursor || typeof IntersectionObserver === 'undefined') return;
+      const watcher = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) void this.loadMore();
+        },
+        { rootMargin: '400px 0px' },
+      );
+      watcher.observe(element);
+      onCleanup(() => watcher.disconnect());
+    });
   }
 
   ngOnInit(): void {
@@ -176,18 +203,47 @@ export class AdminStudyLog implements OnInit {
     void this.load();
   }
 
+  /** Start the log again from its first page (new filter, sort, or Refresh). */
   async load(): Promise<void> {
+    const wanted = this.settingsKey();
     this.loading.set(true);
     this.error.set(null);
+    this.next.set(null);
     try {
-      const reply = await this.api.studyLog(this.match(), this.showStudent(), this.sort());
+      const reply = await this.api.studyLogPage(this.match(), this.showStudent(), this.sort(), null, AdminStudyLog.PAGE_SIZE);
+      if (wanted !== this.settingsKey()) return; // the admin changed a setting while this was loading
       this.rows.set(reply.rows);
+      this.next.set(reply.next);
     } catch (error) {
       this.rows.set([]);
       this.error.set(error as ApiError);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Add the next page to the bottom of the table. Does nothing if a page is already loading or none are left. */
+  async loadMore(): Promise<void> {
+    const cursor = this.next();
+    if (!cursor || this.loadingMore() || this.loading()) return;
+    const wanted = this.settingsKey();
+    this.loadingMore.set(true);
+    try {
+      const reply = await this.api.studyLogPage(this.match(), this.showStudent(), this.sort(), cursor, AdminStudyLog.PAGE_SIZE);
+      if (wanted !== this.settingsKey()) return;
+      this.rows.update((list) => [...list, ...reply.rows]);
+      this.next.set(reply.next);
+    } catch (error) {
+      // Keep the cursor, so scrolling again can retry; show what went wrong.
+      this.error.set(error as ApiError);
+    } finally {
+      this.loadingMore.set(false);
+    }
+  }
+
+  /** The settings that decide which questions are listed, as one string, to spot a change while a page is loading. */
+  private settingsKey(): string {
+    return `${this.match()}|${this.showStudent()}|${this.sort()}`;
   }
 
   /** Open the passage's PDF at its page. A new tab opens first, as for other files. */

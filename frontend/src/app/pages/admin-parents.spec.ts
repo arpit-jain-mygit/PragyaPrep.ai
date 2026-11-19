@@ -4,7 +4,8 @@ import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../t
 import { AdminParents } from './admin-parents';
 
 const MEENA = { email: 'meena@example.com', name: 'Meena Rao', mobile: '9876543210', children: [{ email: 'asha@example.com', name: 'Asha Rao' }, { email: 'ravi@example.com', name: 'Ravi K' }], created_at: '' };
-const LIST = `${API}/api/admin/parents`;
+const BASE = `${API}/api/admin/parents`;
+const LIST = `${BASE}?limit=25`;  // the paged list the page loads
 
 async function open(list: object[] = [MEENA]) {
   const env = setupTestBed();
@@ -44,7 +45,7 @@ describe('Admin parents', () => {
     await settle(fixture);
     fill(fixture);
     el(fixture, '#parent-form form').dispatchEvent(new Event('submit'));
-    const request = http.expectOne(LIST);
+    const request = http.expectOne(BASE);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ first_name: 'Vikram', last_name: 'Shah', email: 'vikram@example.com', mobile: '9123456789', student_email: 'asha@example.com' });
     request.flush([{ ...MEENA, email: 'vikram@example.com', name: 'Vikram Shah' }], { status: 201, statusText: 'Created' });
@@ -59,7 +60,7 @@ describe('Admin parents', () => {
     el(fixture, '#add-parent').click();
     await settle(fixture);
     el(fixture, '#parent-form form').dispatchEvent(new Event('submit'));
-    http.expectOne(LIST).flush({ detail: 'Please correct the marked fields.', errors: { first_name: 'Enter the first name (up to 60 characters).', student_email: 'There is no student with the email x here.' } }, { status: 422, statusText: 'x' });
+    http.expectOne(BASE).flush({ detail: 'Please correct the marked fields.', errors: { first_name: 'Enter the first name (up to 60 characters).', student_email: 'There is no student with the email x here.' } }, { status: 422, statusText: 'x' });
     await settle(fixture);
     expect(el(fixture, '#parent-form').textContent).toContain('Enter the first name');
     expect(el(fixture, '#parent-form').textContent).toContain('There is no student');
@@ -71,7 +72,7 @@ describe('Admin parents', () => {
     el(fixture, '#add-parent').click();
     await settle(fixture);
     el(fixture, '#parent-form form').dispatchEvent(new Event('submit'));
-    http.expectOne(LIST).flush({ detail: 'This parent is already linked to that student.' }, { status: 422, statusText: 'x' });
+    http.expectOne(BASE).flush({ detail: 'This parent is already linked to that student.' }, { status: 422, statusText: 'x' });
     await settle(fixture);
     expect(text(fixture)).toContain('already linked');
   });
@@ -79,16 +80,16 @@ describe('Admin parents', () => {
   it('unlinks a child and removes a parent after asking', async () => {
     const { fixture, http } = await open();
     el(fixture, 'button[title="Unlink Ravi K"]').click();
-    const unlink = http.expectOne(`${LIST}/meena%40example.com/children/ravi%40example.com`);
+    const unlink = http.expectOne(`${BASE}/meena%40example.com/children/ravi%40example.com`);
     expect(unlink.request.method).toBe('DELETE');
     unlink.flush([{ ...MEENA, children: [MEENA.children[0]] }]);
     await settle(fixture);
     expect(all(fixture, '[data-child]').length).toBe(1);
     el(fixture, 'button[title="Remove parent"]').click();
     await settle(fixture);
-    http.expectNone(`${LIST}/meena%40example.com`);
+    http.expectNone(`${BASE}/meena%40example.com`);
     all(fixture, 'button').find((b) => b.textContent!.trim() === 'Yes, remove')!.click();
-    http.expectOne(`${LIST}/meena%40example.com`).flush([]);
+    http.expectOne(`${BASE}/meena%40example.com`).flush([]);
     await settle(fixture);
     expect(text(fixture)).toContain('No parents yet');
   });
@@ -100,7 +101,7 @@ describe('Admin parents', () => {
     (globalThis.URL as unknown as { createObjectURL: unknown }).createObjectURL = vi.fn(() => 'blob:x');
     (globalThis.URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = vi.fn();
     el(fixture, '#parent-template').click();
-    const request = http.expectOne(`${LIST}/template`);
+    const request = http.expectOne(`${BASE}/template`);
     expect(request.request.responseType).toBe('blob');
     request.flush(new Blob(['x']));
     await settle(fixture);
@@ -120,7 +121,7 @@ describe('Admin parents', () => {
   it('checks a sheet first, names each problem by column, then adds the ready rows on confirm', async () => {
     const { fixture, http } = await open([]);
     const file = choose(fixture);
-    const check = http.expectOne(`${LIST}/import?confirm=false`);
+    const check = http.expectOne(`${BASE}/import?confirm=false`);
     expect(check.request.body).toBe(file);
     check.flush({
       summary: { total: 2, ready: 1, skipped: 0, errors: 1 }, confirmed: false,
@@ -130,7 +131,7 @@ describe('Admin parents', () => {
     expect(['#i-total', '#i-ready', '#i-skipped', '#i-errors'].map((s) => el(fixture, s).textContent!.trim())).toEqual(['2', '1', '0', '1']);
     expect(el(fixture, '[data-row="3"] [data-problem="Student email"]').textContent).toContain('ghost@example.com');
     el(fixture, '#import-confirm').click();
-    http.expectOne(`${LIST}/import?confirm=true`).flush({ summary: { total: 2, ready: 1, skipped: 0, errors: 1, created: 1, linked: 0, emailed: 1 }, confirmed: true, rows: [row({ status: 'created' })] });
+    http.expectOne(`${BASE}/import?confirm=true`).flush({ summary: { total: 2, ready: 1, skipped: 0, errors: 1, created: 1, linked: 0, emailed: 1 }, confirmed: true, rows: [row({ status: 'created' })] });
     await settle(fixture);
     http.expectOne(LIST).flush([MEENA]);
     await settle(fixture);
@@ -145,13 +146,13 @@ describe('Admin parents', () => {
   it('turns the add button off when nothing is ready, and explains a refused sheet', async () => {
     const { fixture, http } = await open([]);
     choose(fixture);
-    http.expectOne(`${LIST}/import?confirm=false`).flush({ summary: { total: 1, ready: 0, skipped: 0, errors: 1 }, confirmed: false, rows: [row({ status: 'error', problems: { Email: 'x' } })] });
+    http.expectOne(`${BASE}/import?confirm=false`).flush({ summary: { total: 1, ready: 0, skipped: 0, errors: 1 }, confirmed: false, rows: [row({ status: 'error', problems: { Email: 'x' } })] });
     await settle(fixture);
     expect((el(fixture, '#import-confirm') as HTMLButtonElement).disabled).toBe(true);
     el(fixture, '#import-cancel').click();
     await settle(fixture);
     choose(fixture);
-    http.expectOne(`${LIST}/import?confirm=false`).flush({ detail: "The file has no sheet called 'Parents'. Download the template and fill that in." }, { status: 422, statusText: 'x' });
+    http.expectOne(`${BASE}/import?confirm=false`).flush({ detail: "The file has no sheet called 'Parents'. Download the template and fill that in." }, { status: 422, statusText: 'x' });
     await settle(fixture);
     expect(text(fixture)).toContain("no sheet called 'Parents'");
   });

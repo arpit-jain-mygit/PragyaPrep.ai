@@ -889,3 +889,82 @@ describe('Admin registrations: giving access to all chosen courses', () => {
     expect(el<HTMLButtonElement>(fixture, '#give-requested').disabled).toBe(false);
   });
 });
+
+describe('Registrations: paging', () => {
+  /** A registration with the given email, for building pages. */
+  function person(n: number) {
+    return registration({ email: `p${n}@example.com`, first_name: `Person${n}` });
+  }
+
+  const PAGE_URL = `${API}/api/admin/registrations`;
+
+  async function openPaged(first: unknown[], cursor: string | null) {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminRegistrations);
+    fixture.detectChanges();
+    const headers: Record<string, string> = cursor ? { 'X-Next-Cursor': cursor } : {};
+    env.http.expectOne((r) => r.url === PAGE_URL && r.params.get('status') === 'pending' && r.params.get('limit') === '25').flush(first as object[], { headers });
+    await settle(fixture);
+    return { ...env, fixture, component: fixture.componentInstance };
+  }
+
+  it('asks for the first page of 25 and shows no loading control when there are no more', async () => {
+    const env = await openPaged([person(1)], null);
+    expect(el(env.fixture, '#showing').textContent).toContain('1 shown');
+    expect(all(env.fixture, '#sentinel').length).toBe(0);
+    expect(text(env.fixture)).not.toContain('Load more');
+  });
+
+  it('keeps a bottom marker while there are more pages, and adds the next page after the last one', async () => {
+    const env = await openPaged([person(1), person(2)], 'cursor-1');
+    expect(all(env.fixture, '#sentinel').length).toBe(1);
+    expect(text(env.fixture)).not.toContain('Load more');
+
+    const more = env.component.loadMore();
+    env.http.expectOne((r) => r.url === PAGE_URL && r.params.get('before') === 'cursor-1' && r.params.get('limit') === '25')
+      .flush([person(3)], { headers: {} });
+    await more;
+    env.fixture.detectChanges();
+    expect(env.component.items().map((p) => p.email)).toEqual(['p1@example.com', 'p2@example.com', 'p3@example.com']);
+    expect(all(env.fixture, '#sentinel').length).toBe(0);
+  });
+
+  it('does not add a person twice when a page repeats someone', async () => {
+    const env = await openPaged([person(1)], 'c1');
+    const more = env.component.loadMore();
+    env.http.expectOne((r) => r.params.get('before') === 'c1').flush([person(1), person(2)], { headers: {} });
+    await more;
+    expect(env.component.items().map((p) => p.email)).toEqual(['p1@example.com', 'p2@example.com']);
+  });
+
+  it('does not ask for a page while one is already loading, or when none are left', async () => {
+    const env = await openPaged([person(1)], 'c1');
+    const first = env.component.loadMore();
+    await env.component.loadMore(); // ignored: the first is still loading
+    env.http.expectOne((r) => r.params.get('before') === 'c1').flush([person(2)], { headers: {} });
+    await first;
+    await env.component.loadMore(); // ignored: no cursor is left
+    env.http.expectNone((r) => r.url === PAGE_URL && r.params.has('before'));
+  });
+
+  it('loads the rest of the list when the admin starts a search, so the search covers everyone', async () => {
+    const env = await openPaged([person(1)], 'c1');
+    const search = env.component.setQuery('p2');
+    env.http.expectOne((r) => r.params.get('before') === 'c1').flush([person(2)], { headers: {} });
+    await search;
+    expect(env.component.items().length).toBe(2);
+    expect(env.component.next()).toBeNull();
+    expect(env.component.visible().map((p) => p.email)).toEqual(['p2@example.com']);
+  });
+
+  it('starts again from the first page when the admin changes tab', async () => {
+    const env = await openPaged([person(1)], 'c1');
+    env.component.show('approved');
+    env.http.expectOne((r) => r.params.get('status') === 'approved' && !r.params.has('before'))
+      .flush([registration({ email: 'a@example.com', status: 'approved' })], { headers: {} });
+    await settle(env.fixture);
+    expect(env.component.items().map((p) => p.email)).toEqual(['a@example.com']);
+    expect(env.component.next()).toBeNull();
+  });
+});

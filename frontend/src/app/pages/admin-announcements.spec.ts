@@ -22,7 +22,7 @@ async function open(history: object[] = []) {
   const fixture = TestBed.createComponent(AdminAnnouncements);
   fixture.detectChanges();
   env.http.expectOne(`${API}/api/admin/courses`).flush(COURSES);
-  env.http.expectOne(`${API}/api/admin/announcements`).flush(history);
+  env.http.expectOne(`${API}/api/admin/announcements?limit=25`).flush(history);
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -152,7 +152,7 @@ describe('Admin announcements page', () => {
     const fixture = TestBed.createComponent(AdminAnnouncements);
     fixture.detectChanges();
     env.http.expectOne(`${API}/api/admin/courses`).flush({ detail: 'Nope.' }, { status: 500, statusText: 'x' });
-    env.http.expectOne(`${API}/api/admin/announcements`).flush([]);
+    env.http.expectOne(`${API}/api/admin/announcements?limit=25`).flush([]);
     await settle(fixture);
     expect(text(fixture)).toContain('Nope.');
   });

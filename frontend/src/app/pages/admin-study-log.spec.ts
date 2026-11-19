@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { API, all, el, sessionFor, settle, setupTestBed, type } from '../testing';
+import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
 import { AdminStudyLog } from './admin-study-log';
 
 function row(overrides: object = {}) {
@@ -12,7 +12,7 @@ function row(overrides: object = {}) {
   };
 }
 
-const LIST = `${API}/api/admin/study-log?match=all&show_student=false&sort=newest`;
+const LIST = `${API}/api/admin/study-log?match=all&show_student=false&sort=newest&limit=25`;
 
 async function open(rows: object[] = [row()]) {
   const env = setupTestBed();
@@ -76,7 +76,7 @@ describe('AdminStudyLog', () => {
   it('asks the server for matches under 75% when that option is chosen', async () => {
     const env = await open();
     choose(env.fixture, '#match', 'under_75');
-    env.http.expectOne(`${API}/api/admin/study-log?match=under_75&show_student=false&sort=newest`).flush({ rows: [] });
+    env.http.expectOne(`${API}/api/admin/study-log?match=under_75&show_student=false&sort=newest&limit=25`).flush({ rows: [] });
     await settle(env.fixture);
     expect(el(env.fixture, '#log-empty').textContent).toContain('No questions here yet');
   });
@@ -84,14 +84,14 @@ describe('AdminStudyLog', () => {
   it('asks the server for matches under 30% when that option is chosen', async () => {
     const env = await open();
     choose(env.fixture, '#match', 'under_30');
-    env.http.expectOne(`${API}/api/admin/study-log?match=under_30&show_student=false&sort=newest`).flush({ rows: [] });
+    env.http.expectOne(`${API}/api/admin/study-log?match=under_30&show_student=false&sort=newest&limit=25`).flush({ rows: [] });
     await settle(env.fixture);
   });
 
   it('lists worst matches first when that order is chosen', async () => {
     const env = await open();
     choose(env.fixture, '#sort', 'worst');
-    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=false&sort=worst`).flush({ rows: [] });
+    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=false&sort=worst&limit=25`).flush({ rows: [] });
     await settle(env.fixture);
   });
 
@@ -100,7 +100,7 @@ describe('AdminStudyLog', () => {
     const box = el(env.fixture, '#show-student') as HTMLInputElement;
     box.checked = true;
     box.dispatchEvent(new Event('change'));
-    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=true&sort=newest`).flush({
+    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=true&sort=newest&limit=25`).flush({
       rows: [row({ student_name: 'Asha Rao', student_email: 'asha@example.com' })],
     });
     await settle(env.fixture);
@@ -116,4 +116,24 @@ describe('AdminStudyLog', () => {
     await settle(env.fixture);
     expect(all(env.fixture, '#log tbody tr').length).toBe(1);
   });
+
+  it('adds the next page to the bottom of the table when the admin scrolls near the end', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminStudyLog);
+    fixture.detectChanges();
+    env.http.expectOne(LIST).flush({ rows: [row({ id: 'a' })] }, { headers: { 'X-Next-Cursor': '1' } });
+    await settle(fixture);
+    expect(all(fixture, '#sentinel').length).toBe(1);
+    expect(text(fixture)).not.toContain('Load more');
+
+    const more = fixture.componentInstance.loadMore();
+    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=false&sort=newest&limit=25&before=1`)
+      .flush({ rows: [row({ id: 'b' })] }, { headers: {} });
+    await more;
+    fixture.detectChanges();
+    expect(all(fixture, '#log tbody tr').length).toBe(2);
+    expect(all(fixture, '#sentinel').length).toBe(0);
+  });
 });
+

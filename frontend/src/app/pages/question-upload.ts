@@ -56,7 +56,7 @@ function extension(name: string): string {
         <div class="field" style="margin-top: 0.75rem">
           <label for="upload-files">
             Files or a zip
-            <app-info text="Choose one .zip holding your Excel files and pictures, or select the files together. Each Excel file can have up to 500 questions (2 MB). Pictures are PNG or JPG, up to 1 MB each, and are matched by the file name typed in the Excel file." />
+            <app-info text="Choose one .zip holding your Excel files and pictures, or select the files together. Each Excel file can have up to 10,000 questions (5 MB). Pictures are PNG or JPG, up to 1 MB each, and are matched by the file name typed in the Excel file." />
           </label>
           <input id="upload-files" name="uploadFiles" type="file" multiple accept=".zip,.xlsx,.png,.jpg,.jpeg,application/zip,image/png,image/jpeg" (change)="chosen($event)" [disabled]="busy()" />
         </div>
