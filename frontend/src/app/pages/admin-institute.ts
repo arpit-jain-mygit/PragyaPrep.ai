@@ -61,6 +61,7 @@ import { PhotoPicker } from '../ui/photo-picker';
           <p class="hint">Up to 8, separated by commas.</p>
         </div>
 
+        <hr class="section-divider" id="you-divider" />
         <h2>You</h2>
         <div class="row" style="margin-bottom: 0.8rem">
           <app-photo-picker [current]="m.admin.avatar_url" [first]="firstName" [last]="lastName" [email]="m.admin.email" [disabled]="busy()" (photo)="photoChosen($event)" />

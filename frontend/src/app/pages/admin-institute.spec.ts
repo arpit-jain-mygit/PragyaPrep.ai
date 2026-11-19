@@ -29,6 +29,12 @@ describe('My institute', () => {
     expect(all(fixture, 'input[name="email"]').length).toBe(0);
   });
 
+  it('separates the institute section from the admin\'s own section with a divider', async () => {
+    const { fixture } = await open();
+    const divider = el(fixture, '#you-divider');
+    expect(divider.nextElementSibling?.textContent).toBe('You');
+  });
+
   it('saves everything in one go, turning the exams text into a list, and updates the top bar look', async () => {
     const { fixture, http } = await open();
     const tenants = TestBed.inject(TenantService);
