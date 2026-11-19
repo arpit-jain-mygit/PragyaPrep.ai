@@ -8,6 +8,7 @@ from test_student_tests import make_test, q
 
 HOME = "/api/admin/home"
 BEHIND = "/api/admin/home/behind"
+REFRESH = "/api/admin/home/behind/refresh"
 
 
 @pytest.fixture
@@ -33,7 +34,7 @@ def test_only_the_admin_can_see_the_home_counts(client, school, admin, sign_in, 
 
 def test_an_empty_institute_has_zero_counts_and_its_courses(client, school, admin):
     assert client.get(HOME, headers=admin).json() == {"pending": 0, "students": 0, "courses": 2, "tests_open": 0, "questions": {"published": 0, "draft": 0}}
-    assert client.get(BEHIND, headers=admin).json() == {"students": 0, "courses": 0}
+    assert _figures(client.post(REFRESH, headers=admin)) == {"students": 0, "courses": 0}
 
 
 def test_pending_and_approved_students_are_counted_and_the_admin_and_others_are_not(client, school, admin, repo):
@@ -83,6 +84,11 @@ def test_another_institutes_data_is_never_counted(client, school, admin, repo):
 
 # ---- Behind ----
 
+def _figures(response) -> dict:
+    assert response.status_code == 200, response.text
+    return {key: response.json()[key] for key in ("students", "courses")}
+
+
 @pytest.fixture
 def behind_setup(client, school, admin, repo, sign_in):
     """Asha (CAT and CLAT) and Ravi (CAT) have an overdue sub-topic in CAT; Meera is up to date; Zed has CLAT with nothing overdue."""
@@ -98,15 +104,69 @@ def behind_setup(client, school, admin, repo, sign_in):
 
 
 def test_behind_counts_each_student_once_across_courses(client, school, admin, behind_setup):
-    assert client.get(BEHIND, headers=admin).json() == {"students": 2, "courses": 1}  # Asha and Ravi, both in CAT only
+    assert _figures(client.post(REFRESH, headers=admin)) == {"students": 2, "courses": 1}  # Asha and Ravi, both in CAT only
 
 
 def test_a_student_behind_in_two_courses_is_counted_once(client, school, admin, behind_setup):
     sid = sub_id(client, admin, school["clat"]["id"], "Concepts")
     client.patch(plan_url(school["clat"]["id"], f"/{sid}"), json={"due": "2027-01-05"}, headers=admin)
-    assert client.get(BEHIND, headers=admin).json() == {"students": 3, "courses": 2}  # Asha (both), Ravi, Zed
+    assert _figures(client.post(REFRESH, headers=admin)) == {"students": 3, "courses": 2}  # Asha (both), Ravi, Zed
 
 
 def test_hidden_courses_are_left_out_of_behind(client, school, admin, behind_setup):
     client.patch(f"/api/admin/courses/{school['cat']['id']}", json={"active": False}, headers=admin)
-    assert client.get(BEHIND, headers=admin).json() == {"students": 0, "courses": 0}
+    assert _figures(client.post(REFRESH, headers=admin)) == {"students": 0, "courses": 0}
+
+
+def test_the_saved_answer_is_instant_and_empty_until_it_was_worked_out_once(client, school, admin, behind_setup):
+    first = client.get(BEHIND, headers=admin).json()
+    assert first == {"students": None, "courses": None, "as_of": None, "fresh": False}
+    worked = client.post(REFRESH, headers=admin).json()
+    assert worked["students"] == 2 and worked["fresh"] is True and worked["as_of"]
+    assert client.get(BEHIND, headers=admin).json() == worked
+
+
+def test_a_saved_answer_goes_stale_after_fifteen_minutes_but_is_still_shown(client, school, admin, behind_setup, fake_clock):
+    client.post(REFRESH, headers=admin)
+    fake_clock.advance(14 * 60)
+    assert client.get(BEHIND, headers=admin).json()["fresh"] is True
+    fake_clock.advance(2 * 60)
+    old = client.get(BEHIND, headers=admin).json()
+    assert old["fresh"] is False and old["students"] == 2
+
+
+def test_asking_to_refresh_again_within_a_minute_does_not_work_it_out_again(client, school, admin, behind_setup, fake_clock):
+    client.post(REFRESH, headers=admin)
+    client.patch(f"/api/admin/courses/{school['cat']['id']}", json={"active": False}, headers=admin)
+    assert client.post(REFRESH, headers=admin).json()["students"] == 2  # still the saved answer
+    fake_clock.advance(61)
+    assert client.post(REFRESH, headers=admin).json()["students"] == 0  # worked out again
+
+
+def test_each_students_records_are_read_once_however_many_courses_there_are(client, school, admin, behind_setup, monkeypatch):
+    from app import repo as repo_module
+
+    reads = {"done": 0, "attempts": 0}
+    done, attempts = repo_module.TenantRepo.list_done, repo_module.TenantRepo.list_attempts
+
+    def counting_done(self, *a, **k):
+        reads["done"] += 1
+        return done(self, *a, **k)
+
+    def counting_attempts(self, *a, **k):
+        reads["attempts"] += 1
+        return attempts(self, *a, **k)
+
+    monkeypatch.setattr(repo_module.TenantRepo, "list_done", counting_done)
+    monkeypatch.setattr(repo_module.TenantRepo, "list_attempts", counting_attempts)
+    client.post(REFRESH, headers=admin)
+    students = 4  # Asha, Ravi, Meera and Zed, in two courses between them
+    assert reads == {"done": students, "attempts": students}
+
+
+def test_only_the_admin_can_see_or_refresh_it(client, school, admin, sign_in, add_member):
+    add_member("aaptprep", "asha@example.com")
+    student = sign_in("aaptprep", "asha@example.com")
+    assert client.get(BEHIND, headers=student).status_code == 403
+    assert client.post(REFRESH, headers=student).status_code == 403
+    assert client.post(REFRESH, headers={"X-Tenant": "aaptprep"}).status_code == 401

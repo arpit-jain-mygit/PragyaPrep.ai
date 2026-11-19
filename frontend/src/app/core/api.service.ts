@@ -516,8 +516,14 @@ export class ApiService {
     return this.get('/api/admin/home');
   }
 
+  /** The saved answer, instantly. */
   adminBehind(): Promise<AdminBehind> {
     return this.get('/api/admin/home/behind');
+  }
+
+  /** Work the answer out again (a few seconds on a large institute) and save it. */
+  refreshBehind(): Promise<AdminBehind> {
+    return this.post('/api/admin/home/behind/refresh');
   }
 
   courseProgress(courseId: string): Promise<CourseProgress> {

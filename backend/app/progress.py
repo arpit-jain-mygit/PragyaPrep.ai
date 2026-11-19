@@ -38,26 +38,53 @@ def _published(plan: dict) -> list[dict]:
     return out
 
 
-def _gather(scoped: TenantRepo, course_id: str, only: list[str] | None = None) -> dict:
-    """The plan, the course's tests and each student's records. `only` limits it to some students (by email)."""
+def approved_students(scoped: TenantRepo) -> list[dict]:
+    return [m for m in scoped.all_members_by_status("approved") if m.get("role") == "student"]
+
+
+def load_records(scoped: TenantRepo, members: list[dict]) -> dict:
+    """Each student's course access, finished coursework and test attempts, read once (three reads a student) however many courses
+    are looked at afterwards. Pass the result to _gather as `records` when several courses are worked out together."""
+
+    def one(member: dict):
+        email = member["email"]
+        return email, {"access": {a["course_id"]: a for a in scoped.list_access(email)}, "done": scoped.list_done(email), "attempts": scoped.list_attempts(email)}
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        return dict(pool.map(one, members))
+
+
+def _gather(scoped: TenantRepo, course_id: str, only: list[str] | None = None, members: list[dict] | None = None, records: dict | None = None) -> dict:
+    """The plan, the course's tests and each student's records. `only` limits it to some students (by email).
+    `members` and `records` let a caller that looks at many courses read the students once instead of once per course."""
     plan = coursework.tree(scoped, course_id)
     subs = _published(plan)
     now, today = clock.now(), clock.today_india().isoformat()
     tests = [t for t in scoped.list_tests() if t.get("status") == "published" and course_id in (t.get("courses") or [])]
     window = {t["id"]: attempts_module._window(t, now) for t in tests}
-    members = [m for m in scoped.all_members_by_status("approved") if m.get("role") == "student"]
+    if members is None:
+        members = approved_students(scoped)
     if only is not None:
         members = [m for m in members if m["email"] in only]
 
     def load(member: dict):
+        if records is not None:
+            have = records[member["email"]]
+            access = have["access"].get(course_id)
+            if access is None or not content.is_active(access):
+                return None
+            return member, {d["subtopic_id"]: d["done_at"] for d in have["done"] if d["course_id"] == course_id}, have["attempts"]
         access = scoped.get_access(member["email"], course_id)
         if access is None or not content.is_active(access):
             return None
         done = {d["subtopic_id"]: d["done_at"] for d in scoped.list_done(member["email"]) if d["course_id"] == course_id}
         return member, done, scoped.list_attempts(member["email"])
 
-    with ThreadPoolExecutor(max_workers=16) as pool:
-        loaded = [x for x in pool.map(load, members) if x is not None]
+    if records is not None:
+        loaded = [x for x in map(load, members) if x is not None]
+    else:
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            loaded = [x for x in pool.map(load, members) if x is not None]
 
     published_ids = {s["id"] for s in subs}
     test_ids = {t["id"] for t in tests}
@@ -86,9 +113,9 @@ def _gather(scoped: TenantRepo, course_id: str, only: list[str] | None = None) -
     return {"plan": plan, "subs": subs, "tests": tests, "students": students}
 
 
-def students(scoped: TenantRepo, course_id: str, storage=None) -> dict:
+def students(scoped: TenantRepo, course_id: str, storage=None, members: list[dict] | None = None, records: dict | None = None) -> dict:
     """One row per student with access to the course, those needing attention first, with counts for the top of the page."""
-    data = _gather(scoped, course_id)
+    data = _gather(scoped, course_id, members=members, records=records)
     rows = sorted(data["students"], key=lambda r: (STATUS_ORDER[r["status"]], -r["overdue"], r["name"].lower()))
     rows = [{**{k: v for k, v in r.items() if k not in ("done_ids", "avatar_key")}, "avatar_url": avatars.url_for(storage, r) if storage else ""} for r in rows]
     count = lambda status: sum(1 for r in rows if r["status"] == status)

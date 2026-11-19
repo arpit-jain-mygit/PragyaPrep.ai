@@ -755,9 +755,12 @@ export interface AdminHomeCounts {
   questions: { published: number; draft: number };
 }
 
+/** The saved answer to "who is behind". students is null until it has been worked out once; fresh is false when it is over 15 minutes old. */
 export interface AdminBehind {
-  students: number;
-  courses: number;
+  students: number | null;
+  courses: number | null;
+  as_of?: string | null;
+  fresh?: boolean;
 }
 
 // ---- Progress (admin) ----

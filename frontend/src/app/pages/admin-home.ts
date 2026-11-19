@@ -71,7 +71,8 @@ import { Registration } from '../core/models';
       <a class="tile" id="tile-behind" [class.alert-tile]="(behind()?.students ?? 0) > 0" [routerLink]="[base(), 'admin', 'progress']">
         <span class="tile-head"><app-icon name="flag" [size]="22" /> Behind</span>
         <span class="tile-num" data-behind>{{ behindFailed() ? '-' : (behind()?.students ?? '…') }}</span>
-        @if (behind(); as b) { @if (b.students > 0) { <span class="tchips"><span class="tchip" data-behind-courses>in {{ b.courses }} {{ b.courses === 1 ? 'course' : 'courses' }}</span></span> } }
+        @if (behind(); as b) { @if ((b.students ?? 0) > 0) { <span class="tchips"><span class="tchip" data-behind-courses>in {{ b.courses }} {{ b.courses === 1 ? 'course' : 'courses' }}</span></span> } }
+        @if (updating()) { <span class="tchips"><span class="tchip" data-behind-updating>updating…</span></span> }
       </a>
 
       <a class="tile" id="tile-tests" [routerLink]="[base(), 'admin', 'tests']">
@@ -100,6 +101,8 @@ export class AdminHome implements OnInit {
   readonly counts = signal<AdminHomeCounts | null>(null);
   readonly behind = signal<AdminBehind | null>(null);
   readonly behindFailed = signal(false);
+  /** True while the saved answer is being worked out again in the background. */
+  readonly updating = signal(false);
   readonly quick = signal<string | null>(null);
   readonly find = signal('');
   readonly students = signal<Registration[]>([]);
@@ -176,9 +179,30 @@ export class AdminHome implements OnInit {
     return this.sessions.member(this.tenants.slug())?.first_name || 'admin';
   }
 
+  /** Show the saved answer at once; if it is missing or over 15 minutes old, work it out again behind the scenes and swap the number in. */
+  private async loadBehind(): Promise<void> {
+    try {
+      const saved = await this.api.adminBehind();
+      this.behind.set(saved.students === null ? null : saved);
+      if (saved.fresh !== false) return;
+    } catch {
+      this.behindFailed.set(true);
+      return;
+    }
+    this.updating.set(true);
+    try {
+      this.behind.set(await this.api.refreshBehind());
+    } catch {
+      // The saved number (if any) stays; with none, the tile shows a dash.
+      if (this.behind() === null) this.behindFailed.set(true);
+    } finally {
+      this.updating.set(false);
+    }
+  }
+
   ngOnInit(): void {
     // Each count loads on its own, so a slow or failing one leaves only its own tile waiting.
     void this.api.adminHome().then((counts) => this.counts.set(counts), () => undefined);
-    void this.api.adminBehind().then((behind) => this.behind.set(behind), () => this.behindFailed.set(true));
+    void this.loadBehind();
   }
 }

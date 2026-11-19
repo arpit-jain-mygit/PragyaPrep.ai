@@ -142,3 +142,59 @@ describe('Admin home: set-up checklist and find a student', () => {
     http.expectOne(`${API}/api/admin/students/asha%40example.com/quick`);
   });
 });
+
+describe('Admin home: the Behind tile uses the saved answer', () => {
+  const COUNTS_OK = { pending: 0, students: 3, courses: 2, tests_open: 1, questions: { published: 10, draft: 0 } };
+
+  async function openBehind(saved: object | number) {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(AdminHome);
+    fixture.detectChanges();
+    env.http.expectOne(`${API}/api/admin/home`).flush(COUNTS_OK);
+    const request = env.http.expectOne(`${API}/api/admin/home/behind`);
+    if (typeof saved === 'number') request.flush({ detail: 'x' }, { status: saved, statusText: 'x' });
+    else request.flush(saved);
+    await settle(fixture);
+    return { ...env, fixture };
+  }
+
+  it('shows a fresh saved number and does not ask for a refresh', async () => {
+    const { fixture, http } = await openBehind({ students: 4, courses: 2, as_of: '2027-01-15T08:00:00+00:00', fresh: true });
+    expect(num(fixture, '[data-behind]')).toBe('4');
+    http.expectNone(`${API}/api/admin/home/behind/refresh`);
+    expect(all(fixture, '[data-behind-updating]').length).toBe(0);
+  });
+
+  it('shows an old saved number at once, then swaps in the new one', async () => {
+    const { fixture, http } = await openBehind({ students: 4, courses: 2, as_of: '2027-01-15T08:00:00+00:00', fresh: false });
+    expect(num(fixture, '[data-behind]')).toBe('4');
+    expect(all(fixture, '[data-behind-updating]').length).toBe(1);
+    http.expectOne(`${API}/api/admin/home/behind/refresh`).flush({ students: 6, courses: 3, as_of: '2027-01-15T09:00:00+00:00', fresh: true });
+    await settle(fixture);
+    expect(num(fixture, '[data-behind]')).toBe('6');
+    expect(all(fixture, '[data-behind-updating]').length).toBe(0);
+  });
+
+  it('waits with a dots placeholder the very first time, then shows the worked-out number', async () => {
+    const { fixture, http } = await openBehind({ students: null, courses: null, as_of: null, fresh: false });
+    expect(num(fixture, '[data-behind]')).toBe('…');
+    http.expectOne(`${API}/api/admin/home/behind/refresh`).flush({ students: 2, courses: 1, as_of: '2027-01-15T09:00:00+00:00', fresh: true });
+    await settle(fixture);
+    expect(num(fixture, '[data-behind]')).toBe('2');
+  });
+
+  it('keeps the old number when the refresh fails, and shows a dash only when there is none', async () => {
+    const { fixture, http } = await openBehind({ students: 4, courses: 2, as_of: '2027-01-15T08:00:00+00:00', fresh: false });
+    http.expectOne(`${API}/api/admin/home/behind/refresh`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(num(fixture, '[data-behind]')).toBe('4');
+  });
+
+  it('shows a dash when there is no saved number and the refresh fails', async () => {
+    const { fixture, http } = await openBehind({ students: null, courses: null, as_of: null, fresh: false });
+    http.expectOne(`${API}/api/admin/home/behind/refresh`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(num(fixture, '[data-behind]')).toBe('-');
+  });
+});
