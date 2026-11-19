@@ -1,7 +1,8 @@
 """A student's coursework: the plan of each course they can open, and marking sub-topics complete."""
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
-from app import student_coursework
+from app import student_coursework, study_answer
 from app import study_search as study_search_module
 from app.deps import STUDENT, get_tenant_repo, require_roles
 from app.repo import TenantRepo
@@ -41,3 +42,17 @@ def study_search(q: str = "", scoped: TenantRepo = Depends(get_tenant_repo), stu
     except study_search_module.QueryTooShort:
         raise HTTPException(status_code=422, detail="Type a word or two from your question.")
     return {"query": q, "hits": hits, "confident": study_search_module.is_confident(hits)}
+
+
+class AskIn(BaseModel):
+    question: str = Field(default="", max_length=200)
+
+
+@router.post("/api/my/study/ask")
+def study_ask(body: AskIn, scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    """Ask a question about the coursework. An answer is written only when the notes clearly cover it; otherwise the
+    student gets the passages and no answer."""
+    try:
+        return study_answer.answer(scoped, student, body.question)
+    except study_search_module.QueryTooShort:
+        raise HTTPException(status_code=422, detail="Type a word or two from your question.")

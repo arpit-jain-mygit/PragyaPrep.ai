@@ -2,7 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { isNative, openInApp } from '../core/native';
 import { ApiService } from '../core/api.service';
-import { ApiError, StudyHit } from '../core/models';
+import { ApiError, StudyAnswer, StudyHit } from '../core/models';
 import { Icon } from './icon';
 import { Sparkle } from './sparkle';
 
@@ -23,6 +23,25 @@ import { Sparkle } from './sparkle';
         <button class="btn" type="submit" id="study-go" [disabled]="searching()"><app-icon name="search" [size]="16" /> {{ searching() ? 'Searching…' : 'Ask' }}</button>
       </form>
       @if (searchError(); as problem) { <p class="error-text" role="alert" id="study-error">{{ problem.detail }}</p> }
+      @if (answer(); as reply) {
+        @if (reply.answered && reply.answer) {
+          <div class="study-answer" id="study-answer">
+            <p class="study-answer-label"><app-sparkle [size]="16" /> Answer from your coursework</p>
+            <p class="study-answer-text">{{ reply.answer }}</p>
+            @if (reply.citations.length) {
+              <div class="study-foot">
+                @for (cite of reply.citations; track $index) {
+                  <button class="btn small secondary" type="button" [disabled]="openingHit() === $index" (click)="openCitation(cite, $index)">
+                    <app-icon name="file" [size]="14" /> {{ cite.file }}, page {{ cite.page }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        } @else if (reply.hits.length) {
+          <p class="soft" id="study-not-covered">The notes don't clearly answer this question. These are the closest passages.</p>
+        }
+      }
       @if (results(); as found) {
         @if (found.length) {
           <p class="soft" id="study-count">{{ found.length }} {{ found.length === 1 ? 'match' : 'matches' }} in your coursework, best first.</p>
@@ -57,6 +76,7 @@ export class AskAi {
   readonly searching = signal(false);
   readonly searchError = signal<ApiError | null>(null);
   readonly results = signal<StudyHit[] | null>(null);
+  readonly answer = signal<StudyAnswer | null>(null);
   readonly openingHit = signal<number | null>(null);
 
   ngOnChanges(): void {
@@ -78,13 +98,36 @@ export class AskAi {
     }
     this.searching.set(true);
     try {
-      const found = await this.api.studySearch(text);
-      this.results.set(found.hits);
+      const reply = await this.api.studyAsk(text);
+      this.answer.set(reply);
+      this.results.set(reply.hits);
     } catch (error) {
+      this.answer.set(null);
       this.results.set(null);
       this.searchError.set(error as ApiError);
     } finally {
       this.searching.set(false);
+    }
+  }
+
+  /** Open a cited passage's PDF at its page. */
+  async openCitation(cite: { course_id: string; file_id: string; page: number }, index: number): Promise<void> {
+    if (this.openingHit() !== null) return;
+    this.openingHit.set(index);
+    this.searchError.set(null);
+    const tab = isNative() ? null : window.open('', '_blank');
+    if (tab) tab.opener = null;
+    try {
+      const link = await this.api.fileLink(cite.course_id, cite.file_id);
+      const url = `${link.url}#page=${cite.page}`;
+      if (isNative()) await openInApp(url);
+      else if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch (error) {
+      tab?.close();
+      this.searchError.set(error as ApiError);
+    } finally {
+      this.openingHit.set(null);
     }
   }
 

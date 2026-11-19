@@ -40,6 +40,7 @@ import {
   ParentImport,
   ParentInput,
   StudentCoursework,
+  StudyAnswer,
   StudySearch,
   StudentLiveCourse,
   CopyResult,
@@ -402,6 +403,11 @@ export class ApiService {
   /** Passages of the student's coursework that match the words of a question. No AI: keyword matching only. */
   studySearch(query: string): Promise<StudySearch> {
     return this.get(`/api/my/study/search?q=${encodeURIComponent(query)}`);
+  }
+
+  /** Ask a question. An answer comes back only when the notes clearly cover it; the passages come back either way. */
+  studyAsk(question: string): Promise<StudyAnswer> {
+    return this.post('/api/my/study/ask', { question });
   }
 
   // ---- Parents ----

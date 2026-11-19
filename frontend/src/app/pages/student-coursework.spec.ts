@@ -367,12 +367,13 @@ describe('Student coursework page: opened from the Today card', () => {
       file_id: 'f1', file: 'Percent notes', page: 2, snippet: 'Kochi is a natural harbour at the head of the Vembanad lagoon.', score: 9.5, matched: ['vembanad', 'lagoon', 'harbour'], coverage: 1,
     };
 
-    async function searchFor(env: Awaited<ReturnType<typeof open>>, q: string) {
+    async function searchFor(env: Awaited<ReturnType<typeof open>>, q: string, reply?: object) {
       const input = el<HTMLInputElement>(env.fixture, '#study-q');
       input.value = q;
       input.dispatchEvent(new Event('input'));
       el(env.fixture, '#study-go').click();
-      env.http.expectOne((r) => r.url.startsWith(`${API}/api/my/study/search`)).flush({ query: q, hits: q.includes('lagoon') ? [HIT] : [] });
+      const hits = q.includes('lagoon') ? [HIT] : [];
+      env.http.expectOne((r) => r.method === 'POST' && r.url === `${API}/api/my/study/ask`).flush(reply ?? { answered: false, answer: null, citations: [], hits });
       await settle(env.fixture);
     }
 
@@ -384,6 +385,27 @@ describe('Student coursework page: opened from the Today card', () => {
       expect(hit.textContent).toContain('CAT › Quantitative Ability › Percentages › Concepts');
       expect(hit.textContent).toContain('Kochi is a natural harbour');
       expect(hit.textContent).toContain('Percent notes, page 2');
+    });
+
+    it('shows the answer with its source when the notes clearly cover the question', async () => {
+      const env = await open();
+      await searchFor(env, 'Vembanad lagoon', {
+        answered: true,
+        answer: 'Kochi is a natural harbour at the head of the Vembanad lagoon. (From Percent notes, page 2.)',
+        citations: [{ course_id: 'c1', file_id: 'f1', file: 'Percent notes', page: 2, subtopic: 'Concepts' }],
+        hits: [HIT],
+      });
+      expect(el(env.fixture, '#study-answer').textContent).toContain('Kochi is a natural harbour');
+      expect(el(env.fixture, '#study-answer').textContent).toContain('Percent notes, page 2');
+      expect(all(env.fixture, '#study-not-covered').length).toBe(0);
+    });
+
+    it('says the notes do not clearly answer, and still lists the closest passages', async () => {
+      const env = await open();
+      await searchFor(env, 'Vembanad lagoon', { answered: false, answer: null, citations: [], hits: [HIT] });
+      expect(all(env.fixture, '#study-answer').length).toBe(0);
+      expect(el(env.fixture, '#study-not-covered').textContent).toContain("don't clearly answer");
+      expect(all(env.fixture, '.study-hit').length).toBe(1);
     });
 
     it('shows the question words in bold inside the snippet', async () => {
@@ -407,7 +429,7 @@ describe('Student coursework page: opened from the Today card', () => {
       input.dispatchEvent(new Event('input'));
       el(env.fixture, '#study-go').click();
       await settle(env.fixture);
-      env.http.expectNone((r) => r.url.includes('/api/my/study/search'));
+      env.http.expectNone((r) => r.url.includes('/api/my/study/ask'));
       expect(el(env.fixture, '#study-error').textContent).toContain('Type a word or two from your question.');
     });
   });

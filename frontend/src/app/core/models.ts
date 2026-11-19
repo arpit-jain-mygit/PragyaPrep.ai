@@ -1145,3 +1145,20 @@ export interface StudySearch {
   query: string;
   hits: StudyHit[];
 }
+
+/** A cited passage the answer was written from. */
+export interface StudyCitation {
+  course_id: string;
+  file_id: string;
+  file: string;
+  page: number;
+  subtopic: string;
+}
+
+/** The answer step: an answer only when the notes clearly cover the question; the passages are always listed. */
+export interface StudyAnswer {
+  answered: boolean;
+  answer: string | null;
+  citations: StudyCitation[];
+  hits: StudyHit[];
+}
