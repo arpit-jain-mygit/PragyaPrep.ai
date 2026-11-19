@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { ApiService } from '../core/api.service';
 import { ApiError, PICTURE_SLOTS, Paper, Picture, Question } from '../core/models';
 import { Icon } from '../ui/icon';
@@ -83,7 +84,7 @@ function draftFrom(question: Question): Draft {
 /** The institute's question bank: choose a subject and topic, write the question, its four options and why each is right or wrong. */
 @Component({
   selector: 'app-admin-questions',
-  imports: [FormsModule, PicturePicker, QuestionUpload, Icon, InfoTip],
+  imports: [Choice, FormsModule, PicturePicker, QuestionUpload, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>
@@ -113,10 +114,7 @@ function draftFrom(question: Question): Draft {
         <div class="grid-3">
           <div class="field">
             <label for="q-kind">Type</label>
-            <select id="q-kind" name="kind" [(ngModel)]="draft.kind" (ngModelChange)="kindChanged()">
-              <option value="mcq">Multiple choice</option>
-              <option value="fill_in">Fill in</option>
-            </select>
+            <app-choice name="kind" id="q-kind" label="Question type" [options]="[{ value: 'mcq', label: 'Multiple choice' }, { value: 'fill_in', label: 'Fill in' }]" [(ngModel)]="draft.kind" (ngModelChange)="kindChanged()" />
           </div>
           <div class="field">
             <label for="q-subject">Subject</label>
@@ -142,18 +140,11 @@ function draftFrom(question: Question): Draft {
         <div class="grid-3">
           <div class="field">
             <label for="q-difficulty">Difficulty</label>
-            <select id="q-difficulty" name="difficulty" [(ngModel)]="draft.difficulty">
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
+            <app-choice name="difficulty" id="q-difficulty" label="Difficulty" [options]="[{ value: 'easy', label: 'Easy' }, { value: 'medium', label: 'Medium' }, { value: 'hard', label: 'Hard' }]" [(ngModel)]="draft.difficulty" />
           </div>
           <div class="field">
             <label for="q-status">Status</label>
-            <select id="q-status" name="status" [(ngModel)]="draft.status">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
+            <app-choice name="status" id="q-status" label="Status" [options]="[{ value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }]" [(ngModel)]="draft.status" />
           </div>
         </div>
         <div class="field">
@@ -200,10 +191,7 @@ function draftFrom(question: Question): Draft {
           <div class="grid-2">
             <div class="field">
               <label for="q-answer-type">The answer is</label>
-              <select id="q-answer-type" name="answerType" [(ngModel)]="draft.answerType" (ngModelChange)="clearError('answer')">
-                <option value="text">Text</option>
-                <option value="number">A number</option>
-              </select>
+              <app-choice name="answerType" id="q-answer-type" label="Answer type" [options]="[{ value: 'text', label: 'Text' }, { value: 'number', label: 'A number' }]" [(ngModel)]="draft.answerType" (ngModelChange)="clearError('answer')" />
             </div>
             @if (draft.answerType === 'text') {
               <div class="field">
@@ -270,35 +258,19 @@ function draftFrom(question: Question): Draft {
         </div>
         <div class="field">
           <label class="sr-only" for="f-status">Status</label>
-          <select id="f-status" name="fstatus" [(ngModel)]="filter.status" (ngModelChange)="load()">
-            <option value="">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
+          <app-choice name="fstatus" id="f-status" label="Status" [options]="[{ value: '', label: 'All statuses' }, { value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }]" [(ngModel)]="filter.status" (ngModelChange)="load()" />
         </div>
         <div class="field">
           <label class="sr-only" for="f-kind">Type</label>
-          <select id="f-kind" name="fkind" [(ngModel)]="filter.kind" (ngModelChange)="load()">
-            <option value="">All types</option>
-            <option value="mcq">Multiple choice</option>
-            <option value="fill_in">Fill in</option>
-          </select>
+          <app-choice name="fkind" id="f-kind" label="Question type" [options]="[{ value: '', label: 'All types' }, { value: 'mcq', label: 'Multiple choice' }, { value: 'fill_in', label: 'Fill in' }]" [(ngModel)]="filter.kind" (ngModelChange)="load()" />
         </div>
         <div class="field">
           <label class="sr-only" for="f-passage">Passage</label>
-          <select id="f-passage" name="fpassage" [(ngModel)]="filter.passage" (ngModelChange)="load()">
-            <option value="">Any passage</option>
-            <option value="any">With a passage</option>
-            <option value="none">Without a passage</option>
-          </select>
+          <app-choice name="fpassage" id="f-passage" label="Passage" [options]="[{ value: '', label: 'Any passage' }, { value: 'any', label: 'With a passage' }, { value: 'none', label: 'Without a passage' }]" [(ngModel)]="filter.passage" (ngModelChange)="load()" />
         </div>
         <div class="field">
           <label class="sr-only" for="f-pictures">Pictures</label>
-          <select id="f-pictures" name="fpictures" [(ngModel)]="filter.pictures" (ngModelChange)="load()">
-            <option value="">Any pictures</option>
-            <option value="yes">With pictures</option>
-            <option value="no">Without pictures</option>
-          </select>
+          <app-choice name="fpictures" id="f-pictures" label="Pictures" [options]="[{ value: '', label: 'Any pictures' }, { value: 'yes', label: 'With pictures' }, { value: 'no', label: 'Without pictures' }]" [(ngModel)]="filter.pictures" (ngModelChange)="load()" />
         </div>
       </div>
 

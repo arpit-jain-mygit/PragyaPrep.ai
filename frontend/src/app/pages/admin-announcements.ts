@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
 import { AdminCourse, Announcement, AnnouncementInput, ApiError, NoticeKind, NoticeLinkTo } from '../core/models';
@@ -9,7 +10,7 @@ import { InfoTip } from '../ui/info-tip';
 /** Write an announcement to everyone, a course or chosen students, as information or as action needed, and see what was sent. */
 @Component({
   selector: 'app-admin-announcements',
-  imports: [FormsModule, Icon, InfoTip],
+  imports: [Choice, FormsModule, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>
@@ -57,11 +58,7 @@ import { InfoTip } from '../ui/info-tip';
 
         <div class="field">
           <label for="audience">Send to</label>
-          <select id="audience" name="audience" [(ngModel)]="audience">
-            <option value="all">Everyone</option>
-            <option value="course">Students of a course</option>
-            <option value="students">Chosen students</option>
-          </select>
+          <app-choice name="audience" id="audience" label="Send to" [options]="[{ value: 'all', label: 'Everyone' }, { value: 'course', label: 'Students of a course' }, { value: 'students', label: 'Chosen students' }]" [(ngModel)]="audience" />
         </div>
         @if (audience === 'course') {
           <div class="field">

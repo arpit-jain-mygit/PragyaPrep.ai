@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
+import { chosen } from '../testing';
 import { AdminAnnouncements } from './admin-announcements';
 
 const COURSES = [
@@ -36,7 +37,7 @@ const send = (fixture: Parameters<typeof el>[0]) => el<HTMLButtonElement>(fixtur
 describe('Admin announcements page', () => {
   it('starts with an empty form, Everyone as the audience and no email', async () => {
     const { fixture } = await open();
-    expect(el<HTMLSelectElement>(fixture, '#audience').value).toBe('all');
+    expect(chosen(fixture, '#audience')).toBe('all');
     expect(el<HTMLInputElement>(fixture, '#send-email').checked).toBe(false);
     expect(all(fixture, '#link').length).toBe(0);
     expect(send(fixture).disabled).toBe(true);

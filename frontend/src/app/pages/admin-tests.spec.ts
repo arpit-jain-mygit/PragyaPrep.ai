@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
+import { chosen } from '../testing';
 import { AdminTests } from './admin-tests';
 
 const PAPERS = [
@@ -409,7 +410,7 @@ describe('Admin tests page', () => {
       await settle(fixture);
       expect(titles(fixture).length).toBe(4);
       expect(el<HTMLInputElement>(fixture, '#tf-search').value).toBe('');
-      expect(el<HTMLSelectElement>(fixture, '#tf-course').value).toBe('');
+      expect(chosen(fixture, '#tf-course')).toBe('');
     });
 
     it('keeps the filters when a test is published or deleted', async () => {

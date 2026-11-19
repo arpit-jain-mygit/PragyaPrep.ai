@@ -92,11 +92,28 @@ export function all<T extends HTMLElement = HTMLElement>(fixture: ComponentFixtu
   return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<T>(selector));
 }
 
-/** Type into a field the way a person would, so the form picks it up. */
+/** Type into a field the way a person would, so the form picks it up. A row of choices (app-choice) is picked by its value. */
 export function type(fixture: ComponentFixture<unknown>, selector: string, value: string): void {
-  const field = el<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(fixture, selector);
-  field.value = value;
-  field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? 'change' : 'input'));
+  const field = el<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLElement>(fixture, selector);
+  if (field.tagName === 'APP-CHOICE') {
+    const radio = field.querySelector<HTMLInputElement>(`input[type="radio"][value="${value}"]`);
+    if (!radio) throw new Error(`${selector} has no choice "${value}"`);
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+    return;
+  }
+  const input = field as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+  input.value = value;
+  input.dispatchEvent(new Event(input instanceof HTMLSelectElement ? 'change' : 'input'));
+}
+
+/** The value now chosen in a dropdown, or in a row of choices (app-choice). */
+export function chosen(fixture: ComponentFixture<unknown>, selector: string): string {
+  const field = el<HTMLElement>(fixture, selector);
+  if (field.tagName === 'APP-CHOICE') {
+    return field.querySelector<HTMLInputElement>('input[type="radio"]:checked')?.value ?? '';
+  }
+  return (field as HTMLSelectElement).value;
 }
 
 /** Click the button with this label. */

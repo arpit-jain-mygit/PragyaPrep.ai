@@ -412,9 +412,8 @@ export class ApiService {
   }
 
   /** The admin's Ask AI log. The student's name and email are included only when showStudent is true. */
-  studyLog(filter: string, showStudent: boolean, below: number | null, sort: string): Promise<AskLog> {
-    const limit = below === null ? '' : `&below=${below}`;
-    return this.get(`/api/admin/study-log?filter=${encodeURIComponent(filter)}&show_student=${showStudent}&sort=${encodeURIComponent(sort)}${limit}`);
+  studyLog(match: string, showStudent: boolean, sort: string): Promise<AskLog> {
+    return this.get(`/api/admin/study-log?match=${encodeURIComponent(match)}&show_student=${showStudent}&sort=${encodeURIComponent(sort)}`);
   }
 
   /** A short-lived link to one file, for the admin to open a passage from the Ask AI log. */

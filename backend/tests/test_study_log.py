@@ -1,5 +1,6 @@
 """The Ask AI log: each student question is saved with how well the notes covered it, for the admin to review.
-Students' emails stay hidden unless the admin asks to see them, rows expire after 30 days, and one institute never sees another's log."""
+Students' names and emails stay hidden unless the admin asks to see them, rows expire after 30 days, and one institute
+never sees another's log."""
 from app import study_log
 from test_study_search import admin, asha, plan, school, give_file  # noqa: F401  (fixtures)
 from test_study_answer import ask  # noqa: F401  (helper)
@@ -7,7 +8,7 @@ from test_study_answer import ask  # noqa: F401  (helper)
 LOG = "/api/admin/study-log"
 CONFIDENT = "Which state is the most populous in Census 2011?"
 NOT_COVERED = "photosynthesis in leaves"
-WEAK = "state of mind"
+WEAK = "state of mind"  # best match 0.32: under 75%, but not under 30%
 
 
 def admin_log(client, admin_headers, **params):
@@ -43,10 +44,10 @@ def test_each_row_expires_thirty_days_after_it_was_asked(client, plan, asha, rep
     assert row["ttl"] - int(fake_clock()) == study_log.RETENTION_SECONDS == 30 * 24 * 3600
 
 
-def test_the_admin_list_hides_students_emails_by_default(client, plan, admin, asha):
+def test_the_admin_list_hides_students_by_default(client, plan, admin, asha):
     ask(client, asha, CONFIDENT)
     [row] = admin_log(client, admin)
-    assert "student_email" not in row
+    assert "student_email" not in row and "student_name" not in row
     assert row["question"] == CONFIDENT
 
 
@@ -54,29 +55,36 @@ def test_the_admin_can_ask_to_see_which_student_asked(client, plan, admin, asha)
     ask(client, asha, CONFIDENT)
     [row] = admin_log(client, admin, show_student="true")
     assert row["student_email"] == "asha@example.com"
+    assert row["student_name"] == "Asha Rao"
 
 
-def test_not_covered_filter_shows_only_questions_the_app_did_not_answer(client, plan, admin, asha):
-    ask(client, asha, CONFIDENT)
-    ask(client, asha, NOT_COVERED)
-    rows = admin_log(client, admin, filter="not_covered")
-    assert [row["question"] for row in rows] == [NOT_COVERED]
-
-
-def test_low_coverage_filter_shows_questions_with_no_passage_above_the_show_line(client, plan, admin, asha):
-    """Below 0.3 the app hides every passage. 'state of mind' scores 0.32, so it counts as not covered, not low."""
+def test_under_30_shows_only_questions_with_no_passage_above_the_show_line(client, plan, admin, asha):
+    """Below 0.3 the app hides every passage. 'state of mind' scores 0.32, so it is under 75% but not under 30%."""
     ask(client, asha, CONFIDENT)
     ask(client, asha, NOT_COVERED)
     ask(client, asha, WEAK)
-    rows = admin_log(client, admin, filter="low_coverage")
+    rows = admin_log(client, admin, match="under_30")
     assert [row["question"] for row in rows] == [NOT_COVERED]
     assert all(row["best_coverage"] < 0.3 for row in rows)
-    assert sorted(row["question"] for row in admin_log(client, admin, filter="not_covered")) == sorted([WEAK, NOT_COVERED])
 
 
-def test_an_unknown_filter_is_refused(client, admin):
-    response = client.get(LOG, params={"filter": "everything"}, headers=admin)
-    assert response.status_code == 422
+def test_under_75_shows_every_question_that_is_not_a_strong_match(client, plan, admin, asha):
+    ask(client, asha, CONFIDENT)
+    ask(client, asha, NOT_COVERED)
+    ask(client, asha, WEAK)
+    rows = admin_log(client, admin, match="under_75")
+    assert sorted(row["question"] for row in rows) == sorted([NOT_COVERED, WEAK])
+    assert all(row["best_coverage"] < 0.75 for row in rows)
+
+
+def test_all_shows_every_question(client, plan, admin, asha):
+    ask(client, asha, CONFIDENT)
+    ask(client, asha, NOT_COVERED)
+    assert len(admin_log(client, admin, match="all")) == 2
+
+
+def test_an_unknown_match_is_refused(client, admin):
+    assert client.get(LOG, params={"match": "everything"}, headers=admin).status_code == 422
 
 
 def test_a_student_cannot_open_the_admin_log(client, asha):
@@ -109,14 +117,6 @@ def test_each_row_keeps_where_the_passages_are_in_the_coursework(client, plan, a
     assert source["topic"] == "Percentages" and source["subtopic"] == "Census"
 
 
-def test_the_student_name_is_hidden_until_the_admin_asks_to_see_students(client, plan, admin, asha):
-    ask(client, asha, CONFIDENT)
-    [hidden] = admin_log(client, admin)
-    assert "student_name" not in hidden
-    [shown] = admin_log(client, admin, show_student="true")
-    assert shown["student_name"] == "Asha Rao"
-
-
 def test_the_admin_can_open_a_referred_file(client, plan, admin, school):
     response = client.get(f"/api/admin/courses/{school['cat']['id']}/files/census/link", headers=admin)
     assert response.status_code == 200, response.text
@@ -131,14 +131,6 @@ def test_a_student_cannot_use_the_admin_file_link(client, plan, asha, school):
 def test_a_file_that_is_not_ready_cannot_be_opened_from_the_log(client, plan, admin, school):
     response = client.get(f"/api/admin/courses/{school['cat']['id']}/files/no-such-file/link", headers=admin)
     assert response.status_code == 404
-
-
-def test_the_admin_can_see_only_matches_below_a_chosen_share(client, plan, admin, asha):
-    ask(client, asha, CONFIDENT)
-    ask(client, asha, WEAK)
-    rows = admin_log(client, admin, below="0.75")
-    assert sorted(row["question"] for row in rows) == sorted([WEAK])
-    assert all(row["best_coverage"] < 0.75 for row in rows)
 
 
 def test_worst_matches_can_be_listed_first(client, plan, admin, asha):

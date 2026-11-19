@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { shortAccess } from '../core/format';
@@ -41,7 +42,7 @@ function accessFrom(draft: Draft): Access {
 /** The institute's courses: what students can pick when they register, with each one's access length and subjects. */
 @Component({
   selector: 'app-admin-courses',
-  imports: [FormsModule, RouterLink, PaperChecklist, Icon, InfoTip],
+  imports: [Choice, FormsModule, RouterLink, PaperChecklist, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>
@@ -67,11 +68,7 @@ function accessFrom(draft: Draft): Access {
             <div class="field">
               <label for="new-type">Access</label>
               <div class="row" style="flex-wrap: nowrap">
-                <select id="new-type" name="newType" [(ngModel)]="newCourse.accessType">
-                  <option value="unlimited">Unlimited</option>
-                  <option value="days">Days after payment</option>
-                  <option value="until_date">Until a date</option>
-                </select>
+                <app-choice name="newType" id="new-type" label="Access" [options]="[{ value: 'unlimited', label: 'Unlimited' }, { value: 'days', label: 'Days after payment' }, { value: 'until_date', label: 'Until a date' }]" [(ngModel)]="newCourse.accessType" />
                 @if (newCourse.accessType === 'days') {
                   <input id="new-days" name="newDays" type="number" min="1" max="3650" placeholder="Days" aria-label="Days" style="max-width: 6rem" [(ngModel)]="newCourse.days" />
                 }
@@ -113,11 +110,7 @@ function accessFrom(draft: Draft): Access {
                       <div class="field">
                         <label [attr.for]="'type-' + course.id">Access <app-info text="A change affects new payments only. Students who already have access keep what they have." /></label>
                         <div class="row" style="flex-wrap: nowrap">
-                          <select [id]="'type-' + course.id" name="type" [(ngModel)]="draft.accessType">
-                            <option value="unlimited">Unlimited</option>
-                            <option value="days">Days after payment</option>
-                            <option value="until_date">Until a date</option>
-                          </select>
+                          <app-choice name="type" [id]="'type-' + course.id" label="Access" [options]="[{ value: 'unlimited', label: 'Unlimited' }, { value: 'days', label: 'Days after payment' }, { value: 'until_date', label: 'Until a date' }]" [(ngModel)]="draft.accessType" />
                           @if (draft.accessType === 'days') {
                             <input [id]="'days-' + course.id" name="days" type="number" min="1" max="3650" placeholder="Days" aria-label="Days" style="max-width: 6rem" [(ngModel)]="draft.days" />
                           }

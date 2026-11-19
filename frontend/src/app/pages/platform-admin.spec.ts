@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Institute } from '../core/models';
 import { UploadService } from '../core/upload.service';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
+import { chosen } from '../testing';
 import { PlatformAdmin } from './platform-admin';
 
 const LIST = `${API}/api/platform/institutes`;
@@ -190,7 +191,7 @@ describe('Platform admin page: editing an institute', () => {
     const { fixture } = await openEdit();
     expect(el<HTMLInputElement>(fixture, '#name-alpha').value).toBe('Alpha Institute');
     expect(el<HTMLInputElement>(fixture, '#color-alpha').value).toBe('#2563eb');
-    expect(el<HTMLSelectElement>(fixture, '#status-alpha').value).toBe('active');
+    expect(chosen(fixture, '#status-alpha')).toBe('active');
     expect(el<HTMLInputElement>(fixture, '#admin-name-alpha').value).toBe('Ann Lee');
     expect(el<HTMLInputElement>(fixture, '#admin-email-alpha').value).toBe('ann@alpha.example.com');
   });
@@ -221,7 +222,7 @@ describe('Platform admin page: editing an institute', () => {
 
   it('changes the plan and sends only the plan', async () => {
     const env = await openEdit();
-    expect(el<HTMLSelectElement>(env.fixture, '#plan-alpha').value).toBe('premium');
+    expect(chosen(env.fixture, '#plan-alpha')).toBe('premium');
     type(env.fixture, '#plan-alpha', 'free');
     await settle(env.fixture);
     expect(await save(env, { institute: { ...ALPHA, plan: 'free' }, new_admin_notified: null })).toEqual({ plan: 'free' });

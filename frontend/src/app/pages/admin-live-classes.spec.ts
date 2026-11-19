@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { UploadService } from '../core/upload.service';
 import { API, all, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
+import { chosen } from '../testing';
 import { AdminLiveClasses } from './admin-live-classes';
 
 const BASE = `${API}/api/admin/courses/c1/live-classes`;
@@ -109,8 +110,8 @@ describe('Admin live classes', () => {
     el(fixture, '[data-class="Algebra live"] button[title="Edit"]').click();
     await settle(fixture);
     expect(el<HTMLInputElement>(fixture, '#lc-title').value).toBe('Algebra live');
-    expect(el<HTMLSelectElement>(fixture, '#lc-subject').value).toBe('quantitative-ability');
-    expect(el<HTMLSelectElement>(fixture, '#lc-subtopic').value).toBe('s1');
+    expect(chosen(fixture, '#lc-subject')).toBe('quantitative-ability');
+    expect(chosen(fixture, '#lc-subtopic')).toBe('s1');
     expect(el<HTMLInputElement>(fixture, '#lc-time').value).toBe('18:30');
     expect(el(fixture, '#lc-material').textContent).toContain('Algebra recording');
     el(fixture, '#lc-material button[title="Remove"]').click();

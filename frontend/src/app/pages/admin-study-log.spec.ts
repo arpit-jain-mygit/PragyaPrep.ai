@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { API, all, el, sessionFor, settle, setupTestBed } from '../testing';
+import { API, all, el, sessionFor, settle, setupTestBed, type } from '../testing';
 import { AdminStudyLog } from './admin-study-log';
 
 function row(overrides: object = {}) {
@@ -12,7 +12,7 @@ function row(overrides: object = {}) {
   };
 }
 
-const LIST = `${API}/api/admin/study-log?filter=all&show_student=false&sort=newest`;
+const LIST = `${API}/api/admin/study-log?match=all&show_student=false&sort=newest`;
 
 async function open(rows: object[] = [row()]) {
   const env = setupTestBed();
@@ -24,10 +24,8 @@ async function open(rows: object[] = [row()]) {
   return { ...env, fixture };
 }
 
-function choose(fixture: Parameters<typeof el>[0], selector: string, value: string) {
-  const field = el(fixture, selector) as HTMLSelectElement;
-  field.value = value;
-  field.dispatchEvent(new Event('change'));
+function choose(fixture: Parameters<typeof type>[0], selector: string, value: string) {
+  type(fixture, selector, value);
 }
 
 describe('AdminStudyLog', () => {
@@ -52,11 +50,22 @@ describe('AdminStudyLog', () => {
     expect(fills[2]).toContain('high');
   });
 
-  it('shows the course, topic, subtopic and an open button for each passage', async () => {
+  it('keeps the coursework out of the table, behind a button that shows how many sources there are', async () => {
     const env = await open();
-    const text = el(env.fixture, '#log').textContent ?? '';
-    expect(text).toContain('CUET › Ports › Ports table');
-    expect(el(env.fixture, '.source button').textContent).toContain('Geography notes, page 2');
+    expect(el(env.fixture, '#log').textContent).not.toContain('CUET › Ports › Ports table');
+    expect(el(env.fixture, '#log').textContent).toContain('View 1 source');
+  });
+
+  it('opens the coursework in a popup with the course, topic, subtopic and an open button, and closes it', async () => {
+    const env = await open();
+    (el(env.fixture, '#log tbody button') as HTMLButtonElement).click();
+    env.fixture.detectChanges();
+    const dialog = el(env.fixture, '#sources-dialog').textContent ?? '';
+    expect(dialog).toContain('CUET › Ports › Ports table');
+    expect(dialog).toContain('Geography notes, page 2');
+    (el(env.fixture, '#close-sources') as HTMLButtonElement).click();
+    env.fixture.detectChanges();
+    expect(all(env.fixture, '#sources-dialog').length).toBe(0);
   });
 
   it('shows an empty message when nothing is logged', async () => {
@@ -64,25 +73,25 @@ describe('AdminStudyLog', () => {
     expect(el(env.fixture, '#log-empty').textContent).toContain('No questions here yet');
   });
 
-  it('asks the server for not-covered questions when the filter changes', async () => {
+  it('asks the server for matches under 75% when that option is chosen', async () => {
     const env = await open();
-    choose(env.fixture, '#filter', 'not_covered');
-    env.http.expectOne(`${API}/api/admin/study-log?filter=not_covered&show_student=false&sort=newest`).flush({ rows: [] });
+    choose(env.fixture, '#match', 'under_75');
+    env.http.expectOne(`${API}/api/admin/study-log?match=under_75&show_student=false&sort=newest`).flush({ rows: [] });
     await settle(env.fixture);
     expect(el(env.fixture, '#log-empty').textContent).toContain('No questions here yet');
   });
 
-  it('asks for matches below 75% when that option is chosen', async () => {
+  it('asks the server for matches under 30% when that option is chosen', async () => {
     const env = await open();
-    choose(env.fixture, '#below', '0.75');
-    env.http.expectOne(`${API}/api/admin/study-log?filter=all&show_student=false&sort=newest&below=0.75`).flush({ rows: [] });
+    choose(env.fixture, '#match', 'under_30');
+    env.http.expectOne(`${API}/api/admin/study-log?match=under_30&show_student=false&sort=newest`).flush({ rows: [] });
     await settle(env.fixture);
   });
 
   it('lists worst matches first when that order is chosen', async () => {
     const env = await open();
     choose(env.fixture, '#sort', 'worst');
-    env.http.expectOne(`${API}/api/admin/study-log?filter=all&show_student=false&sort=worst`).flush({ rows: [] });
+    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=false&sort=worst`).flush({ rows: [] });
     await settle(env.fixture);
   });
 
@@ -91,7 +100,7 @@ describe('AdminStudyLog', () => {
     const box = el(env.fixture, '#show-student') as HTMLInputElement;
     box.checked = true;
     box.dispatchEvent(new Event('change'));
-    env.http.expectOne(`${API}/api/admin/study-log?filter=all&show_student=true&sort=newest`).flush({
+    env.http.expectOne(`${API}/api/admin/study-log?match=all&show_student=true&sort=newest`).flush({
       rows: [row({ student_name: 'Asha Rao', student_email: 'asha@example.com' })],
     });
     await settle(env.fixture);

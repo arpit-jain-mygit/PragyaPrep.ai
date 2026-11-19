@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDate, logoSrc } from '../core/format';
@@ -41,7 +42,7 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
  */
 @Component({
   selector: 'app-platform-admin',
-  imports: [FormsModule, RouterLink],
+  imports: [Choice, FormsModule, RouterLink],
   template: `
     <div class="row spread">
       <div>
@@ -122,11 +123,7 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
                     </div>
                     <div class="field">
                       <label [attr.for]="'plan-' + institute.slug">Plan</label>
-                      <select [id]="'plan-' + institute.slug" name="plan" [(ngModel)]="draft.plan">
-                        <option value="free">Free (1 student, 1 parent)</option>
-                        <option value="popular">Popular</option>
-                        <option value="premium">Premium</option>
-                      </select>
+                      <app-choice name="plan" [id]="'plan-' + institute.slug" label="Plan" [options]="[{ value: 'free', label: 'Free (1 student, 1 parent)' }, { value: 'popular', label: 'Popular' }, { value: 'premium', label: 'Premium' }]" [(ngModel)]="draft.plan" />
                       <div class="hint">Moving to Free does not remove anyone already approved; it stops new approvals over the limit.</div>
                     </div>
                     @if (institute.profile; as p) {
@@ -141,10 +138,7 @@ function fullName(admin: { first_name: string; last_name: string } | null): stri
                     }
                     <div class="field">
                       <label [attr.for]="'status-' + institute.slug">Status</label>
-                      <select [id]="'status-' + institute.slug" name="status" [(ngModel)]="draft.status">
-                        <option value="active">Active</option>
-                        <option value="suspended">Suspended</option>
-                      </select>
+                      <app-choice name="status" [id]="'status-' + institute.slug" label="Status" [options]="[{ value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }]" [(ngModel)]="draft.status" />
                       @if (draft.status === 'suspended' && institute.status !== 'suspended') {
                         <div class="hint" role="note">Everyone at this institute will be locked out until you set it back to Active.</div>
                       }

@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
 import { ApiError, AskLogRow, AskLogSource } from '../core/models';
+import { Choice } from '../ui/choice';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
@@ -12,7 +14,7 @@ const GREEN_FROM = 0.75;
 /** What students asked in Ask AI, how well the notes covered each question, and where the answer is in the coursework. */
 @Component({
   selector: 'app-admin-study-log',
-  imports: [Icon, InfoTip],
+  imports: [FormsModule, Choice, Icon, InfoTip],
   styles: `
     .meter { display: flex; align-items: center; gap: 8px; min-width: 150px; }
     .meter-track { flex: 1; height: 10px; border-radius: 5px; background: var(--border, #e5e7eb); overflow: hidden; }
@@ -22,7 +24,14 @@ const GREEN_FROM = 0.75;
     .meter-fill.high { background: #2e9e5b; }
     .meter-value { font-weight: 500; min-width: 3ch; text-align: right; }
     .source { display: block; margin-bottom: 6px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; }
+    .divider { border: 0; border-top: 1px solid var(--border, #e5e7eb); margin: 16px 0; }
     .source-line { font-size: 13px; color: var(--text-secondary, #6b7280); }
+    .source-list { list-style: none; padding: 0; margin: 12px 0 0; }
+    .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .dialog { background: var(--surface-1, #fff); color: var(--text-primary, #111827); border-radius: 12px; padding: 20px; width: min(560px, 100%); max-height: 80vh; overflow: auto; }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .dialog-head h2 { margin: 0; font-size: 18px; font-weight: 500; }
   `,
   template: `
     <div class="page-head">
@@ -38,33 +47,23 @@ const GREEN_FROM = 0.75;
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
     <div class="form-panel">
-      <div class="field">
-        <label for="filter">Show</label>
-        <select id="filter" name="filter" [value]="filter()" (change)="setFilter($any($event.target).value)">
-          <option value="all">All questions</option>
-          <option value="not_covered">Not covered (the app did not answer)</option>
-          <option value="low_coverage">Low coverage (no passage shown)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="below">Best match</label>
-        <select id="below" name="below" [value]="below() === null ? 'any' : String(below())" (change)="setBelow($any($event.target).value)">
-          <option value="any">Any</option>
-          <option value="0.75">Below 75%</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="sort">Order</label>
-        <select id="sort" name="sort" [value]="sort()" (change)="setSort($any($event.target).value)">
-          <option value="newest">Newest first</option>
-          <option value="worst">Worst match first</option>
-        </select>
+      <div class="filters">
+        <div class="field">
+          <label for="match">Best match</label>
+          <app-choice id="match" name="match" label="Best match" [options]="[{ value: 'all', label: 'All' }, { value: 'under_75', label: 'Under 75%' }, { value: 'under_30', label: 'Under 30%' }]" [ngModel]="match()" (ngModelChange)="setMatch($event)" />
+        </div>
+        <div class="field">
+          <label for="sort">Order</label>
+          <app-choice id="sort" name="sort" label="Order" [options]="[{ value: 'newest', label: 'Newest' }, { value: 'worst', label: 'Worst first' }]" [ngModel]="sort()" (ngModelChange)="setSort($event)" />
+        </div>
       </div>
       <label class="check">
         <input type="checkbox" id="show-student" [checked]="showStudent()" (change)="setShowStudent($any($event.target).checked)" />
         Show which student asked
       </label>
     </div>
+
+    <hr class="divider" />
 
     @if (loading() && rows().length === 0) {
       <p class="soft">Loading…</p>
@@ -98,14 +97,11 @@ const GREEN_FROM = 0.75;
                 <td>{{ row.matches }}</td>
                 <td>{{ row.answered ? 'Yes' : 'No' }}</td>
                 <td>
-                  @for (source of row.sources ?? []; track $index) {
-                    <span class="source">
-                      <span class="source-line">{{ source.course }} › {{ source.topic }} › {{ source.subtopic }}</span><br />
-                      <button class="btn small secondary" type="button" [disabled]="openingKey() === row.id + $index" (click)="openSource(row.id, source, $index)">
-                        <app-icon name="file" [size]="14" /> {{ source.file }}, page {{ source.page }}
-                      </button>
-                    </span>
-                  } @empty {
+                  @if ((row.sources ?? []).length) {
+                    <button class="btn small secondary" type="button" (click)="showSources(row)">
+                      <app-icon name="book" [size]="14" /> View {{ row.sources.length }} {{ row.sources.length === 1 ? 'source' : 'sources' }}
+                    </button>
+                  } @else {
                     <span class="soft">None</span>
                   }
                 </td>
@@ -116,33 +112,57 @@ const GREEN_FROM = 0.75;
         </table>
       </div>
     }
+
+    @if (openedRow(); as opened) {
+      <div class="overlay" (click)="closeSources()">
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="sources-title" id="sources-dialog" (click)="$event.stopPropagation()">
+          <div class="dialog-head">
+            <h2 id="sources-title">Coursework for this question</h2>
+            <button class="btn small secondary" type="button" id="close-sources" (click)="closeSources()">Close</button>
+          </div>
+          <p class="soft">{{ opened.question }}</p>
+          <ol class="source-list">
+            @for (source of opened.sources; track $index) {
+              <li class="source">
+                <span class="source-line">{{ source.course }} › {{ source.topic }} › {{ source.subtopic }}</span><br />
+                <button class="btn small secondary" type="button" [disabled]="openingKey() === opened.id + $index" (click)="openSource(opened.id, source, $index)">
+                  <app-icon name="file" [size]="14" /> {{ source.file }}, page {{ source.page }}
+                </button>
+              </li>
+            }
+          </ol>
+        </div>
+      </div>
+    }
   `,
 })
 export class AdminStudyLog implements OnInit {
   private readonly api = inject(ApiService);
 
-  readonly filter = signal('all');
-  readonly below = signal<number | null>(null);
+  readonly match = signal('all');
   readonly sort = signal('newest');
   readonly showStudent = signal(false);
   readonly rows = signal<AskLogRow[]>([]);
   readonly loading = signal(true);
   readonly error = signal<ApiError | null>(null);
   readonly openingKey = signal<string | null>(null);
+  /** The question whose coursework list is open in the popup, or null when no popup is open. */
+  readonly openedRow = signal<AskLogRow | null>(null);
 
-  readonly String = String;
+  showSources(row: AskLogRow): void {
+    this.openedRow.set(row);
+  }
+
+  closeSources(): void {
+    this.openedRow.set(null);
+  }
 
   ngOnInit(): void {
     void this.load();
   }
 
-  setFilter(value: string): void {
-    this.filter.set(value);
-    void this.load();
-  }
-
-  setBelow(value: string): void {
-    this.below.set(value === 'any' ? null : Number(value));
+  setMatch(value: string): void {
+    this.match.set(value);
     void this.load();
   }
 
@@ -160,7 +180,7 @@ export class AdminStudyLog implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const reply = await this.api.studyLog(this.filter(), this.showStudent(), this.below(), this.sort());
+      const reply = await this.api.studyLog(this.match(), this.showStudent(), this.sort());
       this.rows.set(reply.rows);
     } catch (error) {
       this.rows.set([]);

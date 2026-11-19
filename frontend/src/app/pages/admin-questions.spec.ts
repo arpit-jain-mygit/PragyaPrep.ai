@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { API, all, clickButton, el, sessionFor, settle, setupTestBed, text, type } from '../testing';
+import { chosen } from '../testing';
 import { AdminQuestions } from './admin-questions';
 
 const PAPERS = [
@@ -209,17 +210,17 @@ describe('Admin question bank: adding several in a row', () => {
     await settle(fixture);
 
     expect(all(fixture, '#question-form').length).toBe(1);
-    expect(el<HTMLSelectElement>(fixture, '#q-subject').value).toBe('physics');
-    expect(el<HTMLSelectElement>(fixture, '#q-topic').value).toBe('Magnetism');
-    expect(el<HTMLSelectElement>(fixture, '#q-difficulty').value).toBe('hard');
-    expect(el<HTMLSelectElement>(fixture, '#q-status').value).toBe('published');
+    expect(chosen(fixture, '#q-subject')).toBe('physics');
+    expect(chosen(fixture, '#q-topic')).toBe('Magnetism');
+    expect(chosen(fixture, '#q-difficulty')).toBe('hard');
+    expect(chosen(fixture, '#q-status')).toBe('published');
     expect(el<HTMLTextAreaElement>(fixture, '#q-text').value).toBe('');
     expect(el<HTMLInputElement>(fixture, '#q-opt-0').value).toBe('');
     expect(el<HTMLInputElement>(fixture, '#q-correct-0').checked).toBe(false);
     expect(text(fixture)).toContain('Added question 1 in Physics · Magnetism. Add the next one.');
     expect(el(fixture, '#working-on').textContent).toContain('1 added');
-    expect(el<HTMLSelectElement>(fixture, '#f-subject').value).toBe('physics');
-    expect(el<HTMLSelectElement>(fixture, '#f-topic').value).toBe('Magnetism');
+    expect(chosen(fixture, '#f-subject')).toBe('physics');
+    expect(chosen(fixture, '#f-topic')).toBe('Magnetism');
   });
 
   it('counts each question added in a row and then closes with Done', async () => {
@@ -467,7 +468,7 @@ describe('Admin question bank: fill-in questions', () => {
     const { fixture } = await open([]);
     clickButton(fixture, 'Add question');
     await settle(fixture);
-    expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('mcq');
+    expect(chosen(fixture, '#q-kind')).toBe('mcq');
     expect(all(fixture, '#q-opt-0').length).toBe(1);
     expect(all(fixture, '#q-answer-text').length).toBe(0);
 
@@ -583,8 +584,8 @@ describe('Admin question bank: fill-in questions', () => {
     const { fixture, http } = await open([FILL]);
     clickButton(fixture, 'Edit');
     await settle(fixture);
-    expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('fill_in');
-    expect(el<HTMLSelectElement>(fixture, '#q-answer-type').value).toBe('number');
+    expect(chosen(fixture, '#q-kind')).toBe('fill_in');
+    expect(chosen(fixture, '#q-answer-type')).toBe('number');
     expect(el<HTMLInputElement>(fixture, '#q-answer-number').value).toBe('300000');
     expect(el<HTMLInputElement>(fixture, '#q-tolerance').value).toBe('1000');
     expect(el<HTMLTextAreaElement>(fixture, '#q-explanation').value).toBe('About 299,792 km/s.');
@@ -613,8 +614,8 @@ describe('Admin question bank: fill-in questions', () => {
     await settle(fixture);
     http.expectOne(`${API}/api/admin/questions?paper=physics&topic=Optics`).flush([]);
     await settle(fixture);
-    expect(el<HTMLSelectElement>(fixture, '#q-kind').value).toBe('fill_in');
-    expect(el<HTMLSelectElement>(fixture, '#q-answer-type').value).toBe('number');
+    expect(chosen(fixture, '#q-kind')).toBe('fill_in');
+    expect(chosen(fixture, '#q-answer-type')).toBe('number');
     expect(el<HTMLInputElement>(fixture, '#q-answer-number').value).toBe('');
     expect(el<HTMLTextAreaElement>(fixture, '#q-explanation').value).toBe('');
   });

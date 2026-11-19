@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDate } from '../core/format';
@@ -13,7 +14,7 @@ import { InfoTip } from '../ui/info-tip';
 /** A student's results across all their tests: totals, how their scores are moving, every finished attempt, and where they are strong or weak. */
 @Component({
   selector: 'app-student-results',
-  imports: [FormsModule, RouterLink, AskAi, Icon, InfoTip, Sparkle],
+  imports: [Choice, FormsModule, RouterLink, AskAi, Icon, InfoTip, Sparkle],
   template: `
     @if (error(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
 
@@ -82,11 +83,7 @@ import { InfoTip } from '../ui/info-tip';
           </div>
           <div class="field">
             <label class="sr-only" for="mr-result">Result</label>
-            <select id="mr-result" name="mrresult" [ngModel]="filter().result" (ngModelChange)="setFilter('result', $event)">
-              <option value="">All results</option>
-              <option value="passed">Passed</option>
-              <option value="failed">Not passed</option>
-            </select>
+            <app-choice name="mrresult" id="mr-result" label="Result" [options]="[{ value: '', label: 'All results' }, { value: 'passed', label: 'Passed' }, { value: 'failed', label: 'Not passed' }]" [ngModel]="filter().result" (ngModelChange)="setFilter('result', $event)" />
           </div>
         </div>
         <div class="table-wrap">

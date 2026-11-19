@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
@@ -44,7 +45,7 @@ const SHOWN_AT_MOST = 100;
 /** Tests the admin builds from the question bank: when they can be taken, how they are marked, who gets them, and which questions they hold. */
 @Component({
   selector: 'app-admin-tests',
-  imports: [FormsModule, RouterLink, Icon, InfoTip],
+  imports: [Choice, FormsModule, RouterLink, Icon, InfoTip],
   template: `
     <div class="page-head">
       <h1>
@@ -269,10 +270,7 @@ const SHOWN_AT_MOST = 100;
         <div class="grid-3" style="margin-top: 0.75rem">
           <div class="field">
             <label for="t-status">Status <app-info text="Only published tests are offered to students. A test needs questions and at least one course to be published." /></label>
-            <select id="t-status" name="status" [(ngModel)]="draft.status">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
+            <app-choice name="status" id="t-status" label="Status" [options]="[{ value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }]" [(ngModel)]="draft.status" />
             @if (fieldErrors()['status']) { <div class="error-text">{{ fieldErrors()['status'] }}</div> }
           </div>
         </div>
@@ -303,11 +301,7 @@ const SHOWN_AT_MOST = 100;
         </div>
         <div class="field">
           <label class="sr-only" for="tf-status">Status</label>
-          <select id="tf-status" name="tfstatus" [ngModel]="testFilter().status" (ngModelChange)="setFilter('status', $event)">
-            <option value="">All statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
+          <app-choice name="tfstatus" id="tf-status" label="Status" [options]="[{ value: '', label: 'All statuses' }, { value: 'published', label: 'Published' }, { value: 'draft', label: 'Draft' }]" [ngModel]="testFilter().status" (ngModelChange)="setFilter('status', $event)" />
         </div>
         @if (filtering()) {
           <button class="icon-btn" type="button" id="tf-clear" title="Clear filters" (click)="clearFilters()"><app-icon name="x" /><span class="sr-only">Clear filters</span></button>

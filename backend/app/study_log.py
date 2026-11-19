@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 RETENTION_SECONDS = 30 * 24 * 3600  # 30 days
 MAX_QUESTION_CHARS = 200
-FILTERS = ("all", "not_covered", "low_coverage")
+# The match choices the admin can pick, as the share of the question's words that the best passage covers.
+MATCH_LIMITS = {"all": None, "under_75": 0.75, "under_30": 0.3}
 SORTS = ("newest", "worst")
 
 
@@ -54,26 +55,17 @@ def record(scoped: TenantRepo, student: dict, question: str, reply: dict) -> Non
         logger.exception("could not save an Ask AI log row")
 
 
-def _keep(row: dict, filter_name: str) -> bool:
-    if filter_name == "not_covered":
-        return not row["answered"]
-    if filter_name == "low_coverage":
-        return row["best_coverage"] < study_search.MIN_SHOW_COVERAGE
-    return True
-
-
-def list_for_admin(scoped: TenantRepo, filter_name: str = "all", show_student: bool = False, limit: int = 200,
-                   below: float | None = None, sort: str = "newest") -> list[dict]:
-    """Newest first. Students' emails are removed unless show_student is asked for."""
-    if filter_name not in FILTERS:
-        raise ValueError(f"unknown filter: {filter_name!r}")
+def list_for_admin(scoped: TenantRepo, match: str = "all", show_student: bool = False, limit: int = 200, sort: str = "newest") -> list[dict]:
+    """Logged questions. 'match' keeps only rows whose best match is under a limit. Students' names and emails are
+    removed unless show_student is asked for. Rows come newest first, or lowest best match first."""
+    if match not in MATCH_LIMITS:
+        raise ValueError(f"unknown match: {match!r}")
     if sort not in SORTS:
         raise ValueError(f"unknown sort: {sort!r}")
+    limit_share = MATCH_LIMITS[match]
     rows = []
     for row in scoped.list_ask_logs(limit=500):
-        if not _keep(row, filter_name):
-            continue
-        if below is not None and not row["best_coverage"] < below:
+        if limit_share is not None and not row["best_coverage"] < limit_share:
             continue
         out = {key: row[key] for key in ("id", "created_at", "question", "best_coverage", "matches", "answered")}
         out["sources"] = row.get("sources", [])  # rows saved before this change have none

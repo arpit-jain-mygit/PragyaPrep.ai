@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Choice } from '../ui/choice';
 import { ApiService } from '../core/api.service';
 import { ApiError, MyProfile } from '../core/models';
 import { ProfileService } from '../core/profile.service';
@@ -15,7 +16,7 @@ const RELATIONS = ['Mother', 'Father', 'Guardian', 'Other'];
  */
 @Component({
   selector: 'app-my-profile',
-  imports: [FormsModule, Icon, PhotoPicker],
+  imports: [Choice, FormsModule, Icon, PhotoPicker],
   template: `
     <div class="page-head"><h1><app-icon name="users" /> My profile</h1></div>
     @if (loadError(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
@@ -48,7 +49,7 @@ const RELATIONS = ['Mother', 'Father', 'Guardian', 'Other'];
             </div>
             <div class="field">
               <label for="summary">Progress summary by email</label>
-              <select id="summary" name="summary" [(ngModel)]="summary"><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="off">Never</option></select>
+              <app-choice name="summary" id="summary" label="Summary emails" [options]="[{ value: 'weekly', label: 'Every week' }, { value: 'monthly', label: 'Every month' }, { value: 'off', label: 'Never' }]" [(ngModel)]="summary" />
             </div>
           }
         </div>

@@ -10,15 +10,14 @@ router = APIRouter(tags=["admin study log"])
 
 @router.get("/api/admin/study-log")
 def ask_log(
-    filter: str = Query(default="all"),
+    match: str = Query(default="all"),
     show_student: bool = Query(default=False),
-    below: float | None = Query(default=None, ge=0, le=1),
     sort: str = Query(default="newest"),
     scoped: TenantRepo = Depends(get_tenant_repo),
     admin: dict = Depends(require_roles(TENANT_ADMIN)),
 ):
-    """Logged questions, newest first. Students' emails are left out unless show_student is true."""
+    """Logged questions. Students' names and emails are left out unless show_student is true."""
     try:
-        return {"rows": study_log.list_for_admin(scoped, filter, show_student, below=below, sort=sort)}
+        return {"rows": study_log.list_for_admin(scoped, match, show_student, sort=sort)}
     except ValueError:
-        raise HTTPException(status_code=422, detail="Choose a valid filter and sort.")
+        raise HTTPException(status_code=422, detail="Choose a valid match and sort.")
