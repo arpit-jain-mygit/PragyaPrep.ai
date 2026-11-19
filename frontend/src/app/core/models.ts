@@ -1136,6 +1136,9 @@ export interface StudyHit {
   page: number;
   snippet: string;
   score: number;
+  /** The question's words (lowercase, no punctuation) that this passage contains. Shown in bold in the snippet. */
+  matched: string[];
+  coverage: number;
 }
 
 export interface StudySearch {

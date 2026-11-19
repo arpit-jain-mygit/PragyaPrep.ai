@@ -364,7 +364,7 @@ describe('Student coursework page: opened from the Today card', () => {
   describe('search over the coursework', () => {
     const HIT = {
       course_id: 'c1', course: 'CAT', subject: 'Quantitative Ability', topic: 'Percentages', subtopic: 'Concepts',
-      file_id: 'f1', file: 'Percent notes', page: 2, snippet: 'Kochi is a natural harbour at the head of the Vembanad lagoon.', score: 9.5,
+      file_id: 'f1', file: 'Percent notes', page: 2, snippet: 'Kochi is a natural harbour at the head of the Vembanad lagoon.', score: 9.5, matched: ['vembanad', 'lagoon', 'harbour'], coverage: 1,
     };
 
     async function searchFor(env: Awaited<ReturnType<typeof open>>, q: string) {
@@ -384,6 +384,13 @@ describe('Student coursework page: opened from the Today card', () => {
       expect(hit.textContent).toContain('CAT › Quantitative Ability › Percentages › Concepts');
       expect(hit.textContent).toContain('Kochi is a natural harbour');
       expect(hit.textContent).toContain('Percent notes, page 2');
+    });
+
+    it('shows the question words in bold inside the snippet', async () => {
+      const env = await open();
+      await searchFor(env, 'Vembanad lagoon');
+      const bold = all(env.fixture, '.study-snippet .hl').map((b) => b.textContent!.trim());
+      expect(bold).toEqual(['harbour', 'Vembanad', 'lagoon.']);
     });
 
     it('says so when nothing in the coursework matches', async () => {

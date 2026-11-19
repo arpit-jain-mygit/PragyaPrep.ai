@@ -35,6 +35,8 @@ SELF_CHECK_FACTOR = 0.5  # a self-check passage counts for half as much as a not
 # Coverage: the share of the question's words (weighted by rarity) that the best passage contains. Below this, the answer step
 # is not run and the student sees "not in your coursework". Start strict; tune it on real questions.
 MIN_COVERAGE = 0.6
+# Results covering less than this are hidden: they share one common word with the question and only confuse the student.
+MIN_SHOW_COVERAGE = 0.3
 
 
 class QueryTooShort(Exception):
@@ -144,9 +146,12 @@ def search(scoped: TenantRepo, member: dict, query: str) -> list[dict]:
         snippet = _snippet(passage["text"], wanted, weights)
         present = set(item["terms"])
         coverage = sum(weights[w] for w in wanted if w in present) / sum(weights.values())
+        if coverage < MIN_SHOW_COVERAGE:
+            continue
+        matched = [w for w in wanted if w in present]
         for place in item["places"]:
             hits.append({
-                "coverage": round(coverage, 2),
+                "coverage": round(coverage, 2), "matched": matched,
                 "course_id": item["course_id"], "course": item["course"], **place, "file_id": item["file_id"], "file": item["file"], "page": passage["page"],
                 "snippet": snippet, "score": round(score, 2),
             })

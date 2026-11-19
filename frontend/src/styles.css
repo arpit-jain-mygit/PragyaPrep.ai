@@ -738,3 +738,6 @@ img.qimg { cursor: zoom-in; }
 .study-crumb { margin: 0 0 0.3rem; font-size: 0.82rem; }
 .study-snippet { margin: 0 0 0.5rem; line-height: 1.5; }
 .study-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; font-size: 0.85rem; }
+
+/* The question's words, in bold inside a snippet. */
+.study-snippet .hl { font-weight: 600; color: var(--text-accent); }

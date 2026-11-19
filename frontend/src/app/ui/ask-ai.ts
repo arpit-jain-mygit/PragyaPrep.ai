@@ -30,7 +30,7 @@ import { Sparkle } from './sparkle';
             @for (hit of found; track $index) {
               <li class="study-hit">
                 <p class="soft study-crumb">{{ hit.course }} › {{ hit.subject }} › {{ hit.topic }} › {{ hit.subtopic }}</p>
-                <p class="study-snippet">{{ hit.snippet }}</p>
+                <p class="study-snippet">@for (part of parts(hit); track $index) {@if (part.match) {<strong class="hl">{{ part.text }}</strong>} @else {<span>{{ part.text }}</span>}}</p>
                 <div class="study-foot">
                   <span class="soft">{{ hit.file }}, page {{ hit.page }}</span>
                   <button class="btn small secondary" type="button" [disabled]="openingHit() === $index" (click)="openHit(hit, $index)">
@@ -86,6 +86,18 @@ export class AskAi {
     } finally {
       this.searching.set(false);
     }
+  }
+
+  /** The snippet cut into words and spaces, with the question's words marked, so they can be shown in bold. Text is never
+   *  read as HTML, so passage text from an upload cannot inject markup. */
+  parts(hit: StudyHit): { text: string; match: boolean }[] {
+    const found = new Set(hit.matched);
+    // Each part is a word with its trailing space, so no part is only whitespace (Angular drops those).
+    const words = hit.snippet.split(' ');
+    return words.map((word, i) => ({
+      text: i < words.length - 1 ? word + ' ' : word,
+      match: found.has(word.toLowerCase().replace(/[^a-z0-9]/g, '')),
+    }));
   }
 
   /** Open the PDF at the page of the passage. A new tab is opened right away, as for other files. */

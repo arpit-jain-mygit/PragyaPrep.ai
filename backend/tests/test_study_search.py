@@ -199,3 +199,16 @@ def test_no_match_is_never_confident(client, plan, asha):
 def test_coverage_is_a_fraction_of_the_question(client, plan, asha):
     hit = search(client, asha, "Uttar Pradesh population").json()["hits"][0]
     assert 0 < hit["coverage"] <= 1
+
+
+# ---- Weak matches are hidden, and each hit says which question words it contains ----
+
+def test_a_result_with_only_one_common_word_is_hidden(client, plan, asha):
+    """'port' alone matches a passage about ports, but covers too little of the question to show."""
+    body = search(client, asha, "Which port is a natural harbour at the head of the Vembanad lagoon?").json()
+    assert all(h["coverage"] >= 0.3 for h in body["hits"])
+
+
+def test_each_hit_lists_the_question_words_it_contains(client, plan, asha):
+    hit = search(client, asha, "Uttar Pradesh population").json()["hits"][0]
+    assert "uttar" in hit["matched"] and "pradesh" in hit["matched"]
