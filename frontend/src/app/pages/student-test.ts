@@ -22,11 +22,10 @@ import { Modal } from '../ui/modal';
     @if (instructions() && test(); as t) {
       <app-modal title="Before you begin" boxId="instructions" (close)="instructions.set(false)">
         <ul class="plain-list rules">
-          <li><app-icon name="clock" [size]="16" /> You have <strong>{{ t.duration_minutes }} minutes</strong>. The clock starts now and keeps running even if you leave the page.</li>
-          <li><app-icon name="check" [size]="16" /> {{ t.question_count }} questions, {{ sign(t.marks_correct) }} for a correct answer, {{ t.marks_incorrect === '0' ? 'nothing' : t.marks_incorrect }} for a wrong one, nothing if left blank.</li>
-          <li><app-icon name="flag" [size]="16" /> Your answers are saved as you go. You can mark a question for review and come back to it.</li>
-          <li><app-icon name="lock" [size]="16" /> When the time ends, the test is submitted for you with the answers saved so far.</li>
-          <li><app-icon name="rotate" [size]="16" /> You have {{ t.attempts_left }} attempt{{ t.attempts_left === 1 ? '' : 's' }} left, and this uses one.</li>
+          <li><app-icon name="clock" [size]="18" /><span>The clock starts now and keeps running, even if you leave the page.</span></li>
+          <li><app-icon name="flag" [size]="18" /><span>Your answers are saved as you go. You can mark a question for review and come back to it.</span></li>
+          <li><app-icon name="lock" [size]="18" /><span>When the time ends, the test is submitted for you with the answers saved so far.</span></li>
+          <li><app-icon name="rotate" [size]="18" /><span>This uses one of your {{ t.attempts_left }} attempt{{ t.attempts_left === 1 ? '' : 's' }}.</span></li>
         </ul>
         <ng-container slot="footer">
           <button class="btn secondary" type="button" id="instructions-cancel" (click)="instructions.set(false)">Not yet</button>

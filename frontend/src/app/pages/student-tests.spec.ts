@@ -212,7 +212,9 @@ describe('Student test intro', () => {
     await settle(fixture);
     const rules = el(fixture, '#instructions').textContent!.replace(/\s+/g, ' ');
     expect(rules).toContain('Before you begin');
-    expect(rules).toContain('minutes');
+    expect(rules).toContain('clock starts now');
+    expect(rules).toContain('uses one of your 3 attempts');
+    expect(rules).not.toContain('questions,');
     expect(rules).toContain('submitted for you');
     el<HTMLButtonElement>(fixture, '#instructions-cancel').click();
     await settle(fixture);

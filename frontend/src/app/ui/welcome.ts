@@ -47,7 +47,7 @@ const STEPS: Record<string, { title: string; steps: Step[] }> = {
     @if (show() && content(); as c) {
       <app-modal [title]="c.title" boxId="welcome" (close)="done()">
         <ul class="plain-list rules">
-          @for (s of c.steps; track s.text) { <li><app-icon [name]="s.icon" [size]="18" /> {{ s.text }}</li> }
+          @for (s of c.steps; track s.text) { <li><app-icon [name]="s.icon" [size]="18" /><span>{{ s.text }}</span></li> }
         </ul>
         <ng-container slot="footer"><button class="btn" type="button" id="welcome-done" (click)="done()">Got it</button></ng-container>
       </app-modal>
