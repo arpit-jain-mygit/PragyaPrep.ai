@@ -308,10 +308,34 @@ describe('Student coursework page: opened from the Today card', () => {
     expect(el(fixture, '#cw-filter-count').textContent).toBe('1 item');
     expect(el(fixture, '#cw-filter').textContent).toContain('due this week');
     expect(el(fixture, '#sub-name').textContent).toBe('Due this week');
+  });
+
+  it('switches both ways between the filtered list and everything, showing which is on', async () => {
+    const { fixture } = await open(MIXED, { show: 'week' });
+    const pressed = () => [el(fixture, '#cw-scope').getAttribute('aria-pressed'), el(fixture, '#cw-show-all').getAttribute('aria-pressed')];
+    expect(pressed()).toEqual(['true', 'false']);
     el<HTMLButtonElement>(fixture, '#cw-show-all').click();
     await settle(fixture);
-    expect(all(fixture, '#cw-filter').length).toBe(0);
+    expect(pressed()).toEqual(['false', 'true']);
     expect(titles(fixture).length).toBe(5);
+    expect(all(fixture, '#cw-filter').length).toBe(1); // the switch stays, so the student can go back
+    expect(el(fixture, '#cw-filter-count').textContent).toBe('1 item'); // and its count is still the filtered one
+    el<HTMLButtonElement>(fixture, '#cw-scope').click();
+    await settle(fixture);
+    expect(pressed()).toEqual(['true', 'false']);
+    expect(titles(fixture)).toEqual(['Due this week']);
+  });
+
+  it('keeps the item on the right when it is also in the filtered list, and opens the first match when it is not', async () => {
+    const { fixture } = await open(MIXED, { show: 'pending' });
+    el<HTMLButtonElement>(fixture, '#cw-show-all').click();
+    await settle(fixture);
+    el<HTMLButtonElement>(fixture, '[data-sub="Done already"]').click();
+    await settle(fixture);
+    expect(el(fixture, '#sub-name').textContent).toBe('Done already');
+    el<HTMLButtonElement>(fixture, '#cw-scope').click();
+    await settle(fixture);
+    expect(el(fixture, '#sub-name').textContent).toBe('Due this week'); // "Done already" is not pending, so the first pending one opens
   });
 
   it('shows only the overdue ones', async () => {

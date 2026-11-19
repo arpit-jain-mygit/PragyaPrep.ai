@@ -7,6 +7,8 @@ import { ApiError, StudentCourse, StudentCoursework, StudentMaterial, StudentSub
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
 
+type Filter = 'all' | 'week' | 'overdue' | 'pending';
+
 interface Chosen {
   course: StudentCourse;
   subject: StudentSubject;
@@ -42,13 +44,16 @@ interface Chosen {
       @if (!d.courses.length) {
         <div class="empty-state" id="no-coursework"><app-icon name="layers" [size]="32" /><p>No coursework yet</p></div>
       } @else {
-        @if (filter() !== 'all') {
-          <div class="filter-bar" id="cw-filter" role="status">
-            <app-icon name="filter" [size]="18" />
-            <span><strong id="cw-filter-count">{{ matchCount() }} {{ matchCount() === 1 ? 'item' : 'items' }}</strong> {{ filterLabel() }}</span>
-            <button type="button" class="btn secondary small" id="cw-show-all" (click)="clearFilter()"><app-icon name="x" [size]="14" /> Show everything</button>
+        @if (opened() !== 'all') {
+          <div class="seg-row" id="cw-filter" role="group" aria-label="Which items to show">
+            <div class="seg">
+              <button type="button" id="cw-scope" [attr.aria-pressed]="filter() !== 'all'" [class.on]="filter() !== 'all'" (click)="setFilter(opened())">
+                <strong id="cw-filter-count">{{ matchCount() }} {{ matchCount() === 1 ? 'item' : 'items' }}</strong> {{ label(opened()) }}
+              </button>
+              <button type="button" id="cw-show-all" [attr.aria-pressed]="filter() === 'all'" [class.on]="filter() === 'all'" (click)="setFilter('all')">Show everything</button>
+            </div>
           </div>
-          @if (!view().length) { <div class="empty-state" id="cw-filter-empty"><app-icon name="check" [size]="32" /><p>Nothing here. You are all caught up.</p></div> }
+          @if (filter() !== 'all' && !view().length) { <div class="empty-state" id="cw-filter-empty"><app-icon name="check" [size]="32" /><p>Nothing here. You are all caught up.</p></div> }
         }
         <div class="cw-student">
           <nav class="card cw-nav" id="nav" aria-label="Coursework">
@@ -196,8 +201,12 @@ export class StudentCourseworkPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   /** Which sub-topics to show: everything, only those due this week, only the overdue ones, or only those not done yet. Set by the link that opened the page. */
-  readonly filter = signal<'all' | 'week' | 'overdue' | 'pending'>('all');
-  readonly filterLabel = computed(() => ({ all: '', week: 'due this week', overdue: 'overdue', pending: 'not done yet' })[this.filter()]);
+  readonly filter = signal<Filter>('all');
+  /** The filter the page was opened with. It stays, so the switch can go back to it after Show everything. */
+  readonly opened = signal<Filter>('all');
+  label(mode: Filter): string {
+    return { all: '', week: 'due this week', overdue: 'overdue', pending: 'not done yet' }[mode];
+  }
 
   readonly data = signal<StudentCoursework | null>(null);
   readonly loading = signal(false);
@@ -223,9 +232,11 @@ export class StudentCourseworkPage implements OnInit {
   });
 
   /** The tree to show: all of it, or only the courses, subjects and topics that still hold a sub-topic matching the filter. */
-  readonly view = computed<StudentCourse[]>(() => {
+  readonly view = computed<StudentCourse[]>(() => this.treeFor(this.filter()));
+
+  /** The tree with only what the filter lets through. */
+  private treeFor(mode: Filter): StudentCourse[] {
     const courses = this.data()?.courses ?? [];
-    const mode = this.filter();
     if (mode === 'all') return courses;
     const wanted = (sub: StudentSubtopic): boolean =>
       !sub.locked && !sub.done && (mode === 'pending' || (mode === 'overdue' ? sub.overdue : sub.days_left !== null && sub.days_left >= 0 && sub.days_left <= 7));
@@ -243,19 +254,25 @@ export class StudentCourseworkPage implements OnInit {
       if (subjects.length) out.push({ ...course, subjects });
     }
     return out;
-  });
+  }
 
   /** How many sub-topics the filter lets through. */
-  readonly matchCount = computed(() => this.view().reduce((n, c) => n + c.subjects.reduce((m, sj) => m + sj.topics.reduce((k, t) => k + t.subtopics.length, 0), 0), 0));
+  readonly matchCount = computed(() => this.treeFor(this.opened()).reduce((n, c) => n + c.subjects.reduce((m, sj) => m + sj.topics.reduce((k, t) => k + t.subtopics.length, 0), 0), 0));
 
   ngOnInit(): void {
     const show = this.route.snapshot.queryParamMap.get('show');
-    if (show === 'week' || show === 'overdue' || show === 'pending') this.filter.set(show);
+    if (show === 'week' || show === 'overdue' || show === 'pending') {
+      this.filter.set(show);
+      this.opened.set(show);
+    }
     void this.load();
   }
 
-  clearFilter(): void {
-    this.filter.set('all');
+  /** Switch between the filtered list and everything. If the sub-topic on the right is not in the new list, the first one in it is opened. */
+  setFilter(mode: Filter): void {
+    this.filter.set(mode);
+    const shown = this.view().flatMap((course) => course.subjects.flatMap((subject) => subject.topics.flatMap((topic) => topic.subtopics.map((sub) => ({ course, subject, topic, sub })))));
+    if (shown.length && !shown.some((x) => x.sub.id === this.selectedId())) this.select(shown.find((x) => !x.sub.locked) ?? shown[0]);
   }
 
   private async load(): Promise<void> {
