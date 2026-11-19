@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { toCsv } from '../core/csv';
-import { shortDate, timeAgo } from '../core/format';
+import { formatDateTime, shortDate, timeAgo } from '../core/format';
 import { AdminCourse, ApiError, CourseProgress, CourseStuck, ProgressRow, ProgressStatus, ReminderResult } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Avatar } from '../ui/avatar';
@@ -29,6 +29,7 @@ export const STATUS_LABELS: Record<ProgressStatus, string> = { behind: 'Behind',
         @if (data(); as d) {
           <button class="btn small" type="button" id="remind" [disabled]="d.summary.behind === 0 || busy()" (click)="confirmRemind.set(!confirmRemind())"><app-icon name="bell" [size]="16" /> Remind {{ d.summary.behind }}</button>
           <button class="btn secondary small" type="button" id="download-csv" (click)="download()"><app-icon name="download" [size]="16" /> CSV</button>
+          <button class="btn secondary small" type="button" id="refresh" [disabled]="refreshing()" (click)="refresh()"><app-icon name="rotate" [size]="16" /> {{ refreshing() ? 'Updating…' : 'Refresh' }}</button>
         }
       </span>
     </div>
@@ -56,6 +57,7 @@ export const STATUS_LABELS: Record<ProgressStatus, string> = { behind: 'Behind',
     }
 
     @if (data(); as d) {
+      @if (d.as_of) { <p class="soft small" id="as-of">Updated {{ updated(d.as_of) }}@if (refreshing()) { · working out the latest… }</p> }
       <div class="stat-grid" id="counts">
         <div class="stat"><div class="num" id="c-students">{{ d.summary.students }}</div><div class="label">Students</div></div>
         <div class="stat"><div class="num bad-num" id="c-behind">{{ d.summary.behind }}</div><div class="label">Behind</div></div>
@@ -147,6 +149,8 @@ export class AdminProgress implements OnInit {
   readonly tab = signal<'students' | 'stuck'>('students');
   readonly loading = signal(false);
   readonly stuckLoading = signal(false);
+  readonly refreshing = signal(false);
+  updated = formatDateTime;
   readonly error = signal<ApiError | null>(null);
   readonly query = signal('');
   readonly onlyBehind = signal(false);
@@ -192,10 +196,31 @@ export class AdminProgress implements OnInit {
     this.reminded.set(null);
     this.confirmRemind.set(false);
     try {
-      this.data.set(await this.api.courseProgress(id));
+      const saved = await this.api.courseProgress(id);
+      this.data.set(saved);
       if (this.tab() === 'stuck') await this.showStuck();
+      // The saved page opens at once. If it is over 15 minutes old, work out the latest behind the scenes and swap it in.
+      if (saved.fresh === false) await this.refresh();
     } catch (error) {
       this.error.set(error as ApiError);
+    }
+  }
+
+  /** Work the latest out (a few seconds) and replace what is shown, unless another course was picked meanwhile. */
+  async refresh(): Promise<void> {
+    const id = this.courseId();
+    if (!id || this.refreshing()) return;
+    this.refreshing.set(true);
+    try {
+      const latest = await this.api.refreshProgress(id);
+      if (this.courseId() !== id) return;
+      this.data.set(latest);
+      this.stuck.set(null);
+      if (this.tab() === 'stuck') await this.showStuck();
+    } catch (error) {
+      if (this.data() === null) this.error.set(error as ApiError);
+    } finally {
+      this.refreshing.set(false);
     }
   }
 

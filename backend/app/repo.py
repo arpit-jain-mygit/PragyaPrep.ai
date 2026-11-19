@@ -565,6 +565,17 @@ class TenantRepo:
         response = self.table.query(IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}BATCHES"))
         return [_plain(item) for item in response["Items"]]
 
+    # ---- The saved progress of a course (the admin's Progress page), kept as one text item and replaced as a whole ----
+
+    def _progress_key(self, course_id: str) -> dict:
+        return {"PK": f"{self._prefix}PROGRESS#{course_id}", "SK": "SAVED"}
+
+    def put_progress_cache(self, course_id: str, saved: dict) -> None:
+        self.table.put_item(Item={**self._progress_key(course_id), **saved})
+
+    def get_progress_cache(self, course_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._progress_key(course_id)).get("Item"))
+
     # ---- Courses ----
 
     def _course_key(self, course_id: str) -> dict:

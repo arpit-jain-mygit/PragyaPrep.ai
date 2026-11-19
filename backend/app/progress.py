@@ -10,7 +10,9 @@ It is worked out when asked, reading each student's records in parallel, which s
   Not started  nothing marked complete and no test submitted yet.
   On track     everything else.
 """
+import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from statistics import mean
 
 from app import attempts as attempts_module, avatars, clock, content, coursework, student_coursework
@@ -166,3 +168,65 @@ def student(scoped: TenantRepo, course_id: str, email: str, storage=None) -> dic
         "course": data["plan"]["course"], "student": {"email": member["email"], "name": _name(member), "avatar_url": avatars.url_for(storage, full) if storage else ""}, "row": row,
         "coursework": mine, "overdue_items": overdue_items, "tests": tests,
     }
+
+
+# ---- The admin's Progress page: worked out once, saved, shown instantly ----
+
+CACHE_SECONDS = 15 * 60  # a saved page counts as fresh for this long
+THROTTLE_SECONDS = 60  # a refresh asked for within this time returns what is saved
+MAX_SAVED_CHARS = 330_000  # one saved item may be up to 400 KB; a bigger course is simply worked out each time
+
+
+def _build(scoped: TenantRepo, course_id: str) -> dict:
+    """Both views of the page, from ONE pass over the records: the student list and where students get stuck."""
+    data = _gather(scoped, course_id)
+    rows = sorted(data["students"], key=lambda r: (STATUS_ORDER[r["status"]], -r["overdue"], r["name"].lower()))
+    rows = [{k: v for k, v in r.items() if k != "done_ids"} for r in rows]
+    count = lambda status: sum(1 for r in rows if r["status"] == status)
+    total = len(data["students"])
+    items = []
+    for sub in data["subs"]:
+        finished = sum(1 for s in data["students"] if sub["id"] in s["done_ids"])
+        items.append({**sub, "done": finished, "students": total, "percent": round(100 * finished / total) if total else 0})
+    items.sort(key=lambda i: (i["percent"], i["due"] or "9999", i["subject"], i["topic"], i["title"]))
+    return {
+        "course": data["plan"]["course"],
+        "summary": {"students": len(rows), "behind": count("behind"), "not_started": count("not_started"), "on_track": count("on_track"),
+                    "subtopics": len(data["subs"]), "tests": len(data["tests"])},
+        "rows": rows,
+        "stuck": items,
+    }
+
+
+def _saved_or_build(scoped: TenantRepo, course_id: str, refresh: bool = False) -> tuple[dict, int]:
+    """The saved page and when it was worked out. Worked out (and saved) when nothing is saved, or when a refresh was asked for
+    and the saved one is over a minute old. Raises coursework.CourseNotFound."""
+    if scoped.get_course(course_id) is None:
+        raise coursework.CourseNotFound()
+    saved = scoped.get_progress_cache(course_id)
+    now = clock.now()
+    if saved and not (refresh and now - saved["at"] >= THROTTLE_SECONDS):
+        return json.loads(saved["json"]), saved["at"]
+    built = _build(scoped, course_id)
+    text = json.dumps(built)
+    at = int(now)
+    if len(text) <= MAX_SAVED_CHARS:
+        scoped.put_progress_cache(course_id, {"at": at, "json": text})
+    return built, at
+
+
+def _stamp(at: int) -> dict:
+    return {"as_of": datetime.fromtimestamp(at, tz=timezone.utc).isoformat(), "fresh": clock.now() - at < CACHE_SECONDS}
+
+
+def overview(scoped: TenantRepo, course_id: str, storage=None, refresh: bool = False) -> dict:
+    """The student list for the Progress page, from the saved page (with when it was worked out and whether it is still fresh)."""
+    built, at = _saved_or_build(scoped, course_id, refresh)
+    students = [{**{k: v for k, v in r.items() if k != "avatar_key"}, "avatar_url": avatars.url_for(storage, r) if storage else ""} for r in built["rows"]]
+    return {"course": built["course"], "summary": built["summary"], "students": students, **_stamp(at)}
+
+
+def stuck_overview(scoped: TenantRepo, course_id: str, refresh: bool = False) -> dict:
+    """Where students get stuck, from the same saved page."""
+    built, at = _saved_or_build(scoped, course_id, refresh)
+    return {"course": built["course"], "students": built["summary"]["students"], "subtopics": built["stuck"], **_stamp(at)}

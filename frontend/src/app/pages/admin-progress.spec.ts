@@ -279,3 +279,40 @@ describe('timeAgo', () => {
     expect(timeAgo(value as string | null, now)).toBe(expected);
   });
 });
+
+describe('Admin progress: the saved page', () => {
+  const PROGRESS_URL = (id: string) => `${API}/api/admin/progress/${id}`;
+
+  it('says when the page was worked out and does not refresh a fresh one', async () => {
+    const { fixture, http } = await open(progress(PEOPLE, {}) as never);
+    expect(all(fixture, '#as-of').length).toBe(0); // the older test data carries no timestamp
+    http.expectNone(`${PROGRESS_URL('c1')}/refresh`);
+  });
+
+  it('shows a fresh saved page with its time and no background refresh', async () => {
+    const { fixture, http } = await open({ ...progress(PEOPLE), as_of: '2027-01-15T08:00:00+00:00', fresh: true });
+    expect(el(fixture, '#as-of').textContent).toContain('Updated');
+    http.expectNone(`${PROGRESS_URL('c1')}/refresh`);
+  });
+
+  it('shows an old saved page at once, then swaps in the latest', async () => {
+    const { fixture, http } = await open({ ...progress(PEOPLE), as_of: '2027-01-15T08:00:00+00:00', fresh: false });
+    expect(el(fixture, '#c-behind').textContent).toBe('1');
+    expect(el(fixture, '#as-of').textContent).toContain('working out the latest');
+    http.expectOne(`${PROGRESS_URL('c1')}/refresh`).flush({ ...progress([row({ status: 'on_track', overdue: 0 })]), as_of: '2027-01-15T09:00:00+00:00', fresh: true });
+    await settle(fixture);
+    expect(el(fixture, '#c-behind').textContent).toBe('0');
+    expect(el(fixture, '#as-of').textContent).not.toContain('working out');
+  });
+
+  it('refreshes when the Refresh button is pressed, and keeps the old page if that fails', async () => {
+    const { fixture, http } = await open({ ...progress(PEOPLE), as_of: '2027-01-15T08:00:00+00:00', fresh: true });
+    el<HTMLButtonElement>(fixture, '#refresh').click();
+    await settle(fixture);
+    expect(el<HTMLButtonElement>(fixture, '#refresh').textContent).toContain('Updating');
+    http.expectOne(`${PROGRESS_URL('c1')}/refresh`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
+    await settle(fixture);
+    expect(el(fixture, '#c-students').textContent).toBe('3');
+    expect(el<HTMLButtonElement>(fixture, '#refresh').disabled).toBe(false);
+  });
+});

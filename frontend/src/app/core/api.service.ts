@@ -530,6 +530,11 @@ export class ApiService {
     return this.get(`/api/admin/progress/${encodeURIComponent(courseId)}`);
   }
 
+  /** Work the course's page out again and save it (a few seconds on a large course). */
+  refreshProgress(courseId: string): Promise<CourseProgress> {
+    return this.post(`/api/admin/progress/${encodeURIComponent(courseId)}/refresh`);
+  }
+
   courseStuck(courseId: string): Promise<CourseStuck> {
     return this.get(`/api/admin/progress/${encodeURIComponent(courseId)}/stuck`);
   }

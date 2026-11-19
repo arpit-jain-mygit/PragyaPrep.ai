@@ -788,6 +788,9 @@ export interface CourseProgress {
   course: { id: string; name: string };
   summary: { students: number; behind: number; not_started: number; on_track: number; subtopics: number; tests: number };
   students: ProgressRow[];
+  /** When this page was worked out, and whether that was within the last 15 minutes. The page is saved, so it opens at once. */
+  as_of?: string | null;
+  fresh?: boolean;
 }
 
 export interface StuckItem {
@@ -805,6 +808,8 @@ export interface CourseStuck {
   course: { id: string; name: string };
   students: number;
   subtopics: StuckItem[];
+  as_of?: string | null;
+  fresh?: boolean;
 }
 
 export interface StudentProgress {

@@ -61,8 +61,20 @@ def mark(client, token, cid, sid):
     assert client.put(f"{MINE}/{cid}/{sid}/done", headers=token).status_code == 200
 
 
+@pytest.fixture(autouse=True)
+def always_worked_out_fresh(monkeypatch):
+    """These tests change records and look again straight away, so a refresh must never be answered from what is saved."""
+    monkeypatch.setattr("app.progress.THROTTLE_SECONDS", 0)
+
+
 def rows(client, admin, cid):
-    return client.get(f"{PROGRESS}/{cid}", headers=admin)
+    """The page worked out fresh (a refresh), the way the page's Refresh button does."""
+    return client.post(f"{PROGRESS}/{cid}/refresh", headers=admin)
+
+
+def stuck_rows(client, admin, cid):
+    client.post(f"{PROGRESS}/{cid}/refresh", headers=admin)
+    return client.get(f"{PROGRESS}/{cid}/stuck", headers=admin)
 
 
 def by_email(response):
@@ -213,7 +225,7 @@ def test_stuck_lists_each_published_subtopic_with_how_many_finished_least_first(
     mark(client, students["asha"], cid, concepts)
     mark(client, students["ravi"], cid, concepts)
     mark(client, students["asha"], cid, examples)
-    data = client.get(f"{PROGRESS}/{cid}/stuck", headers=admin).json()
+    data = stuck_rows(client, admin, cid).json()
     assert data["students"] == 3
     assert [(s["title"], s["done"], s["students"], s["percent"]) for s in data["subtopics"]] == [("Examples", 1, 3, 33), ("Concepts", 2, 3, 67)]
     assert data["subtopics"][0]["subject"] == "Quantitative Ability" and data["subtopics"][0]["topic"] == "Percentages" and data["subtopics"][0]["due"] == PAST
@@ -221,10 +233,10 @@ def test_stuck_lists_each_published_subtopic_with_how_many_finished_least_first(
 
 def test_stuck_ignores_drafts_and_students_without_access(client, admin, school, students, plan):
     cid = school["cat"]["id"]
-    titles = [s["title"] for s in client.get(f"{PROGRESS}/{cid}/stuck", headers=admin).json()["subtopics"]]
+    titles = [s["title"] for s in stuck_rows(client, admin, cid).json()["subtopics"]]
     assert "Practice" not in titles
     give(client, admin, "zed@example.com", school["cat"])
-    assert client.get(f"{PROGRESS}/{cid}/stuck", headers=admin).json()["students"] == 4
+    assert stuck_rows(client, admin, cid).json()["students"] == 4
 
 
 def test_stuck_with_no_students_has_zero_percent_and_no_error(client, admin, school, plan):
@@ -276,3 +288,70 @@ def test_many_students_are_all_listed(client, admin, school, plan, repo):
         person(repo, email, f"S{i:03d}", "X")
         content.grant_access(scoped, email, school["cat"]["id"], "ritesh@example.com")
     assert rows(client, admin, school["cat"]["id"]).json()["summary"]["students"] == 210
+
+
+# ---- The saved page: instant, fresh for 15 minutes, refreshed on demand, shared by both views ----
+
+@pytest.fixture
+def real_throttle(monkeypatch):
+    monkeypatch.setattr("app.progress.THROTTLE_SECONDS", 60)
+
+
+def test_the_first_visit_works_the_page_out_and_later_visits_use_the_saved_one(client, admin, school, students, plan, real_throttle, monkeypatch):
+    from app import progress
+
+    built = []
+    original = progress._build
+    monkeypatch.setattr(progress, "_build", lambda *a, **k: built.append(1) or original(*a, **k))
+    cid = school["cat"]["id"]
+    first = client.get(f"{PROGRESS}/{cid}", headers=admin).json()
+    assert first["fresh"] is True and first["as_of"] and first["summary"]["students"] == 3
+    client.get(f"{PROGRESS}/{cid}", headers=admin)
+    client.get(f"{PROGRESS}/{cid}/stuck", headers=admin)
+    assert len(built) == 1  # the list and the stuck view share one pass over the records, and later visits read what was saved
+
+
+def test_a_saved_page_does_not_show_new_work_until_it_is_refreshed(client, admin, school, students, plan, real_throttle, sign_in, fake_clock):
+    cid = school["cat"]["id"]
+    before = by_email(client.get(f"{PROGRESS}/{cid}", headers=admin))
+    assert before["meera@example.com"]["cw_done"] == 0
+    mark(client, sign_in("aaptprep", "meera@example.com"), cid, sub_id(client, admin, cid, "Concepts"))
+    assert by_email(client.get(f"{PROGRESS}/{cid}", headers=admin))["meera@example.com"]["cw_done"] == 0  # still the saved page
+    assert by_email(client.post(f"{PROGRESS}/{cid}/refresh", headers=admin))["meera@example.com"]["cw_done"] == 0  # refresh within a minute: saved
+    fake_clock.advance(61)
+    assert by_email(client.post(f"{PROGRESS}/{cid}/refresh", headers=admin))["meera@example.com"]["cw_done"] == 1
+    assert by_email(client.get(f"{PROGRESS}/{cid}", headers=admin))["meera@example.com"]["cw_done"] == 1
+
+
+def test_a_saved_page_goes_stale_after_fifteen_minutes_but_is_still_shown(client, admin, school, students, plan, real_throttle, fake_clock):
+    cid = school["cat"]["id"]
+    client.get(f"{PROGRESS}/{cid}", headers=admin)
+    fake_clock.advance(14 * 60)
+    assert client.get(f"{PROGRESS}/{cid}", headers=admin).json()["fresh"] is True
+    fake_clock.advance(2 * 60)
+    old = client.get(f"{PROGRESS}/{cid}", headers=admin).json()
+    assert old["fresh"] is False and old["summary"]["students"] == 3
+
+
+def test_the_saved_page_keeps_photos_as_fresh_links_and_never_the_storage_key(client, admin, school, students, plan, real_throttle, repo):
+    cid = school["cat"]["id"]
+    repo.scoped("aaptprep").update_member("asha@example.com", avatar_key="aaptprep/avatars/a.jpg")
+    client.post(f"{PROGRESS}/{cid}/refresh", headers=admin)
+    page = client.get(f"{PROGRESS}/{cid}", headers=admin).json()
+    asha = next(r for r in page["students"] if r["email"] == "asha@example.com")
+    assert asha["avatar_url"].startswith("http") and "avatar_key" not in str(page)
+    saved = repo.scoped("aaptprep").get_progress_cache(cid)
+    assert "aaptprep/avatars/a.jpg" in saved["json"] and "http" not in saved["json"].split("avatar_key")[0][-200:]  # only the key is saved, links are made on each visit
+
+
+def test_the_page_for_an_unknown_course_is_not_found_and_each_course_is_saved_separately(client, admin, school, students, plan, real_throttle):
+    assert client.get(f"{PROGRESS}/nope", headers=admin).status_code == 404
+    assert client.post(f"{PROGRESS}/nope/refresh", headers=admin).status_code == 404
+    clat = client.get(f"{PROGRESS}/{school['clat']['id']}", headers=admin).json()
+    cat = client.get(f"{PROGRESS}/{school['cat']['id']}", headers=admin).json()
+    assert clat["course"]["name"] == "CLAT" and cat["course"]["name"] == "CAT"
+
+
+def test_only_the_admin_can_refresh_it(client, admin, school, students, plan):
+    assert client.post(f"{PROGRESS}/{school['cat']['id']}/refresh", headers=students["asha"]).status_code == 403
+    assert client.post(f"{PROGRESS}/{school['cat']['id']}/refresh", headers={"X-Tenant": "aaptprep"}).status_code == 401

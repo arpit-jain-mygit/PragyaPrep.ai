@@ -23,12 +23,19 @@ def _guard(action):
 
 @router.get("/api/admin/progress/{course_id}")
 def course_progress(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo), storage: ContentStorage = Depends(get_storage)):
-    return _guard(lambda: progress.students(scoped, course_id, storage))
+    """The saved student list, instantly (worked out only the first time). 'fresh' is false when it is over 15 minutes old."""
+    return _guard(lambda: progress.overview(scoped, course_id, storage))
+
+
+@router.post("/api/admin/progress/{course_id}/refresh")
+def refresh_progress(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo), storage: ContentStorage = Depends(get_storage)):
+    """Work the page out again from the records and save it. Asked again within a minute, it returns what is saved."""
+    return _guard(lambda: progress.overview(scoped, course_id, storage, refresh=True))
 
 
 @router.get("/api/admin/progress/{course_id}/stuck")
 def course_stuck(course_id: str, scoped: TenantRepo = Depends(get_tenant_repo)):
-    return _guard(lambda: progress.stuck(scoped, course_id))
+    return _guard(lambda: progress.stuck_overview(scoped, course_id))
 
 
 @router.get("/api/admin/progress/{course_id}/students/{email}")
