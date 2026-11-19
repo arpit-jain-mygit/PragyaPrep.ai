@@ -12,11 +12,22 @@ import { TenantService } from '../core/tenant.service';
 
 /**
  * The frame around every page of an institute: its name and colour at the top, and links that suit
- * who is signed in. If the institute can't be loaded (unknown, switched off, or no connection), this explains why.
+ * who is signed in. Admins and the platform admin get a menu behind the three-line button on the left,
+ * so the top bar stays short. If the institute can't be loaded (unknown, switched off, or no connection), this explains why.
  */
 @Component({
   selector: 'app-tenant-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox, Welcome],
+  styles: `
+    .menu-btn { color: var(--brand-text); flex: none; }
+    .menu-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 40; }
+    .side-menu { position: fixed; top: 0; bottom: 0; left: 0; z-index: 41; width: min(18rem, 85vw); overflow-y: auto; padding: 1rem; background: var(--brand); color: var(--brand-text); box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2); }
+    .side-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .side-title { font-weight: 700; font-size: 1.05rem; }
+    .side-links { display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; }
+    .side-links a { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.6rem; border-radius: 8px; border-bottom: 0; color: var(--brand-text); }
+    .side-links a.active { background: rgba(255, 255, 255, 0.16); font-weight: 600; border-bottom: 0; }
+  `,
   template: `
     @if (tenants.loading()) {
       <p class="center muted" style="margin-top: 3rem">Loading…</p>
@@ -29,8 +40,13 @@ import { TenantService } from '../core/tenant.service';
         </div>
       </main>
     } @else if (tenants.info(); as info) {
-      <header class="topbar" [attr.data-role]="member()?.role ?? null">
+      <header class="topbar" [attr.data-role]="member()?.role ?? null" (keydown.escape)="menuOpen.set(false)">
         <div class="topbar-inner">
+          @if (usesMenu()) {
+            <button class="icon-btn menu-btn" type="button" id="menu-open" aria-controls="side-menu" aria-label="Open menu" title="Menu" [attr.aria-expanded]="menuOpen()" (click)="menuOpen.set(true)">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
+            </button>
+          }
           <a class="brand-name" [routerLink]="homeLink()">
             @if (logo(info.branding.logo_url); as src) { <img class="logo" [src]="src" alt="" /> }
             {{ info.branding.display_name }}
@@ -42,26 +58,16 @@ import { TenantService } from '../core/tenant.service';
               }
               <a [routerLink]="['/', info.slug, 'login']" routerLinkActive="active" data-tone="out"><app-icon name="logout" /><span class="nav-label">Log in</span></a>
             } @else {
-              @if (isPlatformAdmin()) {
-                <a routerLink="/platform-admin" routerLinkActive="active" data-tone="inst"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
-              } @else if (isAdmin()) {
-                <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">Courses</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'batches']" routerLinkActive="active" data-tone="batch"><app-icon name="layers" /><span class="nav-label">Batches</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active" data-tone="qbank"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active" data-tone="tests"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active" data-tone="news"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
-                <a [routerLink]="['/', info.slug, 'admin', 'study-log']" routerLinkActive="active" data-tone="prog"><app-icon name="search" /><span class="nav-label">Ask AI log</span></a>
-              } @else if (info.slug === 'free') {
-                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
-              } @else if (isParent()) {
-                <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">My children</span></a>
-              } @else {
-                <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
-                <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
-                <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link" data-tone="news"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
+              @if (!usesMenu()) {
+                @if (info.slug === 'free') {
+                  <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
+                } @else if (isParent()) {
+                  <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">My children</span></a>
+                } @else {
+                  <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
+                  <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
+                  <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link" data-tone="news"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
+                }
               }
               @if (member()!.role === 'student' || member()!.role === 'parent') {
                 <a class="avatar-link" id="profile-link" [routerLink]="['/', info.slug, 'profile']" routerLinkActive="active" title="My profile" aria-label="My profile"><app-avatar [url]="profile.avatarUrl()" [first]="member()!.first_name" [last]="member()!.last_name" [email]="member()!.email" [size]="28" /></a>
@@ -77,6 +83,31 @@ import { TenantService } from '../core/tenant.service';
             }
           </nav>
         </div>
+        @if (menuOpen() && usesMenu()) {
+          <div class="menu-backdrop" (click)="menuOpen.set(false)"></div>
+          <aside class="side-menu" id="side-menu" aria-label="Menu">
+            <div class="side-head">
+              <span class="side-title">{{ info.branding.display_name }}</span>
+              <button class="icon-btn" type="button" id="menu-close" aria-label="Close menu" title="Close" (click)="menuOpen.set(false)"><app-icon name="x" /></button>
+            </div>
+            <!-- Clicking anywhere in the links closes the menu, so the next page is not hidden behind it. -->
+            <nav class="nav side-links" aria-label="Main menu" (click)="menuOpen.set(false)">
+              @if (isPlatformAdmin()) {
+                <a routerLink="/platform-admin" routerLinkActive="active" data-tone="inst"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
+              } @else {
+                <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'registrations']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">Registrations</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'courses']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">Courses</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'batches']" routerLinkActive="active" data-tone="batch"><app-icon name="layers" /><span class="nav-label">Batches</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'questions']" routerLinkActive="active" data-tone="qbank"><app-icon name="help" /><span class="nav-label">Question bank</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active" data-tone="tests"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active" data-tone="news"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'study-log']" routerLinkActive="active" data-tone="prog"><app-icon name="search" /><span class="nav-label">Ask AI log</span></a>
+              }
+            </nav>
+          </aside>
+        }
       </header>
       <main class="page">
         <router-outlet />
@@ -90,6 +121,8 @@ import { TenantService } from '../core/tenant.service';
 export class TenantShell {
   readonly logo = logoSrc;
   readonly support = signal(false);
+  /** Whether the side menu (three-line button) is open. */
+  readonly menuOpen = signal(false);
   readonly tenants = inject(TenantService);
   private readonly sessions = inject(SessionService);
   private readonly router = inject(Router);
@@ -112,6 +145,9 @@ export class TenantShell {
 
   readonly isParent = computed(() => this.member()?.role === 'parent');
   readonly isPlatformAdmin = computed(() => this.member()?.role === 'platform_admin');
+
+  /** Admins and the platform admin keep their links in the side menu; students and parents keep theirs in the bar. */
+  readonly usesMenu = computed(() => this.isAdmin() || this.isPlatformAdmin());
 
   /** Where the institute's name in the top bar leads. Each part of the address is its own item, so slashes aren't escaped. */
   readonly homeLink = computed(() => {

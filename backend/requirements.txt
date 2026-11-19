@@ -6,6 +6,7 @@ pyjwt
 httpx
 uvicorn[standard]
 pytest
+pytest-xdist==3.8.0
 moto[dynamodb,s3]
 openpyxl
 pypdf

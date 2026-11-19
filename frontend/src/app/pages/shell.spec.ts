@@ -6,6 +6,12 @@ import { API, DEMO, all, clickButton, el, sessionFor, settle, setupTestBed, text
 import { NotFound } from './not-found';
 import { TenantShell } from './tenant-shell';
 
+/** Open the side menu with its three-line button, and wait for the screen to update. */
+function openMenu(fixture: { detectChanges: () => void; nativeElement: unknown }): void {
+  (el(fixture as never, '#menu-open') as HTMLButtonElement).click();
+  fixture.detectChanges();
+}
+
 describe('Institute page frame', () => {
   it('shows the institute\'s name and the links for someone who is signed out', async () => {
     setupTestBed();
@@ -22,6 +28,7 @@ describe('Institute page frame', () => {
     env.sessions.save(sessionFor('tenant_admin'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
+    openMenu(fixture);
     expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Batches', 'Question bank', 'Tests', 'Progress', 'Announcements', 'Ask AI log']);
     expect(all<HTMLAnchorElement>(fixture, '#institute-link')[0].getAttribute('href')).toBe('/demo/admin/institute');
     expect(all(fixture, '.who').length).toBe(0);
@@ -226,6 +233,7 @@ describe('Institute page frame: the platform', () => {
     env.sessions.save(sessionFor('platform_admin', 'platform'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
+    openMenu(fixture);
     expect(all(fixture, 'nav a').map((a) => a.textContent?.trim())).toEqual(['Institutes']);
     expect(all<HTMLAnchorElement>(fixture, 'a.brand-name')[0].getAttribute('href')).toBe('/platform-admin');
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
@@ -267,5 +275,59 @@ describe('Page not found', () => {
     fixture.detectChanges();
     await settle(fixture);
     expect(all(fixture, '.topbar img').length).toBe(0);
+  });
+
+  it('keeps the admin links out of sight until the three-line button is pressed', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    expect(all(fixture, '#side-menu').length).toBe(0);
+    expect(all(fixture, '#menu-open').length).toBe(1);
+    openMenu(fixture);
+    expect(all(fixture, '#side-menu').length).toBe(1);
+    expect(el(fixture, '#menu-open').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('closes the menu after a link is pressed, with the close button, and with Escape', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+
+    openMenu(fixture);
+    // Pressing the list closes the menu. (This test has no routes, so the link itself is not followed.)
+    (el(fixture, '#side-menu .side-links') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(all(fixture, '#side-menu').length).toBe(0);
+
+    openMenu(fixture);
+    (el(fixture, '#menu-close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(all(fixture, '#side-menu').length).toBe(0);
+
+    openMenu(fixture);
+    el(fixture, '.topbar').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(all(fixture, '#side-menu').length).toBe(0);
+  });
+
+  it('closes the menu when the dimmed area behind it is pressed', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('tenant_admin'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    openMenu(fixture);
+    (el(fixture, '.menu-backdrop') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(all(fixture, '#side-menu').length).toBe(0);
+  });
+
+  it('keeps students\' links in the bar, with no menu button', async () => {
+    const env = setupTestBed();
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    expect(all(fixture, '#menu-open').length).toBe(0);
   });
 });
