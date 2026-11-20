@@ -2,6 +2,7 @@
 import pytest
 
 from app import tenants
+from app.tenants import suggested_text_color
 from app.repo import now_iso
 from conftest import code_in, headers
 
@@ -223,7 +224,8 @@ def test_the_name_and_colour_can_be_changed_and_show_on_the_institutes_own_pages
     assert response.json()["new_admin_notified"] is None
     info = client.get("/api/tenant", headers=headers("aaptprep")).json()
     assert info["name"] == "AaptPrep"
-    assert info["branding"] == {"display_name": "AaptPrep", "primary_color": "#0f766e", "logo_url": None}
+    assert info["branding"] == {"display_name": "AaptPrep", "primary_color": "#0f766e", "text_color": info["branding"]["text_color"], "logo_url": None}
+    assert info["branding"]["text_color"] == suggested_text_color("#0f766e")
 
 
 def test_only_what_is_sent_is_changed(client, owner, make_tenant):

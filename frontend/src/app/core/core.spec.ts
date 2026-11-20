@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API, DEMO, sessionFor } from '../testing';
 import { toApiError } from './api.service';
 import { formatDate, formatFee, formatSize, describeAccess } from './format';
+import { contrastRatio, suggestedTextColor } from './tenant.service';
 import { adminGuard, parentGuard, platformGuard, signedInGuard } from './guards';
 import { apiInterceptor } from './interceptor';
 import { SessionService } from './session.service';
@@ -383,5 +384,18 @@ describe('Unsaved changes guard', () => {
     ask.mockReturnValue(true);
     expect(run({ hasUnsaved: () => true })).toBe(true);
     ask.mockRestore();
+  });
+});
+
+describe('text colour on white', () => {
+  it('suggests a colour that reads well on white, even for a pale brand', () => {
+    for (const brand of ['#bbf7d0', '#fde68a', '#f9a8d4', '#2563eb', '#000000']) {
+      expect(contrastRatio(suggestedTextColor(brand), '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('keeps a brand colour that already reads well, and only darkens the rest', () => {
+    expect(suggestedTextColor('#2563eb')).toBe('#2563eb');
+    expect(suggestedTextColor('#bbf7d0')).not.toBe('#bbf7d0');
   });
 });

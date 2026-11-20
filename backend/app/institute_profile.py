@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from app import tenants
 from app.registrations import clean_mobile
 from app.repo import Repo, TenantRepo
-from app.tenants import ValidationError, clean_color, clean_name, normalize_email
+from app.tenants import ValidationError, clean_color, clean_name, clean_text_color, normalize_email, suggested_text_color, text_color_of
 
 MAX_CATEGORIES = 8
 PROFILE_FIELDS = ("description", "city", "contact_email", "contact_phone", "website", "exam_categories")
@@ -98,6 +98,7 @@ def read(repo: Repo, tenant: dict, admin: dict) -> dict:
     """Everything the admin's My institute page shows."""
     return {
         "slug": tenant["slug"], "name": tenant["branding"]["display_name"], "primary_color": tenant["branding"]["primary_color"],
+        "text_color": text_color_of(tenant),
         "logo_url": tenants.logo_url(tenant), "plan": tenant.get("plan", "paid"), "profile": public_profile(tenant),
         "admin": {"email": admin["email"], "first_name": admin.get("first_name", ""), "last_name": admin.get("last_name", ""), "mobile": admin.get("mobile", "")},
     }
@@ -105,7 +106,7 @@ def read(repo: Repo, tenant: dict, admin: dict) -> dict:
 
 def save(repo: Repo, tenant: dict, admin: dict, body: dict) -> dict:
     """Save the fields that were sent. Checks everything first, so a mistake in one field changes nothing. Raises ValidationError."""
-    allowed = {"name", "primary_color", "admin_first_name", "admin_last_name", "admin_mobile", *PROFILE_FIELDS}
+    allowed = {"name", "primary_color", "text_color", "admin_first_name", "admin_last_name", "admin_mobile", *PROFILE_FIELDS}
     unknown = sorted(set(body) - allowed)
     if unknown:
         raise ValidationError(f"These can't be changed here: {', '.join(unknown)}.")
@@ -115,6 +116,11 @@ def save(repo: Repo, tenant: dict, admin: dict, body: dict) -> dict:
         branding["display_name"] = fields["name"] = clean_name(body["name"])
     if "primary_color" in body:
         branding["primary_color"] = clean_color(body["primary_color"])
+        # A new brand colour gets a fresh suggestion for its text colour; a text colour sent below wins.
+        branding["text_color"] = suggested_text_color(branding["primary_color"])
+    if "text_color" in body:
+        # An empty value means "use the suggestion again".
+        branding["text_color"] = clean_text_color(body["text_color"]) if body["text_color"] else suggested_text_color(branding["primary_color"])
     if branding != tenant["branding"]:
         fields["branding"] = branding
     profile = dict(tenant.get("profile") or {})

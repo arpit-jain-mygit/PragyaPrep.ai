@@ -7,14 +7,14 @@ from app.deps import get_repo, get_storage, get_tenant
 from app.repo import Repo
 from app.schemas import TenantPublicOut
 from app.storage import ContentStorage
-from app.tenants import logo_url
+from app.tenants import logo_url, text_color_of
 
 router = APIRouter(prefix="/api", tags=["tenant"])
 
 
 @router.get("/tenant", response_model=TenantPublicOut)
 def tenant_info(tenant: dict = Depends(get_tenant)):
-    return {**tenant, "branding": {**tenant["branding"], "logo_url": logo_url(tenant)}, "profile": institute_profile.public_profile(tenant)}
+    return {**tenant, "branding": {**tenant["branding"], "text_color": text_color_of(tenant), "logo_url": logo_url(tenant)}, "profile": institute_profile.public_profile(tenant)}
 
 
 @router.get("/logo/{slug}", include_in_schema=True)

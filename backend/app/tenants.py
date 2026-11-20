@@ -43,6 +43,57 @@ def clean_color(raw: str) -> str:
     return color.lower()
 
 
+# ---- Text colour on white ----
+# The brand colour fills buttons and the top bar. Text on a white page needs its own colour, dark enough to read.
+# The WCAG standard for normal text is a contrast of at least 4.5 to 1.
+MIN_TEXT_CONTRAST = 4.5
+
+
+def _rgb(color: str) -> tuple[int, int, int]:
+    value = int(color[1:], 16)
+    return (value >> 16) & 255, (value >> 8) & 255, value & 255
+
+
+def _luminance(color: str) -> float:
+    """How bright a colour looks to the eye, from 0 (black) to 1 (white)."""
+    def channel(value: int) -> float:
+        c = value / 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    red, green, blue = (channel(part) for part in _rgb(color))
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+
+def contrast(first: str, second: str) -> float:
+    """The contrast ratio between two colours, from 1 (none) to 21 (black on white)."""
+    light, dark = sorted((_luminance(first), _luminance(second)), reverse=True)
+    return (light + 0.05) / (dark + 0.05)
+
+
+def suggested_text_color(brand: str) -> str:
+    """The brand colour made darker, step by step, until it reads well on white. The hue stays the same."""
+    red, green, blue = _rgb(brand)
+    for step in range(101):
+        keep = 1 - step / 100
+        candidate = "#%02x%02x%02x" % (round(red * keep), round(green * keep), round(blue * keep))
+        if contrast(candidate, "#ffffff") >= MIN_TEXT_CONTRAST:
+            return candidate
+    return "#000000"
+
+
+def clean_text_color(raw: str) -> str:
+    """A text colour the admin picked. It must read well on white, or nothing is saved."""
+    color = clean_color(raw)
+    if contrast(color, "#ffffff") < MIN_TEXT_CONTRAST:
+        raise ValidationError("The text colour is too light to read on white. Pick a darker one.")
+    return color
+
+
+def text_color_of(tenant: dict) -> str:
+    """The text colour to use on white: the one saved, or the suggestion for the brand colour."""
+    branding = tenant["branding"]
+    return branding.get("text_color") or suggested_text_color(branding["primary_color"])
+
+
 def split_name(raw: str) -> tuple[str, str]:
     """'Ritesh Kumar Jain' becomes ('Ritesh', 'Kumar Jain'). A first name is required."""
     first_name, _, last_name = " ".join(str(raw).split()).partition(" ")
@@ -63,7 +114,7 @@ def _create(repo: Repo, slug: str, name: str, admin_email: str, admin_name: str,
         "slug": slug,
         "name": name,
         "status": "active",
-        "branding": {"display_name": name, "primary_color": primary_color},
+        "branding": {"display_name": name, "primary_color": primary_color, "text_color": suggested_text_color(primary_color)},
         # The institute's one admin. The platform admin's page reads this to show and change who it is.
         "admin_email": email,
         "created_at": now_iso(),
@@ -221,6 +272,8 @@ def update_institute(
         branding["display_name"] = fields["name"] = clean_name(name)
     if primary_color is not None:
         branding["primary_color"] = clean_color(primary_color)
+        # A new brand colour gets a fresh suggestion for its text colour.
+        branding["text_color"] = suggested_text_color(branding["primary_color"])
     if branding != tenant["branding"]:
         fields["branding"] = branding
     if status is not None:

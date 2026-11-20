@@ -4,7 +4,7 @@ import { ApiService } from '../core/api.service';
 import { logoSrc } from '../core/format';
 import { ApiError, MyInstitute } from '../core/models';
 import { ProfileService } from '../core/profile.service';
-import { TenantService } from '../core/tenant.service';
+import { contrastRatio, suggestedTextColor, TenantService } from '../core/tenant.service';
 import { UploadService } from '../core/upload.service';
 import { Icon } from '../ui/icon';
 import { PhotoPicker } from '../ui/photo-picker';
@@ -45,7 +45,19 @@ import { PhotoPicker } from '../ui/photo-picker';
 
         <div class="grid-2">
           <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" [(ngModel)]="name" /></div>
-          <div class="field"><label for="color">Brand colour</label><input id="color" name="color" type="color" [(ngModel)]="color" /></div>
+          <div class="field">
+            <label for="color">Brand colour</label>
+            <input id="color" name="color" type="color" [(ngModel)]="color" (ngModelChange)="ink = suggestedTextColor($event)" />
+            <p class="hint">Used for buttons and the top bar.</p>
+          </div>
+          <div class="field">
+            <label for="ink">Text colour on white</label>
+            <div class="row">
+              <input id="ink" name="ink" type="color" [(ngModel)]="ink" aria-describedby="ink-hint" />
+              <button class="btn secondary small" type="button" id="ink-suggest" (click)="ink = suggestedTextColor(color)">Use suggested</button>
+            </div>
+            <p class="hint" id="ink-hint" [class.error-text]="!inkReadable()">{{ inkHint() }}</p>
+          </div>
           <div class="field"><label for="city">City</label><input id="city" name="city" type="text" placeholder="Noida" [(ngModel)]="city" /></div>
           <div class="field"><label for="website">Website</label><input id="website" name="website" type="text" placeholder="https://example.com" [(ngModel)]="website" autocapitalize="none" /></div>
           <div class="field"><label for="contactEmail">Contact email</label><input id="contactEmail" name="contactEmail" type="email" placeholder="hello@example.com" [(ngModel)]="contactEmail" /></div>
@@ -101,6 +113,9 @@ export class AdminInstitutePage implements OnInit {
 
   name = '';
   color = '#2563eb';
+  /** The text colour for words on white. It starts as the suggestion for the brand colour. */
+  ink = '#2563eb';
+  readonly suggestedTextColor = suggestedTextColor;
   city = '';
   website = '';
   contactEmail = '';
@@ -122,7 +137,7 @@ export class AdminInstitutePage implements OnInit {
   private baseline = '';
 
   private snapshot(): string {
-    return JSON.stringify([this.name, this.color, this.city, this.website, this.contactEmail, this.contactPhone, this.description, this.categories.trim(), this.firstName, this.lastName, this.mobile]);
+    return JSON.stringify([this.name, this.color, this.ink, this.city, this.website, this.contactEmail, this.contactPhone, this.description, this.categories.trim(), this.firstName, this.lastName, this.mobile]);
   }
 
   /** True when something was typed and not saved yet. */
@@ -135,6 +150,7 @@ export class AdminInstitutePage implements OnInit {
     this.shared.avatarUrl.set(m.admin.avatar_url ?? '');
     this.name = m.name;
     this.color = m.primary_color;
+    this.ink = m.text_color || suggestedTextColor(m.primary_color);
     this.city = m.profile.city;
     this.website = m.profile.website;
     this.contactEmail = m.profile.contact_email;
@@ -147,11 +163,24 @@ export class AdminInstitutePage implements OnInit {
     this.baseline = this.snapshot();
   }
 
+  /** Whether the chosen text colour reads well on white (at least 4.5 to 1). */
+  inkReadable(): boolean {
+    return contrastRatio(this.ink, '#ffffff') >= 4.5;
+  }
+
+  /** What the admin sees under the text colour: the contrast, or why it is too light. */
+  inkHint(): string {
+    const ratio = contrastRatio(this.ink, '#ffffff').toFixed(1);
+    return this.inkReadable()
+      ? `Reads well on white (${ratio} to 1).`
+      : `Too light to read on white (${ratio} to 1). Pick a darker colour, or use the suggestion.`;
+  }
+
   /** The top bar and the institute's look follow what was just saved. */
   private async refreshLook(m: MyInstitute): Promise<void> {
     const info = this.tenants.info();
     if (!info) return;
-    this.tenants.update({ ...info, name: m.name, branding: { ...info.branding, display_name: m.name, primary_color: m.primary_color, logo_url: m.logo_url }, profile: m.profile });
+    this.tenants.update({ ...info, name: m.name, branding: { ...info.branding, display_name: m.name, primary_color: m.primary_color, text_color: m.text_color, logo_url: m.logo_url }, profile: m.profile });
   }
 
   async save(): Promise<void> {
@@ -161,7 +190,7 @@ export class AdminInstitutePage implements OnInit {
     this.saved.set(false);
     try {
       const m = await this.api.saveMyInstitute({
-        name: this.name, primary_color: this.color, city: this.city, website: this.website, contact_email: this.contactEmail, contact_phone: this.contactPhone,
+        name: this.name, primary_color: this.color, text_color: this.ink, city: this.city, website: this.website, contact_email: this.contactEmail, contact_phone: this.contactPhone,
         description: this.description, exam_categories: this.categories.split(',').map((x) => x.trim()).filter(Boolean),
         admin_first_name: this.firstName, admin_last_name: this.lastName, admin_mobile: this.mobile,
       });

@@ -3,6 +3,8 @@
 export interface Branding {
   display_name: string;
   primary_color: string;
+  /** The text colour to use on white, chosen by the admin or suggested from the brand colour. */
+  text_color?: string;
   logo_url: string | null;
 }
 
@@ -28,6 +30,7 @@ export interface MyInstitute {
   slug: string;
   name: string;
   primary_color: string;
+  text_color: string;
   logo_url: string | null;
   plan: string;
   profile: InstituteProfile;

@@ -7,6 +7,8 @@ from pydantic import model_validator, BaseModel
 class BrandingOut(BaseModel):
     display_name: str
     primary_color: str
+    # The text colour to use on white (readable, chosen by the admin or suggested from the brand colour).
+    text_color: str = "#111827"
     logo_url: str | None = None
 
 

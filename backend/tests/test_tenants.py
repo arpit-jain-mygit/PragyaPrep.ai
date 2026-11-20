@@ -69,7 +69,7 @@ def test_public_info_comes_back_for_a_known_institute(client, make_tenant):
     assert response.json() == {
         "slug": "aaptprep",
         "name": "AAPT Prep",
-        "branding": {"display_name": "AAPT Prep", "primary_color": "#2563eb", "logo_url": None},
+        "branding": {"display_name": "AAPT Prep", "primary_color": "#2563eb", "text_color": "#2563eb", "logo_url": None},
         "profile": {"description": "", "city": "", "contact_email": "", "contact_phone": "", "website": "", "exam_categories": []},
     }
 
