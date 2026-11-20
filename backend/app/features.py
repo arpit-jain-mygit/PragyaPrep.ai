@@ -27,7 +27,7 @@ CATALOGUE = [
     ("videos_library", "Learn", "Videos", False),
     ("vocabulary", "Learn", "Vocabulary", False),
     ("idioms", "Learn", "Idioms", False),
-    ("topic_tests", "Practice", "Topic tests", False),
+    ("topic_tests", "Practice", "Topic tests", True),
     ("sectionals", "Practice", "Sectionals", False),
     ("mocks", "Practice", "Mocks", False),
     ("daily_rc", "Practice", "Daily RC", True),

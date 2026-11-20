@@ -7,6 +7,7 @@ import {
   AskLog,
   FeatureRow,
   MyLeaderboard,
+  MyTopicTests,
   ReleaseList,
   ReleaseSchedule,
   Release,
@@ -507,6 +508,11 @@ export class ApiService {
 
   makeChildPractice(email: string, body: { paper: string; topic: string; count?: number }): Promise<{ id: string; title: string; question_count: number }> {
     return this.post(`/api/parent/children/${encodeURIComponent(email)}/practice`, body);
+  }
+
+  /** The subjects and topics a student can practise, with their published question counts. */
+  myTopicTests(): Promise<MyTopicTests> {
+    return this.get('/api/my/topic-tests');
   }
 
   makePractice(body: { paper: string; topic: string; count?: number }): Promise<{ id: string; title: string; question_count: number }> {

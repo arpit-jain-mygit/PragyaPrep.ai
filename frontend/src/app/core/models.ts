@@ -104,6 +104,28 @@ export interface TodayReleases {
   weekly_dilr: TodayPassage | null;
 }
 
+/** A topic a student can practise, with how many published questions it has. */
+export interface TopicCount {
+  name: string;
+  count: number;
+}
+
+export interface TopicSubject {
+  id: string;
+  name: string;
+  section: string;
+  topics: TopicCount[];
+}
+
+export interface TopicTestsOverview {
+  enrolled: boolean;
+  subjects: TopicSubject[];
+}
+
+export interface MyTopicTests {
+  topic_tests: TopicTestsOverview | null;
+}
+
 export interface FeatureRow {
   key: string;
   group: string;

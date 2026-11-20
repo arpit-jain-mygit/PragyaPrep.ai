@@ -47,7 +47,7 @@ Feature keys refer to `backend/app/features.py` (the `CATALOGUE`).
 
 1. Should **Dashboard points** (oranges and days strong) come first, or the test-based screens (Topic Tests, Sectionals, Mocks)? The test screens reuse the existing test engine, so they are cheaper.
 2. Should **Daily RC and Weekly DILR** be scheduled by the institute admin (one passage per day, one set per week, from the question bank)? This is my recommendation from before and still unconfirmed.
-3. **Eligibility, cutoffs and loan calculator** need data (college rules, cutoff marks, fees). Should that data be one shared library for all institutes, or entered per institute?
+3. **Eligibility, cutoffs and loan calculator** need data (college rules, cutoff marks, fees). **Decided (decision 6): entered per institute**, not shared. Each institute enters its own college data through its admin.
 
 ## Bulk utilities to prepare (for later)
 
