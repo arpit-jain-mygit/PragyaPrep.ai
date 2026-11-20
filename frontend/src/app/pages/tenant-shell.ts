@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { logoSrc } from '../core/format';
 import { Avatar } from '../ui/avatar';
 import { Welcome } from '../ui/welcome';
+import { StudentSidebar } from '../ui/student-sidebar';
 import { Icon } from '../ui/icon';
 import { SupportBox } from '../ui/support-box';
 import { NoticeService } from '../core/notice.service';
@@ -17,7 +18,7 @@ import { TenantService } from '../core/tenant.service';
  */
 @Component({
   selector: 'app-tenant-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox, Welcome],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox, Welcome, StudentSidebar],
   styles: `
     .menu-btn { color: var(--brand-text); flex: none; }
     .menu-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 40; }
@@ -27,6 +28,14 @@ import { TenantService } from '../core/tenant.service';
     .side-links { display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; }
     .side-links a { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.6rem; border-radius: 8px; border-bottom: 0; color: var(--brand-text); }
     .side-links a.active { background: rgba(255, 255, 255, 0.16); font-weight: 600; border-bottom: 0; }
+    /* Students get a fixed left menu on wide screens, so the three-line button is only needed on narrow ones. */
+    .frame { display: block; }
+    .side-column { display: none; }
+    @media (min-width: 60rem) {
+      .frame.with-column { display: grid; grid-template-columns: 15rem minmax(0, 1fr); align-items: start; }
+      .frame.with-column .side-column { display: block; position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 1rem 0.75rem; background: var(--card); border-right: 1px solid var(--line); }
+      .frame.with-column .menu-btn { display: none; }
+    }
   `,
   template: `
     @if (tenants.loading()) {
@@ -94,7 +103,9 @@ import { TenantService } from '../core/tenant.service';
             </div>
             <!-- Clicking anywhere in the links closes the menu, so the next page is not hidden behind it. -->
             <nav class="nav side-links" aria-label="Main menu" (click)="menuOpen.set(false)">
-              @if (isPlatformAdmin()) {
+              @if (isStudent()) {
+                <app-student-sidebar />
+              } @else if (isPlatformAdmin()) {
                 <a routerLink="/platform-admin" routerLinkActive="active" data-tone="inst"><app-icon name="building" /><span class="nav-label">Institutes</span></a>
               } @else {
                 <a [routerLink]="['/', info.slug, 'admin', 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
@@ -114,9 +125,14 @@ import { TenantService } from '../core/tenant.service';
           </aside>
         }
       </header>
-      <main class="page">
-        <router-outlet />
-      </main>
+      <div class="frame" [class.with-column]="isStudent()">
+        @if (isStudent()) {
+          <aside class="side-column" aria-label="Menu"><app-student-sidebar /></aside>
+        }
+        <main class="page">
+          <router-outlet />
+        </main>
+      </div>
       @if (support()) { <app-support-box (close)="support.set(false)" /> }
       @if (member(); as m) { @if (!isPlatformAdmin()) { <app-welcome [role]="m.role" [tenant]="info.slug" [email]="m.email" /> } }
       <p class="footer">Powered by PragyaPrep</p>
@@ -151,8 +167,11 @@ export class TenantShell {
   readonly isParent = computed(() => this.member()?.role === 'parent');
   readonly isPlatformAdmin = computed(() => this.member()?.role === 'platform_admin');
 
-  /** Admins and the platform admin keep their links in the side menu; students and parents keep theirs in the bar. */
-  readonly usesMenu = computed(() => this.isAdmin() || this.isPlatformAdmin());
+  /** Admins, the platform admin and students keep their links in the side menu; parents keep theirs in the bar. */
+  readonly usesMenu = computed(() => this.isAdmin() || this.isPlatformAdmin() || this.isStudent());
+
+  /** Students see their links in the left menu, not in the top bar. */
+  readonly isStudent = computed(() => this.member()?.role === 'student');
 
   /** Where the institute's name in the top bar leads. Each part of the address is its own item, so slashes aren't escaped. */
   readonly homeLink = computed(() => {

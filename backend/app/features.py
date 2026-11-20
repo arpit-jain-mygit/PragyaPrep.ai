@@ -13,35 +13,52 @@ from app.tenants import ValidationError
 MAX_LABEL = 40
 
 # (key, group, default label, built)
+# The group is the heading in the student's left menu, in this order. The rows are the menu items under it.
+# Built items can be switched on. Planned items are listed so the admin can name and order them, but can't be
+# switched on until they are built.
 CATALOGUE = [
-    # Built today: students see these in My Learning and on the home page.
-    ("coursework", "Learning", "Coursework", True),
-    ("live_classes", "Learning", "Live classes", True),
-    ("tests", "Learning", "Tests", True),
-    ("results", "Learning", "Results", True),
-    ("notices", "Learning", "Notices", True),
-    # Planned: listed for the admin, not switchable until built.
+    # Dashboard: the home page. Its cards are built; the overview tiles are planned.
     ("dashboard_points", "Dashboard", "Oranges", True),
     ("word_of_day", "Dashboard", "Word of the day", True),
     ("leaderboard", "Dashboard", "Leaderboard", True),
-    ("videos_library", "Learn", "Videos", False),
+    ("activity", "Dashboard", "Activity", False),
+    ("unresolved_doubts", "Dashboard", "Unresolved doubts", False),
+    ("free_resources", "Dashboard", "Free resources", False),
+    # Learn
+    ("coursework", "Learn", "Videos", True),
     ("vocabulary", "Learn", "Vocabulary", False),
     ("idioms", "Learn", "Idioms", False),
+    # Practice
     ("topic_tests", "Practice", "Topic tests", True),
     ("sectionals", "Practice", "Sectionals", False),
     ("mocks", "Practice", "Mocks", False),
     ("daily_rc", "Practice", "Daily RC", True),
     ("weekly_dilr", "Practice", "Weekly DILR", True),
-    ("past_papers", "Past papers", "Past papers", False),
+    # Past papers
+    ("past_papers", "Past papers", "Attempt", False),
+    ("past_papers_explore", "Past papers", "Explore", False),
     ("syllabus", "Past papers", "Syllabus", False),
-    ("analytics", "Analyse", "Analytics", False),
+    ("filter_topics", "Past papers", "Filter topics", False),
+    # Analyse
+    ("analyse_topic_tests", "Analyse", "Topic tests", False),
+    ("analyse_sectionals", "Analyse", "Sectionals", False),
+    ("analyse_mocks", "Analyse", "Mocks", False),
     ("swot", "Analyse", "SWOT analysis", False),
-    ("forum", "Community", "Forum", False),
-    ("pi_bank", "Interview", "PI question bank", False),
+    # Forum and interview
+    ("forum", "Forum", "Forum", False),
+    ("pi_bank", "Interview", "Question bank", False),
+    ("interview_guide", "Interview", "Guide", False),
+    # Tools
     ("application_tracker", "Tools", "Applications", False),
     ("eligibility", "Tools", "Eligibility", False),
+    ("tools_syllabus", "Tools", "Syllabus", False),
     ("cutoffs", "Tools", "Cutoffs", False),
     ("loan_calculator", "Tools", "Loan calculator", False),
+    # As-is: not in the wireframes, kept unchanged. Shown after the wireframe groups.
+    ("live_classes", "My learning", "Live classes", True),
+    ("tests", "My learning", "Tests", True),
+    ("results", "My learning", "Results", True),
+    ("notices", "My learning", "Notices", True),
 ]
 
 _BY_KEY = {key: {"key": key, "group": group, "default_label": label, "built": built} for key, group, label, built in CATALOGUE}

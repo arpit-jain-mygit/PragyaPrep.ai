@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { PhotoService } from '../core/photo.service';
+import { TenantService } from '../core/tenant.service';
 import { API, DEMO, all, clickButton, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { NotFound } from './not-found';
 import { TenantShell } from './tenant-shell';
@@ -88,39 +89,69 @@ describe('Institute page frame', () => {
     expect(all<HTMLAnchorElement>(fixture, 'a.brand-name')[0].getAttribute('href')).toBe('/demo/login');
   });
 
-  it('shows a student Home, My Learning and Notices', async () => {
+  /** A student's institute, with the menu items switched on, as the server lists them. */
+  const STUDENT_MENU = {
+    ...DEMO,
+    features: [
+      { key: 'coursework', group: 'Learn', label: 'Videos', enabled: true },
+      { key: 'topic_tests', group: 'Practice', label: 'Topic tests', enabled: true },
+      { key: 'daily_rc', group: 'Practice', label: 'Daily RC', enabled: false },
+      { key: 'notices', group: 'My learning', label: 'Notices', enabled: true },
+    ],
+  };
+
+  it('shows a student the Dashboard link, then the menu the institute chose, in its order', async () => {
     const env = setupTestBed();
+    TestBed.inject(TenantService).info.set(STUDENT_MENU);
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
     await settle(fixture);
-    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'My Learning', 'Notices']);
+    expect(el(fixture, '#side-home').textContent?.trim()).toBe('Dashboard');
+    expect(all(fixture, '.side-heading').map((node) => node.textContent?.trim())).toEqual(['Learn', 'Practice', 'My learning']);
+    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'Videos', 'Topic tests', 'Notices']);
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 
-  it('shows the unread count on the Notices link, in red when something needs action', async () => {
+  it('shows the unread count on Notices in the menu', async () => {
     const env = setupTestBed();
+    TestBed.inject(TenantService).info.set(STUDENT_MENU);
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 3, action_unread: 1, notices: [] });
     await settle(fixture);
-    const badge = el(fixture, '#notice-badge');
-    expect(badge.textContent!.trim()).toBe('3');
-    expect(badge.className).toContain('alert');
-    expect(badge.getAttribute('aria-label')).toBe('3 unread');
-    expect(el<HTMLAnchorElement>(fixture, 'a.notices-link').getAttribute('href')).toBe('/demo/notices');
+    expect(el(fixture, '#side-notice-badge').textContent!.trim()).toBe('3');
+    expect(el<HTMLAnchorElement>(fixture, 'a[data-key="notices"]').getAttribute('href')).toBe('/demo/notices');
   });
 
-  it('shows a plain badge for information only, and no badge or request for an admin', async () => {
+  it('folds a menu heading away and opens it again', async () => {
     const env = setupTestBed();
+    TestBed.inject(TenantService).info.set(STUDENT_MENU);
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 2, action_unread: 0, notices: [] });
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    el<HTMLButtonElement>(fixture, '[data-group="Practice"] .side-heading').click();
     await settle(fixture);
-    expect(el(fixture, '#notice-badge').className).not.toContain('alert');
+    expect(all(fixture, '[data-key="topic_tests"]').length).toBe(0);
+    expect(el(fixture, '[data-group="Practice"] .side-heading').getAttribute('aria-expanded')).toBe('false');
+    el<HTMLButtonElement>(fixture, '[data-group="Practice"] .side-heading').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-key="topic_tests"]').length).toBe(1);
+  });
+
+  it('leaves out a menu item that is switched off or has no page yet', async () => {
+    const env = setupTestBed();
+    TestBed.inject(TenantService).info.set(STUDENT_MENU);
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    await settle(fixture);
+    expect(all(fixture, '[data-key="daily_rc"]').length).toBe(0);
+    expect(all(fixture, '[data-key="dashboard_points"]').length).toBe(0);
   });
 
   it('does not ask an admin for notices', async () => {
@@ -139,8 +170,8 @@ describe('Institute page frame', () => {
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ detail: 'x' }, { status: 500, statusText: 'x' });
     await settle(fixture);
-    expect(all(fixture, 'nav a:not(.avatar-link)').length).toBe(3);
-    expect(all(fixture, '#notice-badge').length).toBe(0);
+    expect(all(fixture, '#side-notice-badge').length).toBe(0);
+    expect(all(fixture, '#side-home').length).toBe(1);
   });
 
   it('shows a signed-in student\'s photo in the top bar, asking for their own link', async () => {
@@ -323,11 +354,14 @@ describe('Page not found', () => {
     expect(all(fixture, '#side-menu').length).toBe(0);
   });
 
-  it('keeps students\' links in the bar, with no menu button', async () => {
+  it('gives a student the menu button on narrow screens, and no links in the top bar', async () => {
     const env = setupTestBed();
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
-    expect(all(fixture, '#menu-open').length).toBe(0);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    await settle(fixture);
+    expect(all(fixture, '#menu-open').length).toBe(1);
+    expect(all(fixture, 'nav.nav a:not(.avatar-link)').length).toBe(0);
   });
 });
