@@ -13,7 +13,7 @@ import { Icon } from '../ui/icon';
   imports: [Icon],
   template: `
     <div class="page-head"><h1><app-icon name="layers" /> Features and labels</h1></div>
-    <p class="hint" id="features-intro">Choose which screens your students see, what each one is called, and the order they appear in. A screen marked <strong>Coming later</strong> is not built yet, so it can't be switched on.</p>
+    <p class="hint" id="features-intro">Choose which screens your students see, what each one is called, and the order they appear in. A screen marked <strong>Coming later</strong> is not built yet, so it can't be switched on, but you can name it now.</p>
 
     @if (loadError(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
     @if (error(); as problem) { <div class="alert error" role="alert" id="save-error">{{ problem.detail }}</div> }
@@ -30,7 +30,7 @@ import { Icon } from '../ui/icon';
                 <span class="sr-only">Show {{ row.default_label }}</span>
               </label>
               <div class="feature-name">
-                <input type="text" maxlength="40" [value]="row.label" [attr.aria-label]="'Name for ' + row.default_label" [disabled]="!row.built" (input)="rename(row.key, $any($event.target).value)" />
+                <input type="text" maxlength="40" [value]="row.label" [attr.aria-label]="'Name for ' + row.default_label" (input)="rename(row.key, $any($event.target).value)" />
                 @if (row.label !== row.default_label) {
                   <button class="btn secondary small" type="button" (click)="rename(row.key, row.default_label)">Use default name</button>
                 }

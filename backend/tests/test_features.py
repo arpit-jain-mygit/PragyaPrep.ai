@@ -136,3 +136,16 @@ def test_clean_refuses_bad_switches():
         features.clean([{"key": "tests", "enabled": "yes", "label": "Tests"}])
     with pytest.raises(ValidationError):
         features.clean("not a list")
+
+
+def test_a_planned_feature_can_be_named_now_but_not_switched_on(client, admin):
+    rows = _as_sent(_listed(client, admin))
+    for row in rows:
+        if row["key"] == "mocks":
+            row["label"] = "Full mocks"
+    saved = client.put(URL, json=rows, headers=admin)
+    assert saved.status_code == 200, saved.text
+    mocks = next(row for row in saved.json()["features"] if row["key"] == "mocks")
+    assert mocks["label"] == "Full mocks" and mocks["enabled"] is False
+    public = client.get("/api/tenant", headers=headers("aaptprep")).json()["features"]
+    assert "mocks" not in [item["key"] for item in public]

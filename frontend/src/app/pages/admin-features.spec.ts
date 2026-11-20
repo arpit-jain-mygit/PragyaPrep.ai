@@ -30,6 +30,18 @@ describe('Features and labels', () => {
     expect(el(fixture, '[data-key="coursework"] input[type="checkbox"]').hasAttribute('disabled')).toBe(false);
   });
 
+  it('lets the admin name a planned screen now, though it still can\'t be switched on', async () => {
+    const { fixture, http } = await open();
+    const name = el<HTMLInputElement>(fixture, '[data-key="mocks"] input[type="text"]');
+    expect(name.hasAttribute('disabled')).toBe(false);
+    name.value = 'Full mocks';
+    name.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    el<HTMLButtonElement>(fixture, '#save-features').click();
+    const body = http.expectOne(`${API}/api/admin/features`).request.body as { key: string; enabled: boolean; label: string }[];
+    expect(body.find((row) => row.key === 'mocks')).toEqual({ key: 'mocks', enabled: false, label: 'Full mocks' });
+  });
+
   it('switches a built screen off and renames it, then saves exactly those settings in order', async () => {
     const { fixture, http } = await open();
     const notices = el<HTMLInputElement>(fixture, '[data-key="notices"] input[type="checkbox"]');
