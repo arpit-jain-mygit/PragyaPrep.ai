@@ -293,6 +293,7 @@ def test_card(scoped: TenantRepo, member: dict, test: dict) -> dict:
     total = Decimal(test["marks_correct"]) * count
     return {
         "id": test["id"], "title": test["title"], "description": test.get("description") or "",
+        "kind": test.get("kind") or "test", "free": bool(test.get("free")), "year": test.get("year"),
         "practice": bool(test.get("practice_for")), "set_by": test.get("created_by") if test.get("practice_for") and test.get("created_by") != member["email"] else None,
         "start_at": test.get("start_at"), "end_at": test.get("end_at"),
         "duration_minutes": test["duration_minutes"], "max_attempts": test["max_attempts"],
@@ -527,6 +528,29 @@ def _accuracy(right: int, total: int) -> str:
     return _fmt((Decimal(right) * 100 / total).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) if total else "0"
 
 
+def by_subject(done: list[dict]) -> list[dict]:
+    """Accuracy by subject and by topic, across the given submitted attempts. Weakest first."""
+    totals: dict[str, list[int]] = {}
+    for a in done:
+        for key, counts in (a.get("topics") or {}).items():
+            have = totals.setdefault(key, [0, 0, 0])
+            for slot in range(3):
+                have[slot] += int(counts[slot])
+    subjects: dict[str, dict] = {}
+    for key, (right, wrong, blank) in totals.items():
+        paper, _, topic = key.partition("|")
+        subject = subjects.setdefault(paper, {"id": paper, "name": BY_ID[paper]["name"] if paper in BY_ID else paper, "correct": 0, "questions": 0, "topics": []})
+        faced = right + wrong + blank
+        subject["correct"] += right
+        subject["questions"] += faced
+        subject["topics"].append({"topic": topic, "correct": right, "wrong": wrong, "unanswered": blank, "questions": faced, "accuracy": _accuracy(right, faced)})
+    for subject in subjects.values():
+        subject["accuracy"] = _accuracy(subject["correct"], subject["questions"])
+        subject["topics"].sort(key=lambda t: (Decimal(t["accuracy"]), t["topic"]))
+    ordered = sorted(subjects.values(), key=lambda s: (Decimal(s["accuracy"]), s["name"]))
+    return ordered
+
+
 def my_results(scoped: TenantRepo, member: dict) -> dict:
     """Everything the student's results page shows: totals, a score trend, every finished attempt, and accuracy by subject and topic."""
     attempts = [_settle(scoped, a) for a in scoped.list_attempts(member["email"])]
@@ -553,22 +577,5 @@ def my_results(scoped: TenantRepo, member: dict) -> dict:
     ]
     trend = [{"title": r["title"], "number": r["number"], "percentage": r["percentage"], "passed": r["passed"], "started_at": r["started_at"]} for r in reversed(rows[:TREND_ATTEMPTS])]
 
-    totals: dict[str, list[int]] = {}
-    for a in done:
-        for key, counts in (a.get("topics") or {}).items():
-            have = totals.setdefault(key, [0, 0, 0])
-            for slot in range(3):
-                have[slot] += int(counts[slot])
-    subjects: dict[str, dict] = {}
-    for key, (right, wrong, blank) in totals.items():
-        paper, _, topic = key.partition("|")
-        subject = subjects.setdefault(paper, {"id": paper, "name": BY_ID[paper]["name"] if paper in BY_ID else paper, "correct": 0, "questions": 0, "topics": []})
-        faced = right + wrong + blank
-        subject["correct"] += right
-        subject["questions"] += faced
-        subject["topics"].append({"topic": topic, "correct": right, "wrong": wrong, "unanswered": blank, "questions": faced, "accuracy": _accuracy(right, faced)})
-    for subject in subjects.values():
-        subject["accuracy"] = _accuracy(subject["correct"], subject["questions"])
-        subject["topics"].sort(key=lambda t: (Decimal(t["accuracy"]), t["topic"]))
-    ordered = sorted(subjects.values(), key=lambda s: (Decimal(s["accuracy"]), s["name"]))
+    ordered = by_subject(done)
     return {"summary": summary, "trend": trend, "attempts": rows, "subjects": ordered}

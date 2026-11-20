@@ -17,6 +17,9 @@ from app.tenants import ValidationError
 
 STATUSES = ["draft", "published"]
 MODES = ["manual", "auto"]
+# What a test is for: a normal test, a sectional, a full mock, or a past-year paper. Students see each kind on its own page.
+KINDS = ["test", "sectional", "mock", "past_paper"]
+MIN_YEAR, MAX_YEAR = 1990, 2100
 MAX_QUESTIONS = 500
 MAX_RULES = 20
 TIME_FORMAT = "%Y-%m-%dT%H:%M"
@@ -177,6 +180,30 @@ def clean(scoped: TenantRepo, data: dict) -> dict:
         errors["courses"] = "Choose the courses from the list."
         chosen = []
     out["courses"] = list(dict.fromkeys(chosen))
+
+    kind = data.get("kind") or "test"
+    if kind not in KINDS:
+        errors["kind"] = "Choose test, sectional, mock or past paper."
+        kind = "test"
+    out["kind"] = kind
+
+    # The free mock is shown first on the Mocks page. Only a mock can be free.
+    free = data.get("free")
+    if free is None:
+        free = False
+    if not isinstance(free, bool):
+        errors["free"] = "Choose yes or no."
+    out["free"] = free is True and kind == "mock"
+
+    # A past paper is for one year. Other kinds have no year.
+    year = data.get("year")
+    if kind == "past_paper":
+        if isinstance(year, bool) or not isinstance(year, int) or not MIN_YEAR <= year <= MAX_YEAR:
+            errors["year"] = f"Enter the year of the paper, from {MIN_YEAR} to {MAX_YEAR}."
+            year = None
+    else:
+        year = None
+    out["year"] = year
 
     mode = data.get("mode") or "manual"
     if mode not in MODES:

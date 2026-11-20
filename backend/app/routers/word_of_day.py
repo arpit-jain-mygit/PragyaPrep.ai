@@ -1,5 +1,5 @@
 """Word of the day: the admin's word list, and today's word for each student."""
-from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 
 from app import word_of_day
 from app.deps import STUDENT, TENANT_ADMIN, get_tenant, get_tenant_repo, require_roles
@@ -10,8 +10,10 @@ router = APIRouter(tags=["word-of-day"])
 
 
 @router.get("/api/admin/words", dependencies=[Depends(require_roles(TENANT_ADMIN))])
-def list_words(scoped: TenantRepo = Depends(get_tenant_repo)):
-    return word_of_day.all_words(scoped)
+def list_words(kind: str = Query("word", description="word or idiom"), scoped: TenantRepo = Depends(get_tenant_repo)):
+    if kind not in word_of_day.KINDS:
+        raise HTTPException(status_code=422, detail="Choose a word or an idiom.")
+    return word_of_day.all_words(scoped, kind)
 
 
 @router.post("/api/admin/words", status_code=201)

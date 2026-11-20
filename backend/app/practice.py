@@ -39,11 +39,16 @@ def create(scoped: TenantRepo, student: dict, body: dict, made_by: str) -> dict:
     if not ids:
         raise ValidationError("There are no questions for that topic yet.")
     name = body.get("topic") or ""
+    return save(scoped, student, f"Practice: {name}" if name else "Practice", ids, made_by)
+
+
+def save(scoped: TenantRepo, student: dict, title: str, ids: list[str], made_by: str, extra: dict | None = None) -> dict:
+    """Store a practice test with these questions for one student. Used for topics and for a Daily RC or Weekly DILR passage."""
     test = {
-        "id": uuid4().hex, "title": f"Practice: {name}" if name else "Practice", "description": "A practice test on a topic that needs work. You can take it as often as you like.",
+        "id": uuid4().hex, "title": title, "description": "A practice test on a topic that needs work. You can take it as often as you like.",
         "start_at": None, "end_at": None, "duration_minutes": max(10, round(len(ids) * 1.5)), "max_attempts": 100, "pass_percentage": 50,
         "marks_correct": "1", "marks_incorrect": "0", "show_answers": True, "courses": [], "mode": "manual", "rules": [], "question_ids": ids,
-        "status": "published", "practice_for": student["email"], "created_by": made_by, "created_at": now_iso(),
+        "status": "published", "practice_for": student["email"], "created_by": made_by, "created_at": now_iso(), **(extra or {}),
     }
     scoped.create_practice(test)
     return test

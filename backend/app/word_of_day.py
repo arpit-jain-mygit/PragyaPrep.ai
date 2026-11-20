@@ -21,9 +21,15 @@ MAX_LIST = 1000
 EPOCH = date(1970, 1, 1)
 
 
+KINDS = ("word", "idiom")
+
+
 def clean(body: dict) -> dict:
-    """Check a word from the admin. Every mistake is reported together, in plain words."""
+    """Check a word or idiom from the admin. Every mistake is reported together, in plain words."""
     problems = []
+    kind = body.get("kind") or "word"
+    if kind not in KINDS:
+        problems.append("Choose a word or an idiom.")
     word = _text(body.get("word"))
     meaning = _text(body.get("meaning"))
     example = _text(body.get("example"))
@@ -39,7 +45,7 @@ def clean(body: dict) -> dict:
         problems.append(f"The example can be at most {MAX_EXAMPLE} characters.")
     if problems:
         raise ValidationError(" ".join(problems))
-    return {"word": word, "meaning": meaning, "example": example}
+    return {"kind": kind, "word": word, "meaning": meaning, "example": example}
 
 
 def _text(raw) -> str:
@@ -53,9 +59,9 @@ def add(scoped: TenantRepo, body: dict) -> dict:
     return record
 
 
-def all_words(scoped: TenantRepo) -> list[dict]:
-    """The whole list, in the order it was added."""
-    return scoped.list_words(MAX_LIST)
+def all_words(scoped: TenantRepo, kind: str = "word") -> list[dict]:
+    """One list (words or idioms), in the order it was added. Entries saved before idioms existed are words."""
+    return [row for row in scoped.list_words(MAX_LIST) if (row.get("kind") or "word") == kind]
 
 
 def remove(scoped: TenantRepo, word_id: str) -> None:

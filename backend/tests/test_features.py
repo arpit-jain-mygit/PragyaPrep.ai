@@ -58,7 +58,7 @@ def test_the_admin_can_change_the_order(client, admin):
 def test_a_planned_feature_cannot_be_switched_on(client, admin):
     rows = _as_sent(_listed(client, admin))
     for row in rows:
-        if row["key"] == "mocks":
+        if row["key"] == "pi_bank":
             row["enabled"] = True
     refused = client.put(URL, json=rows, headers=admin)
     assert refused.status_code == 422
@@ -107,7 +107,7 @@ def test_the_public_tenant_info_lists_the_built_features_in_order_with_their_swi
     by_key = {item["key"]: item for item in public}
     assert by_key["notices"]["enabled"] is False
     assert by_key["coursework"]["label"] == "Coursework (new name)"
-    assert "mocks" not in by_key
+    assert "pi_bank" not in by_key
 
 
 def test_one_institute_can_not_change_another_institutes_features(client, admin, make_tenant, sign_in):
@@ -141,11 +141,31 @@ def test_clean_refuses_bad_switches():
 def test_a_planned_feature_can_be_named_now_but_not_switched_on(client, admin):
     rows = _as_sent(_listed(client, admin))
     for row in rows:
-        if row["key"] == "mocks":
-            row["label"] = "Full mocks"
+        if row["key"] == "pi_bank":
+            row["label"] = "Full vocabulary"
     saved = client.put(URL, json=rows, headers=admin)
     assert saved.status_code == 200, saved.text
-    mocks = next(row for row in saved.json()["features"] if row["key"] == "mocks")
-    assert mocks["label"] == "Full mocks" and mocks["enabled"] is False
+    pi = next(row for row in saved.json()["features"] if row["key"] == "pi_bank")
+    assert pi["label"] == "Full vocabulary" and pi["enabled"] is False
     public = client.get("/api/tenant", headers=headers("aaptprep")).json()["features"]
-    assert "mocks" not in [item["key"] for item in public]
+    assert "pi_bank" not in [item["key"] for item in public]
+
+
+# Every screen in the wireframes has a feature here, so the admin can see and name it. The screen-by-screen record
+# is in wireframe-mapping.md. A screen added to the wireframes needs a key added here too.
+WIREFRAME_SCREENS = [
+    "dashboard_points", "word_of_day", "leaderboard",
+    "word_battle", "flashcards", "word_list", "crossword", "phrasal_verbs",
+    "activity", "unresolved_doubts", "free_resources",
+    "coursework", "vocabulary", "idioms",
+    "topic_tests", "sectionals", "mocks", "daily_rc", "weekly_dilr",
+    "past_papers", "past_papers_explore", "syllabus", "filter_topics",
+    "analyse_topic_tests", "analyse_sectionals", "analyse_mocks", "swot",
+    "forum", "forum_explore", "pi_bank", "interview_guide",
+    "application_tracker", "eligibility", "tools_syllabus", "cutoffs", "loan_calculator",
+]
+
+
+def test_every_wireframe_screen_has_a_feature_for_the_admin():
+    keys = {key for key, *_ in features.CATALOGUE}
+    assert [key for key in WIREFRAME_SCREENS if key not in keys] == []

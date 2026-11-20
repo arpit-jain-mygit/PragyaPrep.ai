@@ -90,6 +90,6 @@ def test_todays_word_is_the_same_for_everyone_on_one_day():
 
 
 def test_clean_returns_the_trimmed_word():
-    assert word_of_day.clean({"word": "  bashful ", "meaning": " shy ", "example": None}) == {"word": "bashful", "meaning": "shy", "example": ""}
+    assert word_of_day.clean({"word": "  bashful ", "meaning": " shy ", "example": None}) == {"kind": "word", "word": "bashful", "meaning": "shy", "example": ""}
     with pytest.raises(ValidationError):
         word_of_day.clean({"word": "", "meaning": ""})

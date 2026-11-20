@@ -3,95 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
-import {
-  AskLog,
-  FeatureRow,
-  MyLeaderboard,
-  MyTopicTests,
-  ReleaseList,
-  ReleaseSchedule,
-  Release,
-  TodayReleases,
-  MyOranges,
-  MyWordOfDay,
-  WordEntry,
-  FreeSample,
-  FreeState,
-  SignupForm,
-  Access,
-  Batch,
-  StudentQuick,
-  MyBatch,
-  MyInstitute,
-  MyProfile,
-  StudentPhotoStart,
-  RegistrationReceived,
-  AdminCourse,
-  ApiError,
-  CourseAccess,
-  CourseFile,
-  AdminBehind,
-  Announcement,
-  LiveClass,
-  LiveClassInput,
-  LiveImport,
-  StudentImport,
-  WelcomeResult,
-  AnnouncementInput,
-  MyNotices,
-  ReminderResult,
-  AdminHomeCounts,
-  CopyChoice,
-  CourseProgress,
-  CourseStuck,
-  StudentProgress,
-  AdminParent,
-  ChildDetail,
-  ChildSummary,
-  ParentImport,
-  ParentInput,
-  StudentCoursework,
-  StudyAnswer,
-  StudySearch,
-  StudentLiveCourse,
-  CopyResult,
-  CourseworkPlan,
-  WorkSubtopicInput,
-  CodeResult,
-  Course,
-  DecisionAction,
-  DecisionResult,
-  FileLink,
-  FileStart,
-  GrantRequestedResult,
-  Institute,
-  InstituteCreate,
-  InstituteResult,
-  InstituteUpdate,
-  Member,
-  AdminAttempt,
-  AttemptResult,
-  AttemptView,
-  AutoPickResult,
-  MyResults,
-  StudentTestCard,
-  Paper,
-  TestDetail,
-  TestResults,
-  TestInput,
-  TestSummary,
-  Passage,
-  Picture,
-  Question,
-  QuestionImport,
-  QuestionInput,
-  Registration,
-  RegistrationEdit,
-  RegistrationForm,
-  Session,
-  TenantInfo,
-  UploadForm,
-} from './models';
+import { AskLog, FeatureRow, MyLeaderboard, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView } from './models';
 
 /** Turn whatever went wrong into one simple shape the screens can show. */
 export function toApiError(error: unknown): ApiError {
@@ -585,12 +497,12 @@ export class ApiService {
     return this.post('/api/admin/reminders', { course_id: courseId, emails, send_email: sendEmail });
   }
 
-  /** The institute's word list, in the order it was added. */
-  words(): Promise<WordEntry[]> {
-    return this.get('/api/admin/words');
+  /** The institute's word list, or its idiom list, in the order it was added. */
+  words(kind: 'word' | 'idiom' = 'word'): Promise<WordEntry[]> {
+    return this.get(`/api/admin/words?kind=${kind}`);
   }
 
-  addWord(body: { word: string; meaning: string; example: string }): Promise<WordEntry> {
+  addWord(body: { kind: 'word' | 'idiom'; word: string; meaning: string; example: string }): Promise<WordEntry> {
     return this.post('/api/admin/words', body);
   }
 
@@ -611,6 +523,21 @@ export class ApiService {
   /** The institute's daily target for oranges. */
   setOrangesTarget(target: number): Promise<{ target: number }> {
     return this.call(firstValueFrom(this.http.put<{ target: number }>(`${this.base}/api/admin/oranges-target`, { target })));
+  }
+
+  /** Today's pack in Vocabulary or Idioms, with the calendar around it. */
+  myVocab(kind: 'vocabulary' | 'idioms'): Promise<VocabPack> {
+    return this.get(`/api/my/vocab/${kind}`);
+  }
+
+  /** Today's test: the words and four choices each. The right answers are not sent. */
+  vocabTest(kind: 'vocabulary' | 'idioms'): Promise<{ questions: VocabQuestion[] }> {
+    return this.post(`/api/my/vocab/${kind}/test`, {});
+  }
+
+  /** Mark today's test: the chosen option for each word, or null for none. */
+  vocabMark(kind: 'vocabulary' | 'idioms', answers: (number | null)[]): Promise<VocabMarked> {
+    return this.post(`/api/my/vocab/${kind}/test/answers`, { answers });
   }
 
   /** Today's word for the student (null when there is none or it is switched off). */
@@ -749,6 +676,36 @@ export class ApiService {
     return this.get('/api/my/releases/today');
   }
 
+  /** Analyse for one kind of test: topic tests, sectionals or mocks. */
+  myAnalyse(view: 'topic' | 'sectional' | 'mock'): Promise<AnalyseView> {
+    return this.get(`/api/my/analyse/${view}`);
+  }
+
+  /** SWOT from the student's last sectional and mock attempts. */
+  mySwot(): Promise<SwotView> {
+    return this.get('/api/my/swot');
+  }
+
+  /** The past papers the student can open, newest year first. */
+  myPastPapers(): Promise<PastPaperCard[]> {
+    return this.get('/api/my/past-papers');
+  }
+
+  /** Topics by year: how many questions of each topic came up in each year's paper. */
+  mySyllabus(): Promise<SyllabusTable> {
+    return this.get('/api/my/syllabus');
+  }
+
+  /** Each subject's topics that appear in the past papers, for practice. */
+  myFilterTopics(): Promise<FilterTopicGroup[]> {
+    return this.get('/api/my/filter-topics');
+  }
+
+  /** Open the student's practice test on today's Daily RC passage, or this week's Weekly DILR set. */
+  attemptRelease(kind: 'daily_rc' | 'weekly_dilr'): Promise<{ id: string; title: string; question_count: number }> {
+    return this.post(`/api/my/releases/${kind}/attempt`, {});
+  }
+
   updatePassage(id: string, body: { title?: string; text?: string }): Promise<Passage> {
     return this.patch(`/api/admin/passages/${encodeURIComponent(id)}`, body);
   }
@@ -870,8 +827,8 @@ export class ApiService {
     return this.get('/api/free/test');
   }
 
-  myTests(): Promise<StudentTestCard[]> {
-    return this.get('/api/my/tests');
+  myTests(kind?: TestKind): Promise<StudentTestCard[]> {
+    return this.get(kind ? `/api/my/tests?kind=${kind}` : '/api/my/tests');
   }
 
   myTest(id: string): Promise<StudentTestCard> {

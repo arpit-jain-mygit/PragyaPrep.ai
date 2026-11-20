@@ -30,9 +30,29 @@ export interface PublicFeature {
 /** One word on the institute's word list. */
 export interface WordEntry {
   id: string;
+  /** A word, or an idiom. Entries saved before idioms existed are words. */
+  kind?: 'word' | 'idiom';
   word: string;
   meaning: string;
   example: string;
+}
+
+/** One day's pack in Vocabulary or Idioms, and the days either side of it for the calendar. */
+export interface VocabPack {
+  packs: number;
+  today: { pack: number; items: { word: string; meaning: string; example: string }[] } | null;
+  days: { date: string; pack: number; count: number }[];
+}
+
+export interface VocabQuestion {
+  word: string;
+  options: string[];
+}
+
+export interface VocabMarked {
+  score: number;
+  total: number;
+  results: { word: string; given: number | null; answer: number; right: boolean; meaning: string }[];
 }
 
 /** The word a student sees today: null when the institute has nothing to show. */
@@ -458,6 +478,12 @@ export interface TestSummary {
   id: string;
   title: string;
   description: string;
+  /** What the test is for. Older tests have none, so they count as a test. */
+  kind?: TestKind;
+  /** The free mock. */
+  free?: boolean;
+  /** The year of a past paper. */
+  year?: number | null;
   /** India time, "2027-01-31T23:59", or null for no limit. */
   start_at: string | null;
   end_at: string | null;
@@ -480,6 +506,9 @@ export interface TestSummary {
   attempt_count: number;
 }
 
+/** What a test is for. Students see each kind on its own page. */
+export type TestKind = 'test' | 'sectional' | 'mock' | 'past_paper';
+
 export interface TestDetail extends TestSummary {
   questions: Question[];
 }
@@ -487,6 +516,12 @@ export interface TestDetail extends TestSummary {
 export interface TestInput {
   title?: string;
   description?: string;
+  /** What the test is for: a normal test, a sectional, or a full mock. */
+  kind?: TestKind;
+  /** Only a mock can be free. */
+  free?: boolean;
+  /** The year of a past paper. Other kinds have none. */
+  year?: number | null;
   start_at?: string;
   end_at?: string;
   duration_minutes?: number;
@@ -523,8 +558,57 @@ export interface AttemptLine {
   auto_submitted?: boolean;
 }
 
+/** Analyse for one kind of test: the summary, the score trend, and accuracy by subject and topic. */
+export interface AnalyseView {
+  summary: { attempts: number; average: string | null; best: string | null };
+  trend: { title: string; percentage: string; started_at: string }[];
+  subjects: {
+    id: string;
+    name: string;
+    correct: number;
+    questions: number;
+    accuracy: string;
+    topics: { topic: string; correct: number; wrong: number; unanswered: number; questions: number; accuracy: string }[];
+  }[];
+}
+
+/** SWOT from the last ten sectional and mock attempts. Needs a few attempts before it judges. */
+export interface SwotView {
+  attempts: number;
+  enough: boolean;
+  strengths: SwotTopic[];
+  weaknesses: SwotTopic[];
+}
+
+export interface SwotTopic {
+  subject: string;
+  topic: string;
+  accuracy: string;
+  questions: number;
+}
+
+export interface PastPaperCard {
+  id: string;
+  title: string;
+  year: number | null;
+  question_count: number;
+}
+
+export interface SyllabusTable {
+  years: number[];
+  rows: { paper: string; topic: string; counts: Record<string, number>; total: number }[];
+}
+
+export interface FilterTopicGroup {
+  paper: string;
+  topics: { name: string; count: number }[];
+}
+
 export interface StudentTestCard {
   id: string;
+  kind?: TestKind;
+  /** The free mock, shown first on the Mocks page. */
+  free?: boolean;
   /** A practice test made from a weak topic, only for this student. */
   practice?: boolean;
   /** Who made a practice test, when it was not the student (a parent). */

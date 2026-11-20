@@ -12,17 +12,22 @@ import { Icon } from '../ui/icon';
   imports: [Icon],
   template: `
     <div class="page-head"><h1><app-icon name="book" /> Word of the day</h1></div>
-    <p class="hint">Add words with their meaning and an example. Students see one word a day, going down this list in the order it was added, then starting again. Switch it on or off on <strong>Features and labels</strong>.</p>
+    <p class="hint">Add words or idioms with their meaning and an example. Students see one word a day, going down this list in the order it was added, then starting again. Idioms have their own list for Idioms. Switch each one on or off on <strong>Features and labels</strong>.</p>
+
+    <div class="tabs" role="tablist" aria-label="Which list">
+      <button class="tab" type="button" id="kind-word" role="tab" [attr.aria-selected]="kind() === 'word'" (click)="switchKind('word')">Words</button>
+      <button class="tab" type="button" id="kind-idiom" role="tab" [attr.aria-selected]="kind() === 'idiom'" (click)="switchKind('idiom')">Idioms</button>
+    </div>
 
     @if (loadError(); as problem) { <div class="alert error" role="alert">{{ problem.detail }}</div> }
     @if (error(); as problem) { <div class="alert error" role="alert" id="word-error">{{ problem.detail }}</div> }
 
     <section class="card">
       <h2>Add a word</h2>
-      <label class="field">Word <input id="word-input" type="text" maxlength="60" [value]="word()" (input)="word.set(read($event))" /></label>
+      <label class="field">{{ kind() === 'idiom' ? 'Idiom' : 'Word' }} <input id="word-input" type="text" maxlength="60" [value]="word()" (input)="word.set(read($event))" /></label>
       <label class="field">Meaning <textarea id="meaning-input" maxlength="300" [value]="meaning()" (input)="meaning.set(read($event))"></textarea></label>
       <label class="field">Example (optional) <textarea id="example-input" maxlength="300" [value]="example()" (input)="example.set(read($event))"></textarea></label>
-      <button class="btn" id="add-word" type="button" [disabled]="busy()" (click)="add()">Add word</button>
+      <button class="btn" id="add-word" type="button" [disabled]="busy()" (click)="add()">Add {{ kind() === 'idiom' ? 'idiom' : 'word' }}</button>
     </section>
 
     <section class="card">
@@ -51,6 +56,8 @@ export class AdminWordsPage implements OnInit {
   readonly error = signal<ApiError | null>(null);
   readonly busy = signal(false);
 
+  /** Which list the admin is looking at: the words, or the idioms. */
+  readonly kind = signal<'word' | 'idiom'>('word');
   readonly word = signal('');
   readonly meaning = signal('');
   readonly example = signal('');
@@ -59,7 +66,7 @@ export class AdminWordsPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      this.words.set(await this.api.words());
+      this.words.set(await this.api.words(this.kind()));
     } catch (error) {
       this.loadError.set(error as ApiError);
     } finally {
@@ -71,11 +78,23 @@ export class AdminWordsPage implements OnInit {
     return (event.target as HTMLInputElement | HTMLTextAreaElement).value;
   }
 
+  /** Show the other list. The one on screen is loaded from the server again. */
+  async switchKind(kind: 'word' | 'idiom'): Promise<void> {
+    if (kind === this.kind()) return;
+    this.kind.set(kind);
+    this.error.set(null);
+    try {
+      this.words.set(await this.api.words(kind));
+    } catch (error) {
+      this.loadError.set(error as ApiError);
+    }
+  }
+
   async add(): Promise<void> {
     this.busy.set(true);
     this.error.set(null);
     try {
-      const added = await this.api.addWord({ word: this.word(), meaning: this.meaning(), example: this.example() });
+      const added = await this.api.addWord({ kind: this.kind(), word: this.word(), meaning: this.meaning(), example: this.example() });
       this.words.set([...this.words(), added]);
       this.word.set('');
       this.meaning.set('');

@@ -3,7 +3,7 @@ from datetime import date
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 
-from app import clock, releases
+from app import clock, features, practice, releases
 from app.deps import STUDENT, TENANT_ADMIN, get_repo, get_tenant, get_tenant_repo, require_roles
 from app.repo import Repo, TenantRepo
 from app.tenants import ValidationError
@@ -48,6 +48,20 @@ def remove_release(release_id: str, scoped: TenantRepo = Depends(get_tenant_repo
 @router.get("/api/my/releases/today")
 def my_today(tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
     return releases.for_student(scoped, tenant)
+
+
+@router.post("/api/my/releases/{kind}/attempt", status_code=201)
+def my_attempt(kind: str, tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    """Open the student's practice test on today's Daily RC passage, or this week's Weekly DILR set."""
+    if kind not in releases.KINDS or not features.is_on(tenant, kind):
+        raise HTTPException(status_code=404, detail="That isn't available.")
+    try:
+        test = releases.attempt(scoped, student, kind, _today())
+    except practice.NotEnrolled:
+        raise HTTPException(status_code=403, detail="Practice opens once you are enrolled in a course.")
+    except ValidationError as error:
+        _refuse(error)
+    return {"id": test["id"], "title": test["title"], "question_count": len(test["question_ids"])}
 
 
 def _today() -> date:

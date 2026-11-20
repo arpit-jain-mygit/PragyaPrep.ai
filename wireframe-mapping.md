@@ -34,7 +34,7 @@ Feature keys refer to `backend/app/features.py` (the `CATALOGUE`).
 | Weekly DILR: a set per week, filtered by sub-topic | `weekly_dilr` | img12 |
 | Past papers: attempt, explore, syllabus, filter topics | `past_papers`, `syllabus`, `filter_topics` | img13, img15 |
 | Syllabus table: topics by year, with counts | `syllabus` | img14, img25 |
-| Deep analytics for topic tests, sectionals and mocks | `analytics` | img16, img17, img18 |
+| Deep analytics for topic tests, sectionals and mocks | `analyse_topic_tests`, `analyse_sectionals`, `analyse_mocks` | img16, img17, img18 |
 | SWOT analysis from the last 10 attempts | `swot` | img19 |
 | Forums: home, explore, farmhouses per subject | `forum` | img20, img21 |
 | PI question bank with list and flashcard views | `pi_bank` | img22 |
@@ -68,3 +68,44 @@ Each one needs an Excel template, a checked preview row by row before anything i
 | Eligibility rules by college | To build | Eligibility |
 | Fees and loan terms by college | To build | Loan calculator |
 | Vocabulary and idioms lists | To build | Vocabulary, idioms |
+
+## Screen register (one row per wireframe image)
+
+Status: **Built** = switched on for students when the admin chooses; **Planned** = listed for the admin, can't be switched on until built; **Existing** = already in the app, not a student menu item.
+
+| Image | Screen | Feature key(s) | Status |
+|---|---|---|---|
+| img02 | Dashboard: progress, oranges, days strong, Free Daily RCs and Weekly DILR cards, vocab builder, overview, word of the day, yesterday's winners | `dashboard_points`, `word_of_day`, `leaderboard`, `daily_rc`, `weekly_dilr` | Built (cards) |
+| img02 | Vocab builder tiles: Word battle, Flashcards, Word list, Crossword, Phrasal verbs | `word_battle`, `flashcards`, `word_list`, `crossword`, `phrasal_verbs` | Planned |
+| img02 | Overview tiles: Activity, Unresolved doubts, Free resources | `activity`, `unresolved_doubts`, `free_resources` | Planned |
+| img03 | Videos (topics, continue learning, video grid) | `coursework` (labelled Videos) | Built |
+| img04 | Learn: Vocabulary | `vocabulary` | Planned |
+| img05 | Vocabulary daily test with calendar of packs | `vocabulary` | Planned |
+| img06 | Idioms packs | `idioms` | Planned |
+| img07 | Dashboard with Practice menu open | as img02 | Built (cards) |
+| img08 | Topic tests by subject, with sub-topics | `topic_tests` | Built |
+| img09 | Sectionals (SA and MCQ) | `sectionals` | Planned |
+| img10 | Mocks grid | `mocks` | Planned |
+| img11 | Daily RC passage | `daily_rc` | Built (no own page yet; card on Dashboard) |
+| img12 | Weekly DILR sets | `weekly_dilr` | Built (no own page yet; card on Dashboard) |
+| img13 | Past papers: Attempt | `past_papers` | Built |
+| img14 | Syllabus table | `syllabus` | Built |
+| img15 | Past papers: Explore and Filter topics | `past_papers_explore`, `filter_topics` | Built |
+| img16 | Analyse: Topic test analytics | `analyse_topic_tests` | Built |
+| img17 | Analyse: Sectionals analytics | `analyse_sectionals` | Built |
+| img18 | Analyse: Mocks analytics | `analyse_mocks` | Built |
+| img19 | SWOT analysis | `swot` | Built |
+| img20 | Forum home | `forum` | Planned |
+| img21 | Forum: Explore farmhouses | `forum_explore` | Planned |
+| img22 | Interview: PI question bank (list and flashcard) | `pi_bank` | Planned |
+| img22 | Interview: Guide | `interview_guide` | Planned |
+| img23 | Tools: Applications tracker | `application_tracker` | Planned |
+| img24 | Tools: Eligibility checker | `eligibility` | Planned |
+| img25 | Tools: Syllabus table | `tools_syllabus` | Built |
+| img26 | Tools: Cutoffs | `cutoffs` | Planned |
+| img27 | Tools: Loan calculator | `loan_calculator` | Planned |
+| img28 | Admin: student record edit (registrations) | none | Existing |
+| img29 | Dashboard with menu (duplicate of img02) | as img02 | Built (cards) |
+
+Not in the wireframes, kept as-is: Live classes, Tests, Results, Notices (group "My learning").
+Coverage is checked by `WIREFRAME_SCREENS` in `backend/tests/test_features.py`.

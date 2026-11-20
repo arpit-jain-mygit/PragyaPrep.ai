@@ -380,6 +380,9 @@ class TestIn(BaseModel):
     rules: Any = None
     question_ids: Any = None
     status: Any = None
+    kind: Any = None
+    free: Any = None
+    year: Any = None
 
 
 class AnswersIn(BaseModel):

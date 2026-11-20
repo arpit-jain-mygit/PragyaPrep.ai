@@ -4,7 +4,7 @@ import { Choice } from '../ui/choice';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { formatDateTime } from '../core/format';
-import { AdminCourse, ApiError, AutoRule, Paper, Question, TestDetail, TestInput, TestSummary } from '../core/models';
+import { AdminCourse, ApiError, AutoRule, Paper, Question, TestDetail, TestInput, TestKind, TestSummary } from '../core/models';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
 import { InfoTip } from '../ui/info-tip';
@@ -23,6 +23,9 @@ interface Draft {
   showAnswers: boolean;
   courses: string[];
   mode: 'manual' | 'auto';
+  kind: TestKind;
+  free: boolean;
+  year: number | null;
   rules: AutoRule[];
   questionIds: string[];
   status: 'draft' | 'published';
@@ -35,7 +38,7 @@ function emptyRule(): AutoRule {
 function emptyDraft(): Draft {
   return {
     title: '', description: '', startAt: '', endAt: '', duration: null, maxAttempts: 1, passPercentage: null,
-    marksCorrect: '1', marksIncorrect: '0', showAnswers: false, courses: [], mode: 'manual', rules: [emptyRule()],
+    marksCorrect: '1', marksIncorrect: '0', showAnswers: false, courses: [], mode: 'manual', kind: 'test', free: false, year: null, rules: [emptyRule()],
     questionIds: [], status: 'draft',
   };
 }
@@ -69,6 +72,24 @@ const SHOWN_AT_MOST = 100;
           <input id="t-title" name="title" type="text" [(ngModel)]="draft.title" (input)="clearError('title')" [attr.aria-invalid]="fieldErrors()['title'] ? 'true' : null" />
           @if (fieldErrors()['title']) { <div class="error-text">{{ fieldErrors()['title'] }}</div> }
         </div>
+        <div class="field">
+          <label for="t-kind">What is it for?</label>
+          <select id="t-kind" name="kind" [(ngModel)]="draft.kind">
+            <option value="test">A test</option>
+            <option value="sectional">A sectional</option>
+            <option value="mock">A full mock</option>
+            <option value="past_paper">A past paper</option>
+          </select>
+        </div>
+        @if (draft.kind === 'past_paper') {
+          <div class="field">
+            <label for="t-year">Year of the paper</label>
+            <input id="t-year" name="year" type="number" min="1990" max="2100" [(ngModel)]="draft.year" />
+          </div>
+        }
+        @if (draft.kind === 'mock') {
+          <label class="check" for="t-free"><input id="t-free" name="free" type="checkbox" [(ngModel)]="draft.free" /> This is the free mock</label>
+        }
         <div class="field">
           <label for="t-description">Instructions <app-info text="Optional. Shown to students before they start." /></label>
           <textarea id="t-description" name="description" rows="2" [(ngModel)]="draft.description" (input)="clearError('description')"></textarea>
@@ -557,6 +578,9 @@ export class AdminTests implements OnInit {
       showAnswers: detail.show_answers,
       courses: [...detail.courses],
       mode: detail.mode,
+      kind: detail.kind ?? 'test',
+      free: detail.free ?? false,
+      year: detail.year ?? null,
       rules: detail.rules.length ? detail.rules.map((rule) => ({ ...rule, difficulty: rule.difficulty as AutoRule['difficulty'] })) : [emptyRule()],
       questionIds: [...detail.question_ids],
       status: detail.status,
@@ -669,6 +693,9 @@ export class AdminTests implements OnInit {
       show_answers: d.showAnswers,
       courses: d.courses,
       mode: d.mode,
+      kind: d.kind,
+      free: d.kind === 'mock' && d.free,
+      year: d.kind === 'past_paper' ? d.year : null,
       rules: d.mode === 'auto' ? d.rules.map((rule) => ({ paper: rule.paper, topic: rule.topic, difficulty: rule.difficulty, count: Number(rule.count) })) : [],
       question_ids: d.questionIds,
       status: d.status,

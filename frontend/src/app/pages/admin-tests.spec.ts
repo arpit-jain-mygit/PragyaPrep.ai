@@ -161,7 +161,7 @@ describe('Admin tests page', () => {
     expect(request.request.body).toEqual({
       title: 'Mock 2', description: '', start_at: '2027-02-01T09:00', end_at: '2027-02-28T23:59', duration_minutes: 45,
       max_attempts: 3, pass_percentage: 35, marks_correct: '3', marks_incorrect: '-1', show_answers: true,
-      courses: ['c1', 'c2'], mode: 'manual', rules: [], question_ids: ['q1'], status: 'published',
+      courses: ['c1', 'c2'], mode: 'manual', kind: 'test', free: false, year: null, rules: [], question_ids: ['q1'], status: 'published',
     });
     request.flush({ ...T1, id: 't2', title: 'Mock 2', questions: [] });
     await settle(env.fixture);

@@ -1,5 +1,5 @@
 """A student's tests: see the ones for their courses, start or resume an attempt, save answers, submit, see the result."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from app import attempts
@@ -16,9 +16,16 @@ NO_ATTEMPT = "We couldn't find that attempt."
 
 
 @router.get("/api/my/tests")
-def my_tests(scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+def my_tests(
+    kind: str | None = Query(None, description="Only this kind: test, sectional or mock. Leave out for all of them."),
+    scoped: TenantRepo = Depends(get_tenant_repo),
+    student: dict = Depends(require_roles(STUDENT)),
+):
     """Published tests for the courses this student can open now."""
-    return attempts.list_tests(scoped, student)
+    listed = attempts.list_tests(scoped, student)
+    if kind is None:
+        return listed
+    return [item for item in listed if item["kind"] == kind]
 
 
 @router.get("/api/my/tests/{test_id}")

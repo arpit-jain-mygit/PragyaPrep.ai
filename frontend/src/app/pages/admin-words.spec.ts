@@ -13,7 +13,7 @@ async function open(list = LIST) {
   env.sessions.save(sessionFor('tenant_admin'));
   const fixture = TestBed.createComponent(AdminWordsPage);
   fixture.detectChanges();
-  env.http.expectOne(`${API}/api/admin/words`).flush(list);
+  env.http.expectOne(`${API}/api/admin/words?kind=word`).flush(list);
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -45,7 +45,7 @@ describe('Word of the day admin page', () => {
     await settle(fixture);
     el<HTMLButtonElement>(fixture, '#add-word').click();
     const request = http.expectOne(`${API}/api/admin/words`);
-    expect(request.request.body).toEqual({ word: 'daunt', meaning: 'to intimidate', example: 'Do not be daunted.' });
+    expect(request.request.body).toEqual({ kind: 'word', word: 'daunt', meaning: 'to intimidate', example: 'Do not be daunted.' });
     request.flush({ id: 'w3', word: 'daunt', meaning: 'to intimidate', example: 'Do not be daunted.' }, { status: 201, statusText: 'Created' });
     await settle(fixture);
     expect(all(fixture, '[data-word-id]').length).toBe(1);

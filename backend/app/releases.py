@@ -13,7 +13,7 @@ The student only sees a kind when the institute has it switched on (see features
 from datetime import date, timedelta
 from uuid import uuid4
 
-from app import clock, features, passages
+from app import clock, features, passages, practice
 from app.repo import Repo, TenantRepo, now_iso
 from app.tenants import ValidationError
 
@@ -124,6 +124,38 @@ def _passage(scoped: TenantRepo, passage_id: str) -> dict | None:
         if row["id"] == passage_id:
             return {"id": row["id"], "title": row["title"], "text": row["text"]}
     return None
+
+
+def current_release(scoped: TenantRepo, kind: str, today: date) -> dict | None:
+    """The release a student sees today: the Daily RC passage for today, or the Weekly DILR set for this week."""
+    for row in scoped.list_releases(kind):
+        start = date.fromisoformat(row["date"])
+        if kind == "daily_rc" and start == today:
+            return row
+        if kind == "weekly_dilr" and start <= today < start + timedelta(days=KINDS["weekly_dilr"]):
+            return row
+    return None
+
+
+def attempt(scoped: TenantRepo, student: dict, kind: str, today: date) -> dict:
+    """The student's own practice test on the passage they see today (Daily RC) or this week (Weekly DILR).
+
+    It is made from the published questions of that passage, once, and reused each time the student opens it.
+    """
+    check_kind(kind)
+    if not practice._enrolled(scoped, student):
+        raise practice.NotEnrolled()
+    row = current_release(scoped, kind, today)
+    if row is None:
+        raise ValidationError("Nothing is set for today yet." if kind == "daily_rc" else "Nothing is set for this week yet.")
+    existing = next((item for item in scoped.list_practice(student["email"]) if item.get("release_id") == row["id"]), None)
+    if existing:
+        return existing
+    ids = [item["id"] for item in scoped.list_questions() if item.get("passage") == row["passage_id"] and item.get("status") == "published"]
+    if not ids:
+        raise ValidationError("This passage has no published questions yet.")
+    title = "Daily RC" if kind == "daily_rc" else "Weekly DILR"
+    return practice.save(scoped, student, f"{title}: {row['date']}", ids, student["email"], {"release_id": row["id"], "kind": kind})
 
 
 def today_for(scoped: TenantRepo, tenant: dict, today: date) -> dict:
