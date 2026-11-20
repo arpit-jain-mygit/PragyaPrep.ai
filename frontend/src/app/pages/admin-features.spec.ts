@@ -15,7 +15,7 @@ async function open(rows = ROWS) {
   env.sessions.save(sessionFor('tenant_admin'));
   const fixture = TestBed.createComponent(AdminFeaturesPage);
   fixture.detectChanges();
-  env.http.expectOne(`${API}/api/admin/features`).flush({ features: rows });
+  env.http.expectOne(`${API}/api/admin/features`).flush({ features: rows, oranges_target: 10 });
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -93,5 +93,28 @@ describe('Features and labels', () => {
     await settle(fixture);
     expect(tenants.isOn('notices')).toBe(false);
     expect(all(fixture, '#saved').length).toBe(1);
+  });
+
+  it('saves the daily target for oranges on its own', async () => {
+    const { fixture, http } = await open();
+    const input = el<HTMLInputElement>(fixture, '#target-input');
+    expect(input.value).toBe('10');
+    input.value = '25';
+    input.dispatchEvent(new Event('input'));
+    el<HTMLButtonElement>(fixture, '#save-target').click();
+    const request = http.expectOne(`${API}/api/admin/oranges-target`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ target: 25 });
+    request.flush({ target: 25 });
+    await settle(fixture);
+    expect(all(fixture, '#target-saved').length).toBe(1);
+  });
+
+  it('shows a refused target as a plain message', async () => {
+    const { fixture, http } = await open();
+    el<HTMLButtonElement>(fixture, '#save-target').click();
+    http.expectOne(`${API}/api/admin/oranges-target`).flush({ detail: 'The daily target must be from 1 to 100.' }, { status: 422, statusText: 'Unprocessable' });
+    await settle(fixture);
+    expect(el(fixture, '#target-error').textContent).toContain('from 1 to 100');
   });
 });

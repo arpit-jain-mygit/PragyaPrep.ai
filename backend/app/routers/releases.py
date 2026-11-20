@@ -1,0 +1,54 @@
+"""Daily RC and Weekly DILR: the admin's release schedule, and what each student sees today."""
+from datetime import date
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Response
+
+from app import clock, releases
+from app.deps import STUDENT, TENANT_ADMIN, get_repo, get_tenant, get_tenant_repo, require_roles
+from app.repo import Repo, TenantRepo
+from app.tenants import ValidationError
+
+router = APIRouter(tags=["releases"])
+
+
+def _refuse(error: ValidationError):
+    raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.get("/api/admin/releases/{kind}", dependencies=[Depends(require_roles(TENANT_ADMIN))])
+def list_releases(kind: str, tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo)):
+    try:
+        return releases.listed(scoped, tenant, releases.check_kind(kind))
+    except ValidationError as error:
+        _refuse(error)
+
+
+@router.put("/api/admin/releases/{kind}/schedule", dependencies=[Depends(require_roles(TENANT_ADMIN))])
+def save_schedule(kind: str, body: dict = Body(...), tenant: dict = Depends(get_tenant), repo: Repo = Depends(get_repo)):
+    try:
+        return releases.set_schedule(repo, tenant, kind, body)
+    except ValidationError as error:
+        _refuse(error)
+
+
+@router.post("/api/admin/releases", status_code=201)
+def add_releases(body: dict = Body(...), tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), admin: dict = Depends(require_roles(TENANT_ADMIN))):
+    try:
+        return releases.add(scoped, tenant, body, admin["email"], _today())
+    except ValidationError as error:
+        _refuse(error)
+
+
+@router.delete("/api/admin/releases/{release_id}", status_code=204)
+def remove_release(release_id: str, scoped: TenantRepo = Depends(get_tenant_repo), admin: dict = Depends(require_roles(TENANT_ADMIN))):
+    releases.remove(scoped, release_id)
+    return Response(status_code=204)
+
+
+@router.get("/api/my/releases/today")
+def my_today(tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    return releases.for_student(scoped, tenant)
+
+
+def _today() -> date:
+    return clock.today_india()

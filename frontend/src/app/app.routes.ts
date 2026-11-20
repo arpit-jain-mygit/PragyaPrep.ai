@@ -69,6 +69,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-words').then((m) => m.AdminWordsPage),
       },
       {
+        path: 'admin/releases',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-releases').then((m) => m.AdminReleasesPage),
+      },
+      {
         path: 'admin/features',
         canActivate: [signedInGuard, adminGuard],
         loadComponent: () => import('./pages/admin-features').then((m) => m.AdminFeaturesPage),

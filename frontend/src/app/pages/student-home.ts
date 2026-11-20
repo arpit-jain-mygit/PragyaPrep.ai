@@ -8,11 +8,14 @@ import { Icon } from '../ui/icon';
 import { FreeHome } from './free-home';
 import { StudentTiles } from './student-tiles';
 import { WordOfDay } from './word-of-day';
+import { DashboardProgress } from './dashboard-progress';
+import { LeaderboardCard } from './leaderboard';
+import { TodaysPassages } from './todays-passages';
 
 /** A student's home page: a greeting and action tiles. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
-  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome, WordOfDay],
+  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome, WordOfDay, DashboardProgress, LeaderboardCard, TodaysPassages],
   template: `
     @if (error(); as problem) {
       <div class="alert error" role="alert">{{ problem.detail }}</div>
@@ -24,6 +27,9 @@ import { WordOfDay } from './word-of-day';
         <h1 class="greeting"><app-avatar [url]="m.avatar_url" [first]="m.first_name" [last]="m.last_name" [email]="m.email" [size]="76" /> Welcome, {{ m.first_name }}</h1>
         <span class="muted small">{{ m.email }}</span>
       </div>
+      <app-dashboard-progress />
+      <app-leaderboard />
+      <app-todays-passages />
       <app-student-tiles />
       <app-word-of-day />
       @if (batches().length) {

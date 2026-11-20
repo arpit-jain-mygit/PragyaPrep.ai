@@ -40,6 +40,70 @@ export interface MyWordOfDay {
   word: { word: string; meaning: string; example: string } | null;
 }
 
+/** A student's oranges for today and their streak. Null when the institute has them switched off. */
+export interface Oranges {
+  collected_today: number;
+  collected_total: number;
+  target: number;
+  days_strong: number;
+}
+
+export interface MyOranges {
+  oranges: Oranges | null;
+}
+
+/** One row of the leaderboard: a student's rank, first name and last initial, and their oranges. */
+export interface LeaderRow {
+  rank: number;
+  name: string;
+  oranges: number;
+  me: boolean;
+}
+
+export interface Leaderboard {
+  days: number;
+  top: LeaderRow[];
+  me: LeaderRow | null;
+}
+
+export interface MyLeaderboard {
+  leaderboard: Leaderboard | null;
+}
+
+/** How a kind of release is added: one at a time by the admin (self), or in a queue (bulk). */
+export interface ReleaseSchedule {
+  mode: 'self' | 'queue';
+  start: string | null;
+}
+
+/** One release: a passage a student sees on a date (a day for Daily RC, the week from it for Weekly DILR). */
+export interface Release {
+  id: string;
+  kind: 'daily_rc' | 'weekly_dilr';
+  passage_id: string;
+  title: string;
+  date: string;
+}
+
+export interface ReleaseList {
+  kind: 'daily_rc' | 'weekly_dilr';
+  schedule: ReleaseSchedule;
+  items: Release[];
+}
+
+/** A passage a student can read today, with the date it was released. */
+export interface TodayPassage {
+  id: string;
+  title: string;
+  text: string;
+  date: string;
+}
+
+export interface TodayReleases {
+  daily_rc: TodayPassage | null;
+  weekly_dilr: TodayPassage | null;
+}
+
 export interface FeatureRow {
   key: string;
   group: string;

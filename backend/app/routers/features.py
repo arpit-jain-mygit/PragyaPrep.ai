@@ -2,7 +2,7 @@
 Only the institute's own admin can change them."""
 from fastapi import APIRouter, Body, Depends, HTTPException
 
-from app import features
+from app import features, oranges
 from app.deps import TENANT_ADMIN, get_repo, get_tenant, require_roles
 from app.repo import Repo
 from app.tenants import ValidationError
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/admin/features", tags=["features"])
 
 @router.get("")
 def get_features(tenant: dict = Depends(get_tenant), admin: dict = Depends(require_roles(TENANT_ADMIN))):
-    return {"features": features.view(tenant)}
+    return {"features": features.view(tenant), "oranges_target": oranges.target_of(tenant)}
 
 
 @router.put("")

@@ -21,17 +21,17 @@ CATALOGUE = [
     ("results", "Learning", "Results", True),
     ("notices", "Learning", "Notices", True),
     # Planned: listed for the admin, not switchable until built.
-    ("dashboard_points", "Dashboard", "Oranges", False),
+    ("dashboard_points", "Dashboard", "Oranges", True),
     ("word_of_day", "Dashboard", "Word of the day", True),
-    ("leaderboard", "Dashboard", "Leaderboard", False),
+    ("leaderboard", "Dashboard", "Leaderboard", True),
     ("videos_library", "Learn", "Videos", False),
     ("vocabulary", "Learn", "Vocabulary", False),
     ("idioms", "Learn", "Idioms", False),
     ("topic_tests", "Practice", "Topic tests", False),
     ("sectionals", "Practice", "Sectionals", False),
     ("mocks", "Practice", "Mocks", False),
-    ("daily_rc", "Practice", "Daily RC", False),
-    ("weekly_dilr", "Practice", "Weekly DILR", False),
+    ("daily_rc", "Practice", "Daily RC", True),
+    ("weekly_dilr", "Practice", "Weekly DILR", True),
     ("past_papers", "Past papers", "Past papers", False),
     ("syllabus", "Past papers", "Syllabus", False),
     ("analytics", "Analyse", "Analytics", False),
@@ -121,6 +121,11 @@ def view(tenant: dict) -> list[dict]:
         item = current["items"][key]
         out.append({**meta, "label": item["label"], "enabled": item["enabled"], "position": position})
     return out
+
+
+def is_on(tenant: dict, key: str) -> bool:
+    """Whether the institute shows a built screen to students."""
+    return any(item["key"] == key and item["enabled"] for item in public(tenant))
 
 
 def public(tenant: dict) -> list[dict]:

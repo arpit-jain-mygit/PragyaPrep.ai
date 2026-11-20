@@ -6,6 +6,12 @@ import { TenantService } from './tenant.service';
 import {
   AskLog,
   FeatureRow,
+  MyLeaderboard,
+  ReleaseList,
+  ReleaseSchedule,
+  Release,
+  TodayReleases,
+  MyOranges,
   MyWordOfDay,
   WordEntry,
   FreeSample,
@@ -204,7 +210,7 @@ export class ApiService {
 
   // ---- Features and labels (the institute admin) ----
 
-  features(): Promise<{ features: FeatureRow[] }> {
+  features(): Promise<{ features: FeatureRow[]; oranges_target: number }> {
     return this.get('/api/admin/features');
   }
 
@@ -586,6 +592,21 @@ export class ApiService {
     return this.delete(`/api/admin/words/${encodeURIComponent(id)}`);
   }
 
+  /** The student's oranges for today (null when the institute has them switched off). */
+  myOranges(): Promise<MyOranges> {
+    return this.get('/api/my/oranges');
+  }
+
+  /** The leaderboard for the last seven days (null when the institute has it switched off). */
+  myLeaderboard(): Promise<MyLeaderboard> {
+    return this.get('/api/my/leaderboard');
+  }
+
+  /** The institute's daily target for oranges. */
+  setOrangesTarget(target: number): Promise<{ target: number }> {
+    return this.call(firstValueFrom(this.http.put<{ target: number }>(`${this.base}/api/admin/oranges-target`, { target })));
+  }
+
   /** Today's word for the student (null when there is none or it is switched off). */
   myWordOfDay(): Promise<MyWordOfDay> {
     return this.get('/api/my/word-of-day');
@@ -693,6 +714,33 @@ export class ApiService {
     for (const [name, value] of Object.entries(filter)) if (value) params[name] = value;
     const page = await this.getPage<Question[] | null>('/api/admin/questions', params, before);
     return { items: page.body ?? [], next: page.next };
+  }
+
+  /** The question bank's passages, by title. */
+  passages(): Promise<Passage[]> {
+    return this.get('/api/admin/passages');
+  }
+
+  /** The releases for one kind (daily_rc or weekly_dilr), with the schedule the admin chose. */
+  releases(kind: string): Promise<ReleaseList> {
+    return this.get(`/api/admin/releases/${encodeURIComponent(kind)}`);
+  }
+
+  saveReleaseSchedule(kind: string, body: ReleaseSchedule): Promise<ReleaseSchedule> {
+    return this.call(firstValueFrom(this.http.put<ReleaseSchedule>(`${this.base}/api/admin/releases/${encodeURIComponent(kind)}/schedule`, body)));
+  }
+
+  addReleases(body: { kind: string; passage_ids: string[]; date?: string }): Promise<Release[]> {
+    return this.post('/api/admin/releases', body);
+  }
+
+  removeRelease(id: string): Promise<void> {
+    return this.delete(`/api/admin/releases/${encodeURIComponent(id)}`);
+  }
+
+  /** Today's Daily RC passage and this week's Weekly DILR set for the student (each null when there is none). */
+  myReleasesToday(): Promise<TodayReleases> {
+    return this.get('/api/my/releases/today');
   }
 
   updatePassage(id: string, body: { title?: string; text?: string }): Promise<Passage> {

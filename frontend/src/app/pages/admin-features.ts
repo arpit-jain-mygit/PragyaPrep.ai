@@ -46,6 +46,15 @@ import { Icon } from '../ui/icon';
       </section>
     }
 
+    <section class="card" id="oranges-target">
+      <h2>Daily target for oranges</h2>
+      <p class="hint">Each coursework item a student marks done gives one orange. The target is how many a day makes a strong day (1 to 100).</p>
+      <label class="field">Oranges a day <input id="target-input" type="number" min="1" max="100" [value]="target()" (input)="target.set(read($event))" /></label>
+      <button class="btn secondary" type="button" id="save-target" [disabled]="busy()" (click)="saveTarget()">Save target</button>
+      @if (targetError(); as problem) { <div class="alert error" role="alert" id="target-error">{{ problem.detail }}</div> }
+      @if (targetSaved()) { <span class="muted small" id="target-saved" role="status">Saved.</span> }
+    </section>
+
     <div class="actions">
       <button class="btn" type="button" id="save-features" [disabled]="busy()" (click)="save()">Save</button>
     </div>
@@ -60,6 +69,9 @@ export class AdminFeaturesPage implements OnInit {
   readonly error = signal<ApiError | null>(null);
   readonly saved = signal(false);
   readonly busy = signal(false);
+  readonly target = signal(10);
+  readonly targetError = signal<ApiError | null>(null);
+  readonly targetSaved = signal(false);
 
   /** The rows grouped by area, in the order the institute chose. */
   readonly sections = computed(() => {
@@ -77,8 +89,26 @@ export class AdminFeaturesPage implements OnInit {
     try {
       const answer = await this.api.features();
       this.rows.set(answer.features);
+      this.target.set(answer.oranges_target ?? 10);
     } catch (error) {
       this.loadError.set(error as ApiError);
+    }
+  }
+
+  read(event: Event): number {
+    return Number((event.target as HTMLInputElement).value);
+  }
+
+  /** Save the daily target for oranges on its own, so it doesn't need the feature list to be saved too. */
+  async saveTarget(): Promise<void> {
+    this.targetError.set(null);
+    this.targetSaved.set(false);
+    try {
+      const saved = await this.api.setOrangesTarget(this.target());
+      this.target.set(saved.target);
+      this.targetSaved.set(true);
+    } catch (error) {
+      this.targetError.set(error as ApiError);
     }
   }
 

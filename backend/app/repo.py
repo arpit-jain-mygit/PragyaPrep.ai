@@ -500,6 +500,30 @@ class TenantRepo:
         response = self.table.query(IndexName="GSI1", KeyConditionExpression=condition, ScanIndexForward=False, Limit=limit)
         return [_plain(item) for item in response["Items"]]
 
+    # ---- Releases: which passage or set a student sees on a given day or week (Daily RC, Weekly DILR) ----
+
+    def _release_key(self, release_id: str) -> dict:
+        return {"PK": f"{self._prefix}RELEASE#{release_id}", "SK": "META"}
+
+    def create_release(self, record: dict) -> None:
+        _put_new(self.table, {**self._release_key(record["id"]), **record, "GSI1PK": f"{self._prefix}RELEASES#{record['kind']}", "GSI1SK": f"{record['date']}#{record['id']}"})
+
+    def list_releases(self, kind: str) -> list[dict]:
+        """Every release of one kind, earliest date first."""
+        items, start = [], None
+        while True:
+            args = {"IndexName": "GSI1", "KeyConditionExpression": Key("GSI1PK").eq(f"{self._prefix}RELEASES#{kind}"), "ScanIndexForward": True}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def delete_release(self, release_id: str) -> None:
+        self.table.delete_item(Key=self._release_key(release_id))
+
     # ---- Word of the day: the institute's own word list ----
 
     def _word_key(self, word_id: str) -> dict:

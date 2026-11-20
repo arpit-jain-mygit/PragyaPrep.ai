@@ -106,6 +106,7 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active" data-tone="news"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'features']" routerLinkActive="active" data-tone="prog" id="features-link"><app-icon name="layers" /><span class="nav-label">Features and labels</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'releases']" routerLinkActive="active" data-tone="prog" id="releases-link"><app-icon name="calendar" /><span class="nav-label">Daily RC and DILR</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'words']" routerLinkActive="active" data-tone="prog" id="words-link"><app-icon name="book" /><span class="nav-label">Word of the day</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'study-log']" routerLinkActive="active" data-tone="prog"><app-icon name="search" /><span class="nav-label">Ask AI log</span></a>
               }

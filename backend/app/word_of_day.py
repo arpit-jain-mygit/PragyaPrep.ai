@@ -71,7 +71,7 @@ def todays(words: list[dict], today: date) -> dict | None:
 
 def switched_on(tenant: dict) -> bool:
     """Whether the institute shows Word of the day to students."""
-    return any(item["key"] == "word_of_day" and item["enabled"] for item in features.public(tenant))
+    return features.is_on(tenant, "word_of_day")
 
 
 def for_student(scoped: TenantRepo, tenant: dict) -> dict:
