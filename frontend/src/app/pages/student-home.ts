@@ -7,11 +7,12 @@ import { BatchList } from '../ui/batch-list';
 import { Icon } from '../ui/icon';
 import { FreeHome } from './free-home';
 import { StudentTiles } from './student-tiles';
+import { WordOfDay } from './word-of-day';
 
 /** A student's home page: a greeting and action tiles. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
-  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome],
+  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome, WordOfDay],
   template: `
     @if (error(); as problem) {
       <div class="alert error" role="alert">{{ problem.detail }}</div>
@@ -24,6 +25,7 @@ import { StudentTiles } from './student-tiles';
         <span class="muted small">{{ m.email }}</span>
       </div>
       <app-student-tiles />
+      <app-word-of-day />
       @if (batches().length) {
         <section class="card" id="my-batches"><h2><app-icon name="layers" [size]="18" /> My {{ batches().length === 1 ? 'batch' : 'batches' }}</h2><app-batch-list [batches]="batches()" /></section>
       }

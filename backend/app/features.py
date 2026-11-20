@@ -22,7 +22,7 @@ CATALOGUE = [
     ("notices", "Learning", "Notices", True),
     # Planned: listed for the admin, not switchable until built.
     ("dashboard_points", "Dashboard", "Oranges", False),
-    ("word_of_day", "Dashboard", "Word of the day", False),
+    ("word_of_day", "Dashboard", "Word of the day", True),
     ("leaderboard", "Dashboard", "Leaderboard", False),
     ("videos_library", "Learn", "Videos", False),
     ("vocabulary", "Learn", "Vocabulary", False),

@@ -29,7 +29,7 @@ describe('Institute page frame', () => {
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     openMenu(fixture);
-    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Batches', 'Question bank', 'Tests', 'Progress', 'Announcements', 'Features and labels', 'Ask AI log']);
+    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Batches', 'Question bank', 'Tests', 'Progress', 'Announcements', 'Features and labels', 'Word of the day', 'Ask AI log']);
     expect(all<HTMLAnchorElement>(fixture, '#institute-link')[0].getAttribute('href')).toBe('/demo/admin/institute');
     expect(all(fixture, '.who').length).toBe(0);
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();

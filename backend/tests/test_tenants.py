@@ -75,7 +75,7 @@ def test_public_info_comes_back_for_a_known_institute(client, make_tenant):
         "profile": {"description": "", "city": "", "contact_email": "", "contact_phone": "", "website": "", "exam_categories": []},
     }
     # A new institute shows every built feature, in the default order.
-    assert [item["key"] for item in features] == ["coursework", "live_classes", "tests", "results", "notices"]
+    assert [item["key"] for item in features] == ["coursework", "live_classes", "tests", "results", "notices", "word_of_day"]
     assert all(item["enabled"] for item in features)
 
 

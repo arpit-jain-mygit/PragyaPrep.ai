@@ -64,6 +64,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-institute').then((m) => m.AdminInstitutePage),
       },
       {
+        path: 'admin/words',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-words').then((m) => m.AdminWordsPage),
+      },
+      {
         path: 'admin/features',
         canActivate: [signedInGuard, adminGuard],
         loadComponent: () => import('./pages/admin-features').then((m) => m.AdminFeaturesPage),

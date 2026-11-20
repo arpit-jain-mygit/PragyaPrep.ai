@@ -6,6 +6,8 @@ import { TenantService } from './tenant.service';
 import {
   AskLog,
   FeatureRow,
+  MyWordOfDay,
+  WordEntry,
   FreeSample,
   FreeState,
   SignupForm,
@@ -569,6 +571,24 @@ export class ApiService {
 
   sendReminders(courseId: string, emails: string[] | null, sendEmail: boolean): Promise<ReminderResult> {
     return this.post('/api/admin/reminders', { course_id: courseId, emails, send_email: sendEmail });
+  }
+
+  /** The institute's word list, in the order it was added. */
+  words(): Promise<WordEntry[]> {
+    return this.get('/api/admin/words');
+  }
+
+  addWord(body: { word: string; meaning: string; example: string }): Promise<WordEntry> {
+    return this.post('/api/admin/words', body);
+  }
+
+  removeWord(id: string): Promise<void> {
+    return this.delete(`/api/admin/words/${encodeURIComponent(id)}`);
+  }
+
+  /** Today's word for the student (null when there is none or it is switched off). */
+  myWordOfDay(): Promise<MyWordOfDay> {
+    return this.get('/api/my/word-of-day');
   }
 
   myNotices(): Promise<MyNotices> {

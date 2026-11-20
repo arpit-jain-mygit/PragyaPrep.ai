@@ -5,7 +5,6 @@ import { MyNotices, MyResults, StudentCoursework, StudentTestCard } from '../cor
 import { ToTake, toTake } from '../core/schedule';
 import { TenantService } from '../core/tenant.service';
 import { Icon } from '../ui/icon';
-import { Ring } from '../ui/ring';
 
 const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
 
@@ -15,7 +14,7 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
  */
 @Component({
   selector: 'app-student-tiles',
-  imports: [RouterLink, Icon, Ring],
+  imports: [RouterLink, Icon],
   template: `
     @if (loaded()) {
       <section class="card today" id="today">
@@ -30,63 +29,7 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
         </ul>
       </section>
     }
-    <div class="tiles">
-      @if (learningOn()) {
-      <a class="tile" id="tile-learning" [class.alert-tile]="overdue() > 0" [routerLink]="learningLink()">
-        <span class="tile-head"><app-icon name="book" [size]="22" /> My Learning</span>
-        @if ((coursework()?.summary?.total ?? 0) > 0) { <app-ring class="tile-ring" data-ring [done]="coursework()!.summary.done" [total]="coursework()!.summary.total" [size]="40" /> }
-        <span class="tile-num" data-total>{{ total() }}</span>
-        <span class="tchips">
-          @if (overdue() > 0) { <span class="tchip bad" data-overdue>{{ overdue() }} overdue</span> }
-          @if (tenants.isOn('coursework')) { <span class="tchip" data-coursework>{{ courseworkLeft() }} {{ tenants.labelOf('coursework', 'coursework').toLowerCase() }}</span> }
-          @if (tenants.isOn('tests')) { <span class="tchip" data-tests>{{ testsToTake() }} {{ tenants.labelOf('tests', 'tests').toLowerCase() }}</span> }
-        </span>
-      </a>
-      }
 
-      @if (notices(); as n) {
-        @if (n.notices.length) {
-          @if (tenants.isOn('notices')) {
-          <a class="tile" id="tile-notices" [class.alert-tile]="n.action_unread > 0" [routerLink]="[base(), 'notices']">
-            <span class="tile-head"><app-icon name="bell" [size]="22" /> Notices</span>
-            <span class="tile-num" data-unread>{{ n.unread }}</span>
-            <span class="tchips">
-              @if (n.action_unread > 0) { <span class="tchip bad" data-action>{{ n.action_unread }} action needed</span> }
-              @if (n.unread === 0) { <span class="tchip" data-allread>all read</span> }
-            </span>
-          </a>
-          }
-        }
-      }
-
-      @if (tenants.isOn('tests') && running(); as test) {
-        <a class="tile" id="tile-continue" [attr.title]="test.title" [routerLink]="[base(), 'tests', test.id]">
-          <span class="tile-head"><app-icon name="play" [size]="22" /> In progress</span>
-          <span class="tile-num" data-running>{{ runningCount() }}</span>
-          <span class="tchips"><span class="tchip">Tap to continue</span></span>
-        </a>
-      }
-
-      @if (tenants.isOn('results')) {
-      <a class="tile" id="tile-results" [routerLink]="[base(), 'learning', 'results']">
-        <span class="tile-head"><app-icon name="chart" [size]="22" /> {{ tenants.labelOf('results', 'Attempts') }}</span>
-        <span class="tile-num" data-attempts>{{ results()?.summary?.attempts ?? 0 }}</span>
-        @if (results()?.summary?.attempts) {
-          <span class="tchips">
-            <span class="tchip">{{ results()!.summary.average }}% avg</span>
-            <span class="tchip">{{ results()!.summary.tests_passed }} of {{ results()!.summary.tests_taken }} passed</span>
-          </span>
-        }
-      </a>
-      }
-
-      @if (tenants.isOn('results') && weak().count > 0) {
-        <a class="tile" id="tile-weak" [attr.title]="'Weakest: ' + weak().name" [routerLink]="[base(), 'learning', 'results']">
-          <span class="tile-head"><app-icon name="flag" [size]="22" /> Weak subjects</span>
-          <span class="tile-num" data-weak>{{ weak().count }}</span>
-        </a>
-      }
-    </div>
   `,
 })
 export class StudentTiles implements OnInit {

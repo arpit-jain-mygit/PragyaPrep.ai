@@ -27,6 +27,19 @@ export interface PublicFeature {
 }
 
 /** One row on the admin's Features & labels page: every feature, built or planned. */
+/** One word on the institute's word list. */
+export interface WordEntry {
+  id: string;
+  word: string;
+  meaning: string;
+  example: string;
+}
+
+/** The word a student sees today: null when the institute has nothing to show. */
+export interface MyWordOfDay {
+  word: { word: string; meaning: string; example: string } | null;
+}
+
 export interface FeatureRow {
   key: string;
   group: string;

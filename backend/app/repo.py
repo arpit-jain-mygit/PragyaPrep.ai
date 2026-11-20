@@ -500,6 +500,23 @@ class TenantRepo:
         response = self.table.query(IndexName="GSI1", KeyConditionExpression=condition, ScanIndexForward=False, Limit=limit)
         return [_plain(item) for item in response["Items"]]
 
+    # ---- Word of the day: the institute's own word list ----
+
+    def _word_key(self, word_id: str) -> dict:
+        return {"PK": f"{self._prefix}WORD#{word_id}", "SK": "META"}
+
+    def create_word(self, record: dict) -> None:
+        # The sort key is the time in nanoseconds, so words added in the same second still keep the order they were added in.
+        _put_new(self.table, {**self._word_key(record["id"]), **record, "GSI1PK": f"{self._prefix}WORDS", "GSI1SK": f"{record['added_at']:020d}#{record['id']}"})
+
+    def list_words(self, limit: int = 1000) -> list[dict]:
+        """The word list, oldest first, so the day's word follows the order the admin added them."""
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}WORDS"), ScanIndexForward=True, Limit=limit)
+        return [_plain(item) for item in response["Items"]]
+
+    def delete_word(self, word_id: str) -> None:
+        self.table.delete_item(Key=self._word_key(word_id))
+
     def delete_access(self, email: str, course_id: str) -> None:
         self.table.delete_item(Key=self._access_key(email, course_id))
 

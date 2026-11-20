@@ -52,117 +52,6 @@ describe('Student home', () => {
     expect(el(fixture, '.greeting span.avatar').textContent!.trim()).toBe('AR');
   });
 
-  it('greets the student and shows tiles for My Learning and results', async () => {
-    const { fixture } = await openHome();
-    expect(text(fixture)).toContain('Welcome, Asha');
-    expect(text(fixture)).toContain('asha@example.com');
-    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-learning', 'tile-results']);  // no Notices tile until there is a notice
-    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('href'))).toEqual(['/demo/learning/tests', '/demo/learning/results']);
-    expect(el(fixture, '#tile-learning').textContent).toContain('My Learning');
-  });
-
-  it('adds up coursework left and tests to take, with the split and the overdue count', async () => {
-    const { fixture } = await openHome({
-      tests: [
-        { ...base, id: 'a', title: 'Slow', state: 'open', minutes_left: 20000 },
-        { ...base, id: 'b', title: 'Urgent', state: 'open', minutes_left: 120 },
-        { ...base, id: 'c', title: 'Missed', state: 'ended', overdue: true },
-        { ...base, id: 'd', title: 'Opens soon', state: 'upcoming', opens_in_minutes: 4000 },
-        { ...base, id: 'g', title: 'Already taken', state: 'open', minutes_left: 100, attempts_used: 1 },
-        { ...base, id: 'h', title: 'Old', state: 'ended', attempts_used: 1 },
-      ],
-      coursework: { summary: { total: 10, done: 4, left: 6, overdue: 2, this_week: 3 }, courses: [] },
-    });
-    expect(num(fixture, '#tile-learning [data-total]')).toBe('10');  // 4 tests + 6 coursework
-    expect(num(fixture, '#tile-learning [data-tests]')).toBe('4 tests');
-    expect(num(fixture, '#tile-learning [data-coursework]')).toBe('6 coursework');
-    expect(num(fixture, '#tile-learning [data-overdue]')).toBe('3 overdue');  // 1 test + 2 coursework
-    expect(el(fixture, '#tile-learning').className).toContain('alert-tile');
-    expect(el(fixture, '#tile-learning').getAttribute('href')).toBe('/demo/learning');
-  });
-
-  it('opens the Tests tab when there is no coursework left', async () => {
-    const { fixture } = await openHome({
-      tests: [{ ...base, id: 'a', title: 'Slow', state: 'open', minutes_left: 20000 }],
-      coursework: { summary: { total: 5, done: 5, left: 0, overdue: 0, this_week: 0 }, courses: [] },
-    });
-    expect(num(fixture, '#tile-learning [data-total]')).toBe('1');
-    expect(el(fixture, '#tile-learning').getAttribute('href')).toBe('/demo/learning/tests');
-  });
-
-  it('shows zero counts and no overdue chip when there is nothing to do', async () => {
-    const { fixture } = await openHome();
-    expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
-    expect(num(fixture, '#tile-learning [data-tests]')).toBe('0 tests');
-    expect(num(fixture, '#tile-learning [data-coursework]')).toBe('0 coursework');
-    expect(all(fixture, '#tile-learning [data-overdue]').length).toBe(0);
-    expect(el(fixture, '#tile-learning').className).not.toContain('alert-tile');
-  });
-
-  it('has a Continue tile only while a test is in progress', async () => {
-    const { fixture } = await openHome({ tests: [{ ...base, id: 'p', title: 'Half done', state: 'open', in_progress: 1, attempts_used: 1, minutes_left: 500 }] });
-    expect(num(fixture, '#tile-continue [data-running]')).toBe('1');
-    expect(el(fixture, '#tile-continue').getAttribute('title')).toBe('Half done');
-    expect(el(fixture, '#tile-continue').getAttribute('href')).toBe('/demo/tests/p');
-    expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
-  });
-
-  it('has a Notices tile with the unread count, red with an action chip when something needs doing', async () => {
-    const note = { id: 'n', title: 'T', message: 'M', kind: 'action', link: null, source: 'manual', created_at: '2027-01-01T00:00:00+05:30', read_at: null };
-    const { fixture } = await openHome({ notices: { unread: 3, action_unread: 2, notices: [note] } });
-    expect(num(fixture, '#tile-notices [data-unread]')).toBe('3');
-    expect(num(fixture, '#tile-notices [data-action]')).toBe('2 action needed');
-    expect(el(fixture, '#tile-notices').className).toContain('alert-tile');
-    expect(el(fixture, '#tile-notices').getAttribute('href')).toBe('/demo/notices');
-    expect(all(fixture, 'a.tile').map((a) => a.getAttribute('id'))).toEqual(['tile-learning', 'tile-notices', 'tile-results']);
-  });
-
-  it('shows information notices without red, and says all read when none are unread', async () => {
-    const note = { id: 'n', title: 'T', message: 'M', kind: 'info', link: null, source: 'manual', created_at: '2027-01-01T00:00:00+05:30', read_at: '2027-01-02T00:00:00+05:30' };
-    const { fixture } = await openHome({ notices: { unread: 0, action_unread: 0, notices: [note] } });
-    expect(num(fixture, '#tile-notices [data-unread]')).toBe('0');
-    expect(all(fixture, '#tile-notices [data-allread]').length).toBe(1);
-    expect(all(fixture, '#tile-notices [data-action]').length).toBe(0);
-    expect(el(fixture, '#tile-notices').className).not.toContain('alert-tile');
-  });
-
-  it('has no separate Tests, Coursework or Courses tiles any more', async () => {
-    const { fixture } = await openHome({ coursework: { summary: { total: 2, done: 0, left: 2, overdue: 0, this_week: 0 }, courses: [] } });
-    expect(all(fixture, '#tile-tests, #tile-coursework, #tile-courses').length).toBe(0);
-  });
-
-  it('shows the number of attempts with the average and passes, and a weak subjects tile when a subject is below 50%', async () => {
-    const { fixture } = await openHome({
-      results: {
-        summary, trend: [], attempts: [],
-        subjects: [
-          { id: 's1', name: 'Logical Reasoning', correct: 3, questions: 10, accuracy: '30.0', topics: [] },
-          { id: 's2', name: 'Verbal', correct: 4, questions: 10, accuracy: '40.0', topics: [] },
-          { id: 's3', name: 'Quant', correct: 9, questions: 10, accuracy: '90.0', topics: [] },
-        ],
-      },
-    });
-    expect(num(fixture, '#tile-results [data-attempts]')).toBe('6');
-    expect(el(fixture, '#tile-results').textContent).toContain('62.5% avg');
-    expect(el(fixture, '#tile-results').textContent).toContain('3 of 4 passed');
-    expect(el(fixture, '#tile-results').getAttribute('href')).toBe('/demo/learning/results');
-    expect(num(fixture, '#tile-weak [data-weak]')).toBe('2');
-    expect(el(fixture, '#tile-weak').getAttribute('title')).toBe('Weakest: Logical Reasoning');
-    expect(el(fixture, '#tile-weak').getAttribute('href')).toBe('/demo/learning/results');
-  });
-
-  it('leaves out the weak subjects tile when nothing is weak', async () => {
-    const { fixture } = await openHome({ results: { summary, trend: [], attempts: [], subjects: [{ id: 's', name: 'Quant', correct: 9, questions: 10, accuracy: '90.0', topics: [] }] } });
-    expect(all(fixture, '#tile-weak').length).toBe(0);
-  });
-
-  it('keeps the other tiles when one call fails', async () => {
-    const { fixture } = await openHome({ tests: 500, coursework: 500, notices: 500 });
-    expect(num(fixture, '#tile-learning [data-total]')).toBe('0');
-    expect(num(fixture, '#tile-results [data-attempts]')).toBe('0');
-    expect(text(fixture)).toContain('Welcome, Asha');
-  });
-
   it('shows a message if the session cannot be checked', async () => {
     const env = setupTestBed();
     const fixture = TestBed.createComponent(StudentHome);
@@ -231,7 +120,7 @@ describe('Student home', () => {
     expect(el(fixture, '[data-today="clear"]').textContent).toContain('all caught up');
   });
 
-  it('lists what needs doing today, with a progress ring on My Learning', async () => {
+  it('lists what needs doing today on the Today card', async () => {
     const coursework = { summary: { total: 10, done: 4, left: 6, overdue: 2, this_week: 3 }, courses: [] };
     const notices = { unread: 2, action_unread: 1, notices: [{ id: 'n1' }] };
     const { fixture } = await openHome({ coursework, notices });
@@ -241,62 +130,5 @@ describe('Student home', () => {
     expect(el(fixture, '[data-today="notices"]').textContent).toContain('1 notice needs your action');
     expect(el(fixture, '[data-today="week"] a').getAttribute('href')).toBe('/demo/learning?show=week');
     expect(el(fixture, '[data-today="overdue"] a').getAttribute('href')).toBe('/demo/learning?show=overdue');
-    expect(el(fixture, '[data-ring] text').textContent).toBe('40%');
-  });
-});
-
-
-describe('Student home follows the institute\'s switches', () => {
-  const KEYS = ['coursework', 'live_classes', 'tests', 'results', 'notices'];
-  /** Set the institute's switches: every built screen is on, except the ones listed as off. Labels use the given names. */
-  function switches(off: string[], names: Record<string, string> = {}) {
-    const tenants = TestBed.inject(TenantService);
-    tenants.update({
-      slug: 'demo', name: 'Demo', branding: { display_name: 'Demo', primary_color: '#2563eb', logo_url: null },
-      features: KEYS.map((key) => ({ key, group: 'Learning', label: names[key] ?? key, enabled: !off.includes(key) })),
-    });
-  }
-  const notice = { unread: 2, action_unread: 1, notices: [{ id: 'n1', title: 'Pay fees', body: '', action: null, read: false }] };
-  const runningTest = [{ ...base, id: 't1', title: 'Mock one', in_progress: { started_at: '2026-11-20T09:00:00+05:30' } }];
-
-  it('hides the Notices tile and its Today line when Notices is off', async () => {
-    const { fixture } = await openHome({ notices: notice });
-    expect(all(fixture, '#tile-notices').length).toBe(1);
-    switches(['notices']);
-    await settle(fixture);
-    expect(all(fixture, '#tile-notices').length).toBe(0);
-    expect(all(fixture, '[data-today="notices"]').length).toBe(0);
-  });
-
-  it('hides the In progress tile and the tests count when Tests is off', async () => {
-    const { fixture } = await openHome({ tests: runningTest });
-    expect(all(fixture, '#tile-continue').length).toBe(1);
-    switches(['tests']);
-    await settle(fixture);
-    expect(all(fixture, '#tile-continue').length).toBe(0);
-    expect(all(fixture, '#tile-learning [data-tests]').length).toBe(0);
-  });
-
-  it('hides the coursework count when Coursework is off, and keeps the tests count', async () => {
-    const { fixture } = await openHome();
-    switches(['coursework']);
-    await settle(fixture);
-    expect(all(fixture, '#tile-learning [data-coursework]').length).toBe(0);
-    expect(all(fixture, '#tile-learning [data-tests]').length).toBe(1);
-  });
-
-  it('hides My Learning when none of its screens is on', async () => {
-    const { fixture } = await openHome();
-    expect(all(fixture, '#tile-learning').length).toBe(1);
-    switches(['coursework', 'live_classes', 'tests', 'results']);
-    await settle(fixture);
-    expect(all(fixture, '#tile-learning').length).toBe(0);
-  });
-
-  it('uses the institute\'s name for the results tile', async () => {
-    const { fixture } = await openHome();
-    switches([], { results: 'My scores' });
-    await settle(fixture);
-    expect(el(fixture, '#tile-results .tile-head').textContent).toContain('My scores');
   });
 });
