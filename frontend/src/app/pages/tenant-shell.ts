@@ -65,8 +65,10 @@ import { TenantService } from '../core/tenant.service';
                   <a [routerLink]="['/', info.slug, 'parent']" routerLinkActive="active" data-tone="people"><app-icon name="users" /><span class="nav-label">My children</span></a>
                 } @else {
                   <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" data-tone="home"><app-icon name="home" /><span class="nav-label">Home</span></a>
-                  <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
-                  <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link" data-tone="news"><app-icon name="bell" /><span class="nav-label">Notices</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a>
+                  @if (tenants.isOn('coursework') || tenants.isOn('live_classes') || tenants.isOn('tests') || tenants.isOn('results')) {
+  <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active" data-tone="learn"><app-icon name="book" /><span class="nav-label">My Learning</span></a>
+                  }
+                  @if (tenants.isOn('notices')) { <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active" class="notices-link" data-tone="news"><app-icon name="bell" /><span class="nav-label">{{ tenants.labelOf('notices', 'Notices') }}</span>@if (notices.unread() > 0) { <span class="badge" [class.alert]="notices.actionUnread() > 0" id="notice-badge" [attr.aria-label]="notices.unread() + ' unread'">{{ notices.unread() }}</span> }</a> }
                 }
               }
               @if (member()!.role === 'student' || member()!.role === 'parent') {
@@ -103,6 +105,7 @@ import { TenantService } from '../core/tenant.service';
                 <a [routerLink]="['/', info.slug, 'admin', 'tests']" routerLinkActive="active" data-tone="tests"><app-icon name="clipboard" /><span class="nav-label">Tests</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'progress']" routerLinkActive="active" data-tone="prog"><app-icon name="chart" /><span class="nav-label">Progress</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'announcements']" routerLinkActive="active" data-tone="news"><app-icon name="mail" /><span class="nav-label">Announcements</span></a>
+                <a [routerLink]="['/', info.slug, 'admin', 'features']" routerLinkActive="active" data-tone="prog" id="features-link"><app-icon name="layers" /><span class="nav-label">Features and labels</span></a>
                 <a [routerLink]="['/', info.slug, 'admin', 'study-log']" routerLinkActive="active" data-tone="prog"><app-icon name="search" /><span class="nav-label">Ask AI log</span></a>
               }
             </nav>

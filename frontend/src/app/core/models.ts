@@ -18,11 +18,31 @@ export interface InstituteProfile {
   exam_categories: string[];
 }
 
+/** One screen the institute can show, as students see it: built features only. */
+export interface PublicFeature {
+  key: string;
+  group: string;
+  label: string;
+  enabled: boolean;
+}
+
+/** One row on the admin's Features & labels page: every feature, built or planned. */
+export interface FeatureRow {
+  key: string;
+  group: string;
+  default_label: string;
+  built: boolean;
+  enabled: boolean;
+  label: string;
+  position: number;
+}
+
 export interface TenantInfo {
   slug: string;
   name: string;
   branding: Branding;
   profile?: InstituteProfile;
+  features?: PublicFeature[];
 }
 
 /** The institute admin's My institute page. */

@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
-import { ApiError, TenantInfo } from './models';
+import { ApiError, PublicFeature, TenantInfo } from './models';
 
 /**
  * A readable text colour (white or dark) for a given background colour.
@@ -54,6 +54,21 @@ export class TenantService {
   readonly info = signal<TenantInfo | null>(null);
   readonly error = signal<ApiError | null>(null);
   readonly loading = signal(false);
+
+  /**
+   * Whether the institute shows a screen. An institute that has not chosen yet (an older answer without the list)
+   * shows everything, so nothing disappears by accident.
+   */
+  isOn(key: string): boolean {
+    const list = this.info()?.features;
+    if (!list) return true;
+    return list.find((item: PublicFeature) => item.key === key)?.enabled ?? false;
+  }
+
+  /** The name the institute gave a screen, or the fallback if it has not been listed. */
+  labelOf(key: string, fallback: string): string {
+    return this.info()?.features?.find((item: PublicFeature) => item.key === key)?.label || fallback;
+  }
 
   /** Load an institute by its short name. Does nothing if it is already loaded. */
   async load(slug: string): Promise<void> {

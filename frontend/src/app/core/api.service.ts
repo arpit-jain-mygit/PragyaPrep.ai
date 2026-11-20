@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
 import {
   AskLog,
+  FeatureRow,
   FreeSample,
   FreeState,
   SignupForm,
@@ -197,6 +198,16 @@ export class ApiService {
 
   myBatches(): Promise<MyBatch[]> {
     return this.get('/api/my/batches');
+  }
+
+  // ---- Features and labels (the institute admin) ----
+
+  features(): Promise<{ features: FeatureRow[] }> {
+    return this.get('/api/admin/features');
+  }
+
+  saveFeatures(rows: { key: string; enabled: boolean; label: string }[]): Promise<{ features: FeatureRow[] }> {
+    return this.call(firstValueFrom(this.http.put<{ features: FeatureRow[] }>(`${this.base}/api/admin/features`, rows)));
   }
 
   // ---- My institute (the institute admin) ----

@@ -20,6 +20,8 @@ class TenantPublicOut(BaseModel):
     branding: BrandingOut
     # What the institute chose to show everyone: description, city, contact email and phone, website, exam categories.
     profile: dict = {}
+    # Which screens the institute shows, with their labels (built features only).
+    features: list = []
 
 
 # ---- Login by emailed code ----
