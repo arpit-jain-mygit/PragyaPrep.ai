@@ -245,3 +245,58 @@ describe('Student home', () => {
   });
 });
 
+
+describe('Student home follows the institute\'s switches', () => {
+  const KEYS = ['coursework', 'live_classes', 'tests', 'results', 'notices'];
+  /** Set the institute's switches: every built screen is on, except the ones listed as off. Labels use the given names. */
+  function switches(off: string[], names: Record<string, string> = {}) {
+    const tenants = TestBed.inject(TenantService);
+    tenants.update({
+      slug: 'demo', name: 'Demo', branding: { display_name: 'Demo', primary_color: '#2563eb', logo_url: null },
+      features: KEYS.map((key) => ({ key, group: 'Learning', label: names[key] ?? key, enabled: !off.includes(key) })),
+    });
+  }
+  const notice = { unread: 2, action_unread: 1, notices: [{ id: 'n1', title: 'Pay fees', body: '', action: null, read: false }] };
+  const runningTest = [{ ...base, id: 't1', title: 'Mock one', in_progress: { started_at: '2026-11-20T09:00:00+05:30' } }];
+
+  it('hides the Notices tile and its Today line when Notices is off', async () => {
+    const { fixture } = await openHome({ notices: notice });
+    expect(all(fixture, '#tile-notices').length).toBe(1);
+    switches(['notices']);
+    await settle(fixture);
+    expect(all(fixture, '#tile-notices').length).toBe(0);
+    expect(all(fixture, '[data-today="notices"]').length).toBe(0);
+  });
+
+  it('hides the In progress tile and the tests count when Tests is off', async () => {
+    const { fixture } = await openHome({ tests: runningTest });
+    expect(all(fixture, '#tile-continue').length).toBe(1);
+    switches(['tests']);
+    await settle(fixture);
+    expect(all(fixture, '#tile-continue').length).toBe(0);
+    expect(all(fixture, '#tile-learning [data-tests]').length).toBe(0);
+  });
+
+  it('hides the coursework count when Coursework is off, and keeps the tests count', async () => {
+    const { fixture } = await openHome();
+    switches(['coursework']);
+    await settle(fixture);
+    expect(all(fixture, '#tile-learning [data-coursework]').length).toBe(0);
+    expect(all(fixture, '#tile-learning [data-tests]').length).toBe(1);
+  });
+
+  it('hides My Learning when none of its screens is on', async () => {
+    const { fixture } = await openHome();
+    expect(all(fixture, '#tile-learning').length).toBe(1);
+    switches(['coursework', 'live_classes', 'tests', 'results']);
+    await settle(fixture);
+    expect(all(fixture, '#tile-learning').length).toBe(0);
+  });
+
+  it('uses the institute\'s name for the results tile', async () => {
+    const { fixture } = await openHome();
+    switches([], { results: 'My scores' });
+    await settle(fixture);
+    expect(el(fixture, '#tile-results .tile-head').textContent).toContain('My scores');
+  });
+});

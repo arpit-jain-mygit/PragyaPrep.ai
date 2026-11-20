@@ -21,29 +21,32 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
       <section class="card today" id="today">
         <h2><app-icon name="calendar" [size]="18" /> Today</h2>
         <ul class="plain-list">
-          @if (running(); as test) { <li data-today="running"><app-icon name="play" [size]="18" /> <a [routerLink]="[base(), 'tests', test.id]">Carry on with {{ test.title }}</a></li> }
+          @if (tenants.isOn('tests') && running(); as test) { <li data-today="running"><app-icon name="play" [size]="18" /> <a [routerLink]="[base(), 'tests', test.id]">Carry on with {{ test.title }}</a></li> }
           @if (overdue() > 0) { <li data-today="overdue"><app-icon name="flag" [size]="18" /> <a [routerLink]="learningLink()" [queryParams]="courseworkLeft() > 0 ? { show: 'overdue' } : null">{{ overdue() }} overdue {{ overdue() === 1 ? 'item' : 'items' }} to catch up on</a></li> }
-          @if ((coursework()?.summary?.this_week ?? 0) > 0) { <li data-today="week"><app-icon name="book" [size]="18" /> <a [routerLink]="[base(), 'learning']" [queryParams]="{ show: 'week' }">{{ coursework()!.summary.this_week }} coursework {{ coursework()!.summary.this_week === 1 ? 'item' : 'items' }} due this week</a></li> }
-          @if (take().thisWeek > 0) { <li data-today="tests"><app-icon name="clipboard" [size]="18" /> <a [routerLink]="[base(), 'learning', 'tests']">{{ take().thisWeek }} {{ take().thisWeek === 1 ? 'test' : 'tests' }} to take this week</a></li> }
-          @if ((notices()?.action_unread ?? 0) > 0) { <li data-today="notices"><app-icon name="bell" [size]="18" /> <a [routerLink]="[base(), 'notices']">{{ notices()!.action_unread }} {{ notices()!.action_unread === 1 ? 'notice needs' : 'notices need' }} your action</a></li> }
+          @if (tenants.isOn('coursework') && (coursework()?.summary?.this_week ?? 0) > 0) { <li data-today="week"><app-icon name="book" [size]="18" /> <a [routerLink]="[base(), 'learning']" [queryParams]="{ show: 'week' }">{{ coursework()!.summary.this_week }} coursework {{ coursework()!.summary.this_week === 1 ? 'item' : 'items' }} due this week</a></li> }
+          @if (tenants.isOn('tests') && take().thisWeek > 0) { <li data-today="tests"><app-icon name="clipboard" [size]="18" /> <a [routerLink]="[base(), 'learning', 'tests']">{{ take().thisWeek }} {{ take().thisWeek === 1 ? 'test' : 'tests' }} to take this week</a></li> }
+          @if (tenants.isOn('notices') && (notices()?.action_unread ?? 0) > 0) { <li data-today="notices"><app-icon name="bell" [size]="18" /> <a [routerLink]="[base(), 'notices']">{{ notices()!.action_unread }} {{ notices()!.action_unread === 1 ? 'notice needs' : 'notices need' }} your action</a></li> }
           @if (caughtUp()) { <li class="caught-up" data-today="clear"><app-icon name="check" [size]="18" /> You are all caught up. Nothing is due.</li> }
         </ul>
       </section>
     }
     <div class="tiles">
+      @if (learningOn()) {
       <a class="tile" id="tile-learning" [class.alert-tile]="overdue() > 0" [routerLink]="learningLink()">
         <span class="tile-head"><app-icon name="book" [size]="22" /> My Learning</span>
         @if ((coursework()?.summary?.total ?? 0) > 0) { <app-ring class="tile-ring" data-ring [done]="coursework()!.summary.done" [total]="coursework()!.summary.total" [size]="40" /> }
         <span class="tile-num" data-total>{{ total() }}</span>
         <span class="tchips">
           @if (overdue() > 0) { <span class="tchip bad" data-overdue>{{ overdue() }} overdue</span> }
-          <span class="tchip" data-coursework>{{ courseworkLeft() }} coursework</span>
-          <span class="tchip" data-tests>{{ testsToTake() }} tests</span>
+          @if (tenants.isOn('coursework')) { <span class="tchip" data-coursework>{{ courseworkLeft() }} {{ tenants.labelOf('coursework', 'coursework').toLowerCase() }}</span> }
+          @if (tenants.isOn('tests')) { <span class="tchip" data-tests>{{ testsToTake() }} {{ tenants.labelOf('tests', 'tests').toLowerCase() }}</span> }
         </span>
       </a>
+      }
 
       @if (notices(); as n) {
         @if (n.notices.length) {
+          @if (tenants.isOn('notices')) {
           <a class="tile" id="tile-notices" [class.alert-tile]="n.action_unread > 0" [routerLink]="[base(), 'notices']">
             <span class="tile-head"><app-icon name="bell" [size]="22" /> Notices</span>
             <span class="tile-num" data-unread>{{ n.unread }}</span>
@@ -52,10 +55,11 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
               @if (n.unread === 0) { <span class="tchip" data-allread>all read</span> }
             </span>
           </a>
+          }
         }
       }
 
-      @if (running(); as test) {
+      @if (tenants.isOn('tests') && running(); as test) {
         <a class="tile" id="tile-continue" [attr.title]="test.title" [routerLink]="[base(), 'tests', test.id]">
           <span class="tile-head"><app-icon name="play" [size]="22" /> In progress</span>
           <span class="tile-num" data-running>{{ runningCount() }}</span>
@@ -63,8 +67,9 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
         </a>
       }
 
+      @if (tenants.isOn('results')) {
       <a class="tile" id="tile-results" [routerLink]="[base(), 'learning', 'results']">
-        <span class="tile-head"><app-icon name="chart" [size]="22" /> Attempts</span>
+        <span class="tile-head"><app-icon name="chart" [size]="22" /> {{ tenants.labelOf('results', 'Attempts') }}</span>
         <span class="tile-num" data-attempts>{{ results()?.summary?.attempts ?? 0 }}</span>
         @if (results()?.summary?.attempts) {
           <span class="tchips">
@@ -73,8 +78,9 @@ const none = { overdue: 0, thisWeek: 0, later: 0, next: null } satisfies ToTake;
           </span>
         }
       </a>
+      }
 
-      @if (weak().count > 0) {
+      @if (tenants.isOn('results') && weak().count > 0) {
         <a class="tile" id="tile-weak" [attr.title]="'Weakest: ' + weak().name" [routerLink]="[base(), 'learning', 'results']">
           <span class="tile-head"><app-icon name="flag" [size]="22" /> Weak subjects</span>
           <span class="tile-num" data-weak>{{ weak().count }}</span>
@@ -98,13 +104,21 @@ export class StudentTiles implements OnInit {
   /** True once the lists that feed the Today card have arrived (or failed), so it never flashes "all caught up" while loading. */
   readonly loaded = signal(false);
   readonly caughtUp = computed(() =>
-    !this.running() && this.overdue() === 0 && (this.coursework()?.summary?.this_week ?? 0) === 0 && this.take().thisWeek === 0 && (this.notices()?.action_unread ?? 0) === 0);
+    (!this.tenants.isOn('tests') || !this.running()) && this.overdue() === 0
+    && (!this.tenants.isOn('coursework') || (this.coursework()?.summary?.this_week ?? 0) === 0)
+    && (!this.tenants.isOn('tests') || this.take().thisWeek === 0)
+    && (!this.tenants.isOn('notices') || (this.notices()?.action_unread ?? 0) === 0));
 
-  readonly testsToTake = computed(() => this.take().overdue + this.take().thisWeek + this.take().later);
-  readonly courseworkLeft = computed(() => this.coursework()?.summary.left ?? 0);
+  /** Whether any of the My Learning screens is on. When none is, the My Learning tile is hidden. */
+  learningOn(): boolean {
+    return this.tenants.isOn('coursework') || this.tenants.isOn('live_classes') || this.tenants.isOn('tests') || this.tenants.isOn('results');
+  }
+
+  readonly testsToTake = computed(() => (this.tenants.isOn('tests') ? this.take().overdue + this.take().thisWeek + this.take().later : 0));
+  readonly courseworkLeft = computed(() => (this.tenants.isOn('coursework') ? this.coursework()?.summary.left ?? 0 : 0));
   readonly total = computed(() => this.testsToTake() + this.courseworkLeft());
   /** Overdue coursework and overdue tests together. */
-  readonly overdue = computed(() => this.take().overdue + (this.coursework()?.summary.overdue ?? 0));
+  readonly overdue = computed(() => (this.tenants.isOn('tests') ? this.take().overdue : 0) + (this.tenants.isOn('coursework') ? this.coursework()?.summary.overdue ?? 0 : 0));
 
   /** Opens the Coursework tab, or the Tests tab when there is no coursework left to do. */
   learningLink(): string[] {
