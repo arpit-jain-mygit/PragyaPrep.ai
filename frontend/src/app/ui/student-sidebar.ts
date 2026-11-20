@@ -11,9 +11,7 @@ import { Icon } from './icon';
 const PAGES: Record<string, string[]> = {
   coursework: ['learning'],
   topic_tests: ['learning', 'topics'],
-  // Daily RC and Weekly DILR are shown as cards on the Dashboard for now, until they have their own pages.
-  daily_rc: ['home'],
-  weekly_dilr: ['home'],
+  // Daily RC and Weekly DILR have no page of their own yet, so they are left out of the menu until they do.
   live_classes: ['learning', 'live'],
   tests: ['learning', 'tests'],
   results: ['learning', 'results'],
@@ -53,7 +51,7 @@ interface MenuGroup {
   `,
   template: `
     <nav class="side-nav" aria-label="Student menu">
-      <a class="side-item side-home" id="side-home" [routerLink]="['/', slug(), 'home']" routerLinkActive="active">
+      <a class="side-item side-home" id="side-home" [routerLink]="['/', slug(), 'home']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <span>Dashboard</span>
       </a>
       @for (group of groups(); track group.name) {
