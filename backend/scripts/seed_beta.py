@@ -117,10 +117,23 @@ def choose(dev):
         & Attr("status").eq("approved"),
     )
     profiles = sorted(profiles, key=lambda p: p["PK"])[:STUDENT_COUNT]
+    student_course_ids = []
     for profile in profiles:
         chosen.append(without_avatar(profile))
         access = dev.query(KeyConditionExpression=Key("PK").eq(profile["PK"]) & Key("SK").begins_with("ACCESS#"))["Items"]
         chosen.extend(access)
+        for course_id in profile.get("course_ids") or []:
+            if course_id not in student_course_ids:
+                student_course_ids.append(course_id)
+
+    # Every course a copied student belongs to must exist in beta, or saving that student fails
+    # with "Choose the courses from the list."
+    have = {item["PK"] for item in chosen}
+    for course_id in student_course_ids:
+        course = get_one(dev, f"T#{TENANT}#COURSE#{course_id}")
+        if course is not None and course["PK"] not in have:
+            chosen.append(course)
+            have.add(course["PK"])
 
     return chosen
 
