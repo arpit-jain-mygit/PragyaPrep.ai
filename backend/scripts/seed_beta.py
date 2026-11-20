@@ -103,6 +103,11 @@ def choose(dev):
         lookups = scan_all(dev, FilterExpression=Attr("PK").begins_with(f"T#{TENANT}#COURSENAME#") & Attr("SK").eq("LOOKUP") & Attr("course_id").eq(course["id"]))
         chosen.extend(lookups)
 
+    # The institute admin: without this profile the admin cannot sign in ("not registered").
+    admin = get_one(dev, f"T#{TENANT}#MEMBER#{tenant['admin_email'].strip().lower()}", "PROFILE")
+    if admin is not None:
+        chosen.append(without_avatar(admin))
+
     # Students: their profile and course access (not attempts or progress).
     profiles = scan_all(
         dev,
