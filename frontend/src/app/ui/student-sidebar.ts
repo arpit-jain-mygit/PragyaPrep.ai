@@ -51,7 +51,7 @@ interface MenuGroup {
 
 /**
  * The student's left menu. Its headings and items come from the institute's Features and labels page, so the
- * institute chooses what shows, what each item is called, and in what order. Headings can be folded away.
+ * institute chooses what shows, what each item is called, and in what order. Headings open one at a time: the menu starts closed.
  */
 @Component({
   selector: 'app-student-sidebar',
@@ -118,8 +118,8 @@ export class StudentSidebar {
   /** The institute's address part, used to build each link. */
   readonly slug = computed(() => this.tenants.slug() ?? '');
 
-  /** The headings folded away by the student. Unfolded by default. */
-  private readonly folded = signal<ReadonlySet<string>>(new Set());
+  /** The one heading that is open. Every heading starts closed, and opening one closes the others. */
+  private readonly openGroup = signal<string | null>(null);
 
   /**
    * The menu: one heading per group, in the order the institute chose. Only switched-on built items with a page appear.
@@ -139,14 +139,13 @@ export class StudentSidebar {
     return groups;
   });
 
+  /** Whether a heading is closed. Only the open heading shows its items. */
   isFolded(name: string): boolean {
-    return this.folded().has(name);
+    return this.openGroup() !== name;
   }
 
+  /** Open this heading and close the others. Clicking the open heading closes it again. */
   toggle(name: string): void {
-    const next = new Set(this.folded());
-    if (next.has(name)) next.delete(name);
-    else next.add(name);
-    this.folded.set(next);
+    this.openGroup.set(this.openGroup() === name ? null : name);
   }
 }

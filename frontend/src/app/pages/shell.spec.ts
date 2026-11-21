@@ -110,7 +110,8 @@ describe('Institute page frame', () => {
     await settle(fixture);
     expect(el(fixture, '#side-home').textContent?.trim()).toBe('Dashboard');
     expect(all(fixture, '.side-heading').map((node) => node.textContent?.trim())).toEqual(['Learn', 'Practice', 'My learning']);
-    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'Videos', 'Topic tests', 'Notices', 'My Learning']);
+    // Every menu heading starts closed, so only the Dashboard and My Learning links show.
+    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'My Learning']);
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 
@@ -121,25 +122,33 @@ describe('Institute page frame', () => {
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 3, action_unread: 1, notices: [] });
+    el<HTMLButtonElement>(fixture, '[data-group="My learning"] .side-heading').click();
     await settle(fixture);
     expect(el(fixture, '#side-notice-badge').textContent!.trim()).toBe('3');
     expect(el<HTMLAnchorElement>(fixture, 'a[data-key="notices"]').getAttribute('href')).toBe('/demo/notices');
   });
 
-  it('folds a menu heading away and opens it again', async () => {
+  it('opens one menu heading at a time, and clicking the open one closes it', async () => {
     const env = setupTestBed();
     TestBed.inject(TenantService).info.set(STUDENT_MENU);
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
-    el<HTMLButtonElement>(fixture, '[data-group="Practice"] .side-heading').click();
     await settle(fixture);
     expect(all(fixture, '[data-key="topic_tests"]').length).toBe(0);
-    expect(el(fixture, '[data-group="Practice"] .side-heading').getAttribute('aria-expanded')).toBe('false');
     el<HTMLButtonElement>(fixture, '[data-group="Practice"] .side-heading').click();
     await settle(fixture);
     expect(all(fixture, '[data-key="topic_tests"]').length).toBe(1);
+    expect(el(fixture, '[data-group="Practice"] .side-heading').getAttribute('aria-expanded')).toBe('true');
+    el<HTMLButtonElement>(fixture, '[data-group="Learn"] .side-heading').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-key="topic_tests"]').length).toBe(0);
+    expect(el(fixture, '[data-group="Practice"] .side-heading').getAttribute('aria-expanded')).toBe('false');
+    expect(el(fixture, '[data-group="Learn"] .side-heading').getAttribute('aria-expanded')).toBe('true');
+    el<HTMLButtonElement>(fixture, '[data-group="Learn"] .side-heading').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-key="coursework"]').length).toBe(0);
   });
 
   it('leaves out a menu item that is switched off or has no page yet', async () => {
