@@ -43,13 +43,34 @@ async function open(reply: object = data(), queryParams: Record<string, string> 
 }
 
 describe('Student coursework page', () => {
-  it('shows the tree with progress at every level and the overall count', async () => {
+  it('shows course, topic and sub-topic tiles with progress, and the overall count', async () => {
     const { fixture } = await open();
     expect(el(fixture, '#overall').textContent!.replace(/\s+/g, ' ')).toContain('1 of 2 done');
+    // The page opens on the first sub-topic not done, so go up to the course tiles first.
+    el(fixture, '#trail-all').click();
+    await settle(fixture);
     expect(el(fixture, '[data-course="CAT"]').textContent).toContain('1/2');
-    expect(el(fixture, '[data-subject="Quantitative Ability"]').textContent).toContain('1/2');
+    el(fixture, '[data-course="CAT"]').click();
+    await settle(fixture);
+    expect(el(fixture, '[data-subject="Quantitative Ability"]').tagName).toBe('H3');
     expect(el(fixture, '[data-topic="Percentages"]').textContent).toContain('1/2');
+    el(fixture, '[data-topic="Percentages"]').click();
+    await settle(fixture);
     expect(all(fixture, '[data-sub]').map((b) => b.getAttribute('data-sub'))).toEqual(['Concepts', 'Examples']);
+  });
+
+  it('shows the way back as a trail of links', async () => {
+    const { fixture } = await open();
+    expect(el(fixture, '#trail').textContent).toContain('CAT');
+    expect(el(fixture, '#trail').textContent).toContain('Percentages');
+    el(fixture, '#trail-course').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-topic]').length).toBe(1);
+    expect(all(fixture, '[data-sub]').length).toBe(0);
+    el(fixture, '#trail-all').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-course]').length).toBe(1);
+    expect(el(fixture, '#sub-name').textContent).toBe('Examples'); // the sub-topic below stays open
   });
 
   it('starts on the first sub-topic that is not done, with its path open', async () => {
@@ -103,6 +124,8 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#overall').textContent!.replace(/\s+/g, ' ')).toContain('2 of 2 done');
     expect(el(fixture, '#sub-name').textContent).toBe('Examples');
     expect(el(fixture, '#toggle-done').textContent).toContain('Mark not complete');
+    el(fixture, '#trail-all').click();
+    await settle(fixture);
     expect(el(fixture, '[data-course="CAT"]').textContent).toContain('2/2');
   });
 
@@ -128,17 +151,17 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#toggle-done').textContent).toContain('Mark complete');
   });
 
-  it('collapses and expands the tree', async () => {
+  it('drills from course to topic to sub-topic and back up', async () => {
     const { fixture } = await open();
-    el(fixture, '[data-topic="Percentages"] > button').click();
+    el(fixture, '#trail-all').click();
     await settle(fixture);
-    expect(all(fixture, '[data-sub]').length).toBe(0);
-    el(fixture, '[data-topic="Percentages"] > button').click();
+    expect(all(fixture, '[data-topic]').length).toBe(0); // course tiles only, no topics yet
+    el(fixture, '[data-course="CAT"]').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-sub]').length).toBe(0); // topic tiles only, no sub-topics yet
+    el(fixture, '[data-topic="Percentages"]').click();
     await settle(fixture);
     expect(all(fixture, '[data-sub]').length).toBe(2);
-    el(fixture, '[data-course="CAT"] > button').click();
-    await settle(fixture);
-    expect(all(fixture, '[data-subject]').length).toBe(0);
   });
 
   it('lists several courses, each with its own progress', async () => {
@@ -147,12 +170,14 @@ describe('Student coursework page', () => {
       subjects: [{ paper_id: 'quantitative-ability', name: 'Quantitative Ability', due: null, progress: { total: 1, done: 0 }, topics: [{ id: 't9', title: 'Percentages', due: null, progress: { total: 1, done: 0 }, subtopics: [sub({ id: 'x1', title: 'CLAT version' })] }] }],
     }];
     const { fixture } = await open(data({ extra }));
+    el(fixture, '#trail-all').click();
+    await settle(fixture);
     expect(all(fixture, '[data-course]').map((c) => c.getAttribute('data-course'))).toEqual(['CAT', 'CLAT']);
-    el(fixture, '[data-course="CLAT"] [data-subject] > button').click();
+    el(fixture, '[data-course="CLAT"]').click();
     await settle(fixture);
-    el(fixture, '[data-course="CLAT"] [data-topic] > button').click();
+    el(fixture, '[data-topic="Percentages"]').click();
     await settle(fixture);
-    el(fixture, '[data-course="CLAT"] [data-sub="CLAT version"]').click();
+    el(fixture, '[data-sub="CLAT version"]').click();
     await settle(fixture);
     expect(el(fixture, '#crumb').textContent).toContain('CLAT');
   });
@@ -224,8 +249,11 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#free-note').textContent).toContain('Free sample');
     expect(el(fixture, '[data-sub="Free one"]').textContent).toContain('Free');
     expect(all(fixture, '[data-sub="Paid one"] app-icon').length).toBe(1);
+    el(fixture, '#trail-all').click();
+    await settle(fixture);
     expect(el(fixture, '[data-course="CAT"]').querySelector('.cw-count')).toBeNull();
     expect(all(fixture, '[data-course] .cw-bar').length).toBe(0);
+    expect(all(fixture, '[data-course="CLAT"]').length).toBe(1);
     expect(all(fixture, '[data-sub="Other"]').length).toBe(0);
     expect(el(fixture, '#material').textContent).toContain('Percent notes');
   });
@@ -237,11 +265,11 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#locked-note').textContent).toContain('This is locked');
     expect(all(fixture, '#toggle-done').length).toBe(0);
     expect(all(fixture, '#material').length).toBe(0);
-    el(fixture, '[data-course="CLAT"] .cw-course').click();
+    el(fixture, '#trail-all').click();
     await settle(fixture);
-    el(fixture, '[data-subject="Logic"] .cw-row').click();
+    el(fixture, '[data-course="CLAT"]').click();
     await settle(fixture);
-    el(fixture, '[data-topic="Puzzles"] .cw-row').click();
+    el(fixture, '[data-topic="Puzzles"]').click();
     await settle(fixture);
     el(fixture, '[data-sub="Other"]').click();
     await settle(fixture);

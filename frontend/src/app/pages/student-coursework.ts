@@ -18,15 +18,30 @@ interface Chosen {
 }
 
 /**
- * A student's coursework: a tree on the left (course, subject, topic, sub-topic, each with its progress) and the chosen
- * sub-topic on the right, with its note, finish-by date, material and a Mark complete button.
+ * A student's Videos: tiles to drill down, course, then topic, then sub-topic. The chosen sub-topic opens below the tiles
+ * with its note, finish-by date, material and a Mark complete button. A trail at the top shows where the student is and
+ * lets them climb back up.
  */
 @Component({
   selector: 'app-student-coursework',
   imports: [AskAi, Icon, InfoTip],
+  styles: [`
+    .cw-trail { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0.2rem 0 0.8rem; }
+    .cw-trail-link { background: none; border: 0; padding: 0.2rem 0.4rem; color: var(--brand, #2563eb); font: inherit; cursor: pointer; border-radius: 6px; }
+    .cw-trail-link:hover { background: var(--page); }
+    .cw-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.7rem; margin-bottom: 1rem; }
+    .cw-tile { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; text-align: left; padding: 0.8rem; border: 1px solid var(--line); border-radius: 12px; background: var(--card, #fff); color: var(--ink); font: inherit; cursor: pointer; }
+    .cw-tile:hover { border-color: var(--brand, #2563eb); }
+    .cw-tile.selected { background: var(--info-bg); border-color: var(--brand, #2563eb); }
+    .cw-tile-top { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+    .cw-tile-top strong, .cw-tile-top span { overflow-wrap: anywhere; }
+    .cw-tile-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.85rem; color: var(--muted); }
+    .cw-tile-heading { margin: 0.9rem 0 0.4rem; font-size: 1rem; }
+    .cw-tile .cw-bar { width: 100%; }
+  `],
   template: `
     <div class="cw-topline">
-      <app-info text="The plan your institute has set for your courses. Open the material, then mark each sub-topic complete. Overdue means the finish-by date has passed and it isn't complete yet. A padlock means the course isn't open to you yet." />
+      <app-info text="The plan your institute has set for your courses. Pick a course, then a topic, then a sub-topic to open its videos and notes. Overdue means the finish-by date has passed and it isn't complete yet. A padlock means the course isn't open to you yet." />
       @if (data(); as d) {
         @if (d.summary.total) {
           <span class="cw-overall" id="overall">
@@ -58,143 +73,175 @@ interface Chosen {
           </div>
           @if (filter() !== 'all' && !view().length) { <div class="empty-state" id="cw-filter-empty"><app-icon name="check" [size]="32" /><p>Nothing here. You are all caught up.</p></div> }
         }
-        <div class="cw-student">
-          <nav class="card cw-nav" id="nav" aria-label="Coursework">
-            @for (course of view(); track course.id) {
-              <div class="cw-node" [attr.data-course]="course.name">
-                <button type="button" class="cw-row cw-course" [attr.aria-expanded]="isOpen('c:' + course.id)" (click)="toggle('c:' + course.id)">
-                  <app-icon [name]="isOpen('c:' + course.id) ? 'chevron' : 'chevron-right'" [size]="16" />
-                  <strong>{{ course.name }}</strong>
-                  @if (course.locked) {
-                    <app-icon name="lock" [size]="14" class="soft-icon" />
-                  } @else {
-                    @if (course.overdue) { <span class="status bad" title="Overdue">{{ course.overdue }}</span> }
-                    <span class="cw-count">{{ course.progress.done }}/{{ course.progress.total }}</span>
-                  }
-                </button>
-                @if (!course.locked) { <span class="cw-bar"><i [style.width.%]="percent(course.progress.done, course.progress.total)"></i></span> }
-                @if (isOpen('c:' + course.id)) {
-                  @for (subject of course.subjects; track subject.paper_id) {
-                    <div class="cw-node cw-level-1" [attr.data-subject]="subject.name">
-                      <button type="button" class="cw-row" [attr.aria-expanded]="isOpen('s:' + course.id + ':' + subject.paper_id)" (click)="toggle('s:' + course.id + ':' + subject.paper_id)">
-                        <app-icon [name]="isOpen('s:' + course.id + ':' + subject.paper_id) ? 'chevron' : 'chevron-right'" [size]="16" />
-                        <span>{{ subject.name }}</span>
-                        @if (!course.locked) { <span class="cw-count">{{ subject.progress.done }}/{{ subject.progress.total }}</span> }
-                      </button>
-                      @if (isOpen('s:' + course.id + ':' + subject.paper_id)) {
-                        @for (topic of subject.topics; track topic.id) {
-                          <div class="cw-node cw-level-2" [attr.data-topic]="topic.title">
-                            <button type="button" class="cw-row" [attr.aria-expanded]="isOpen('t:' + topic.id)" (click)="toggle('t:' + topic.id)">
-                              <app-icon [name]="isOpen('t:' + topic.id) ? 'chevron' : 'chevron-right'" [size]="16" />
-                              <span>{{ topic.title }}</span>
-                              @if (!course.locked) { <span class="cw-count">{{ topic.progress.done }}/{{ topic.progress.total }}</span> }
-                            </button>
-                            @if (isOpen('t:' + topic.id)) {
-                              @for (sub of topic.subtopics; track sub.id) {
-                                <button type="button" class="cw-row cw-leaf" [class.selected]="chosen()?.sub?.id === sub.id" [attr.aria-current]="chosen()?.sub?.id === sub.id ? 'true' : null"
-                                  [attr.data-sub]="sub.title" (click)="select({ course, subject, topic, sub })">
-                                  @if (sub.locked) {
-                                    <app-icon name="lock" [size]="15" class="soft-icon" />
-                                  } @else {
-                                    <app-icon [name]="sub.done ? 'check' : sub.overdue ? 'flag' : 'clock'" [size]="15" [class]="sub.done ? 'ok-icon' : sub.overdue ? 'bad-icon' : 'soft-icon'" />
-                                  }
-                                  <span class="cw-leaf-title">{{ sub.title }}</span>
-                                  @if (sub.free) { <span class="status ok" title="Free to open">Free</span> }
-                                </button>
-                              }
-                            }
-                          </div>
-                        }
-                      }
-                    </div>
-                  }
-                }
-              </div>
+
+        <!-- Where the student is: All courses, then the course, then the topic. Each part can be clicked to go back. -->
+        <nav class="cw-trail" id="trail" aria-label="Where you are">
+          @if (course(); as c) {
+            <button type="button" class="cw-trail-link" id="trail-all" (click)="backToCourses()">All courses</button>
+            <span class="soft">›</span>
+            @if (topic(); as t) {
+              <button type="button" class="cw-trail-link" id="trail-course" (click)="backToTopics()">{{ c.name }}</button>
+              <span class="soft">›</span>
+              <strong>{{ t.topic.title }}</strong>
+            } @else {
+              <strong>{{ c.name }}</strong>
             }
-          </nav>
+          } @else {
+            <strong>All courses</strong>
+          }
+        </nav>
 
-          <section class="cw-detail" id="detail" aria-live="polite">
-            @if (chosen(); as pick) {
-              <div class="card">
-                <p class="soft cw-crumb" id="crumb">{{ pick.course.name }} › {{ pick.subject.name }} › {{ pick.topic.title }}</p>
-                <h2 id="sub-name">{{ pick.sub.title }}</h2>
-                @if (pick.sub.locked) {
-                  <div class="empty-state" id="locked-note" style="padding: 1.2rem 0">
-                    <app-icon name="lock" [size]="32" />
-                    <p><strong>This is locked</strong></p>
-                    <p class="soft">It is part of a course you are not enrolled in yet. It opens as soon as your institute approves your enrolment.</p>
-                  </div>
-                } @else {
-                @if (pick.sub.free) { <p class="soft" id="free-note"><app-icon name="lock" [size]="14" /> Free sample. The rest of {{ pick.course.name }} opens once you are enrolled.</p> }
-                <p class="cw-due" id="due" [class.late]="pick.sub.overdue && !pick.sub.done" [class.done]="pick.sub.done">
-                  <app-icon [name]="pick.sub.done ? 'check' : pick.sub.overdue ? 'flag' : 'calendar'" [size]="16" /> {{ dueText(pick.sub) }}
-                </p>
-                @if (pick.sub.note) { <p class="cw-note" id="note">{{ pick.sub.note }}</p> }
-
-                @if (pick.sub.materials.length) {
-                  <ul class="cw-material" id="material">
-                    @for (item of pick.sub.materials; track $index) {
-                      <li>
-                        @if (item.type === 'link') {
-                          <app-icon name="link" [size]="16" />
-                          <a [href]="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
-                        } @else {
-                          <app-icon name="file" [size]="16" />
-                          <span>{{ item.title }} <span class="soft">{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}@if (item.size) { · {{ size(item.size) }} }</span></span>
-                          <button class="btn small secondary" type="button" [disabled]="opening() === item.file_id" (click)="openFile(pick, item)">
-                            <app-icon [name]="item.kind === 'pdf' ? 'eye' : 'play'" [size]="15" /> {{ item.kind === 'pdf' ? 'Open' : 'Play' }}
-                          </button>
-                        }
-                      </li>
-                    }
-                  </ul>
-                }
-
-                @if (pick.sub.live_classes?.length) {
-                  <h3 style="margin: 1rem 0 0.3rem"><app-icon name="play" [size]="16" /> Live classes</h3>
-                  <div id="live-classes">
-                    @for (live of pick.sub.live_classes; track live.id) {
-                      <div class="cw-live" [attr.data-live]="live.title">
-                        <strong>{{ live.title }}</strong> <span class="soft">{{ shortDate(live.held_on) }}@if (live.held_time) { · {{ live.held_time }} }</span>
-                        @if (live.description) { <p class="soft" style="margin: 0.1rem 0 0.3rem">{{ live.description }}</p> }
-                        <ul class="cw-material">
-                          @for (item of live.materials; track $index) {
-                            <li>
-                              @if (item.type === 'link') {
-                                <app-icon name="link" [size]="16" /> <a [href]="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
-                              } @else {
-                                <app-icon name="file" [size]="16" />
-                                <span>{{ item.title }} <span class="soft">{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}</span></span>
-                                <button class="btn small secondary" type="button" [disabled]="opening() === item.file_id" (click)="openFile(pick, item)">
-                                  <app-icon [name]="item.kind === 'pdf' ? 'eye' : 'play'" [size]="15" /> {{ item.kind === 'pdf' ? 'Open' : 'Play' }}
-                                </button>
-                              }
-                            </li>
-                          }
-                        </ul>
-                      </div>
-                    }
-                  </div>
-                }
-
-                @if (playing(); as video) {
-                  <video id="player" controls autoplay [src]="video.url" (error)="renew(pick, video.id)" style="width: 100%; border-radius: 8px; margin-top: 0.6rem"></video>
-                }
-
-                <div class="row cw-actions">
-                  @if (pick.sub.done) {
-                    <button class="btn secondary" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="rotate" [size]="16" /> Mark not complete</button>
-                  } @else {
-                    <button class="btn" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="check" [size]="16" /> Mark complete</button>
-                  }
-                </div>
+        <section id="tiles" aria-label="Pick a course, topic or sub-topic">
+          @if (course(); as c) {
+            @if (topic(); as t) {
+              <!-- Level 3: the sub-topics of the chosen topic -->
+              <div class="cw-tiles" id="tiles-subtopics">
+                @for (sub of t.topic.subtopics; track sub.id) {
+                  <button type="button" class="cw-tile" [class.selected]="chosen()?.sub?.id === sub.id" [attr.aria-current]="chosen()?.sub?.id === sub.id ? 'true' : null"
+                    [attr.data-sub]="sub.title" (click)="select({ course: c, subject: t.subject, topic: t.topic, sub })">
+                    <span class="cw-tile-top">
+                      @if (sub.locked) {
+                        <app-icon name="lock" [size]="18" class="soft-icon" />
+                      } @else {
+                        <app-icon [name]="sub.done ? 'check' : sub.overdue ? 'flag' : 'clock'" [size]="18" [class]="sub.done ? 'ok-icon' : sub.overdue ? 'bad-icon' : 'soft-icon'" />
+                      }
+                      <strong>{{ sub.title }}</strong>
+                    </span>
+                    <span class="cw-tile-meta">
+                      @if (sub.free) { <span class="status ok" title="Free to open">Free</span> }
+                      @if (sub.locked) { <span>Locked</span> }
+                      @else if (sub.done) { <span>Done</span> }
+                      @else if (sub.overdue) { <span class="status bad">Overdue</span> }
+                      @else if (sub.due) { <span>Due {{ shortDate(sub.due) }}</span> }
+                    </span>
+                  </button>
+                } @empty {
+                  <p class="muted">Nothing here.</p>
                 }
               </div>
             } @else {
-              <div class="empty-state"><app-icon name="layers" [size]="32" /><p>Pick a sub-topic</p></div>
+              <!-- Level 2: the topics of the chosen course, under their subject headings -->
+              <div id="tiles-topics">
+                @for (subject of c.subjects; track subject.paper_id) {
+                  <h3 class="cw-tile-heading" [attr.data-subject]="subject.name">{{ subject.name }}</h3>
+                  <div class="cw-tiles">
+                    @for (tp of subject.topics; track tp.id) {
+                      <button type="button" class="cw-tile" [attr.data-topic]="tp.title" (click)="pickTopic(tp.id)">
+                        <span class="cw-tile-top"><app-icon name="book-open" [size]="18" /><strong>{{ tp.title }}</strong></span>
+                        @if (!c.locked) {
+                          <span class="cw-tile-meta"><span>{{ tp.progress.done }}/{{ tp.progress.total }} done</span></span>
+                          <span class="cw-bar"><i [style.width.%]="percent(tp.progress.done, tp.progress.total)"></i></span>
+                        }
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
             }
-          </section>
-        </div>
+          } @else {
+            <!-- Level 1: the courses -->
+            <div class="cw-tiles" id="tiles-courses">
+              @for (c of view(); track c.id) {
+                <button type="button" class="cw-tile" [attr.data-course]="c.name" (click)="pickCourse(c.id)">
+                  <span class="cw-tile-top"><app-icon [name]="c.locked ? 'lock' : 'layers'" [size]="20" /><strong>{{ c.name }}</strong></span>
+                  @if (c.locked) {
+                    <span class="cw-tile-meta"><span>Not enrolled yet</span></span>
+                  } @else {
+                    <span class="cw-tile-meta">
+                      <span>{{ c.progress.done }}/{{ c.progress.total }} done</span>
+                      @if (c.overdue) { <span class="status bad" title="Overdue">{{ c.overdue }} overdue</span> }
+                    </span>
+                    <span class="cw-bar"><i [style.width.%]="percent(c.progress.done, c.progress.total)"></i></span>
+                  }
+                </button>
+              } @empty {
+                <p class="muted">Nothing here.</p>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="cw-detail" id="detail" aria-live="polite">
+          @if (chosen(); as pick) {
+            <div class="card">
+              <p class="soft cw-crumb" id="crumb">{{ pick.course.name }} › {{ pick.subject.name }} › {{ pick.topic.title }}</p>
+              <h2 id="sub-name">{{ pick.sub.title }}</h2>
+              @if (pick.sub.locked) {
+                <div class="empty-state" id="locked-note" style="padding: 1.2rem 0">
+                  <app-icon name="lock" [size]="32" />
+                  <p><strong>This is locked</strong></p>
+                  <p class="soft">It is part of a course you are not enrolled in yet. It opens as soon as your institute approves your enrolment.</p>
+                </div>
+              } @else {
+              @if (pick.sub.free) { <p class="soft" id="free-note"><app-icon name="lock" [size]="14" /> Free sample. The rest of {{ pick.course.name }} opens once you are enrolled.</p> }
+              <p class="cw-due" id="due" [class.late]="pick.sub.overdue && !pick.sub.done" [class.done]="pick.sub.done">
+                <app-icon [name]="pick.sub.done ? 'check' : pick.sub.overdue ? 'flag' : 'calendar'" [size]="16" /> {{ dueText(pick.sub) }}
+              </p>
+              @if (pick.sub.note) { <p class="cw-note" id="note">{{ pick.sub.note }}</p> }
+
+              @if (pick.sub.materials.length) {
+                <ul class="cw-material" id="material">
+                  @for (item of pick.sub.materials; track $index) {
+                    <li>
+                      @if (item.type === 'link') {
+                        <app-icon name="link" [size]="16" />
+                        <a [href]="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
+                      } @else {
+                        <app-icon name="file" [size]="16" />
+                        <span>{{ item.title }} <span class="soft">{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}@if (item.size) { · {{ size(item.size) }} }</span></span>
+                        <button class="btn small secondary" type="button" [disabled]="opening() === item.file_id" (click)="openFile(pick, item)">
+                          <app-icon [name]="item.kind === 'pdf' ? 'eye' : 'play'" [size]="15" /> {{ item.kind === 'pdf' ? 'Open' : 'Play' }}
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+
+              @if (pick.sub.live_classes?.length) {
+                <h3 style="margin: 1rem 0 0.3rem"><app-icon name="play" [size]="16" /> Live classes</h3>
+                <div id="live-classes">
+                  @for (live of pick.sub.live_classes; track live.id) {
+                    <div class="cw-live" [attr.data-live]="live.title">
+                      <strong>{{ live.title }}</strong> <span class="soft">{{ shortDate(live.held_on) }}@if (live.held_time) { · {{ live.held_time }} }</span>
+                      @if (live.description) { <p class="soft" style="margin: 0.1rem 0 0.3rem">{{ live.description }}</p> }
+                      <ul class="cw-material">
+                        @for (item of live.materials; track $index) {
+                          <li>
+                            @if (item.type === 'link') {
+                              <app-icon name="link" [size]="16" /> <a [href]="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
+                            } @else {
+                              <app-icon name="file" [size]="16" />
+                              <span>{{ item.title }} <span class="soft">{{ item.kind === 'pdf' ? 'PDF' : 'Video' }}</span></span>
+                              <button class="btn small secondary" type="button" [disabled]="opening() === item.file_id" (click)="openFile(pick, item)">
+                                <app-icon [name]="item.kind === 'pdf' ? 'eye' : 'play'" [size]="15" /> {{ item.kind === 'pdf' ? 'Open' : 'Play' }}
+                              </button>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (playing(); as video) {
+                <video id="player" controls autoplay [src]="video.url" (error)="renew(pick, video.id)" style="width: 100%; border-radius: 8px; margin-top: 0.6rem"></video>
+              }
+
+              <div class="row cw-actions">
+                @if (pick.sub.done) {
+                  <button class="btn secondary" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="rotate" [size]="16" /> Mark not complete</button>
+                } @else {
+                  <button class="btn" type="button" id="toggle-done" [disabled]="busy()" (click)="toggleDone(pick)"><app-icon name="check" [size]="16" /> Mark complete</button>
+                }
+              </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-state"><app-icon name="layers" [size]="32" /><p>Pick a sub-topic to see its videos and notes</p></div>
+          }
+        </section>
       }
     }
   `,
@@ -215,7 +262,10 @@ export class StudentCourseworkPage implements OnInit {
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal<ApiError | null>(null);
-  readonly open = signal<Set<string>>(new Set());
+  /** The course the student has drilled into, or null for the course tiles. */
+  readonly courseId = signal<string | null>(null);
+  /** The topic the student has drilled into, or null for the topic tiles. */
+  readonly topicId = signal<string | null>(null);
   readonly selectedId = signal<string | null>(null);
   readonly opening = signal<string | null>(null);
   readonly playing = signal<{ id: string; url: string } | null>(null);
@@ -234,8 +284,21 @@ export class StudentCourseworkPage implements OnInit {
     return null;
   });
 
-  /** The tree to show: all of it, or only the courses, subjects and topics that still hold a sub-topic matching the filter. */
+  /** The courses to show as tiles: all of them, or only the ones that still hold a sub-topic matching the filter. */
   readonly view = computed<StudentCourse[]>(() => this.treeFor(this.filter()));
+
+  /** The course the student has drilled into, from what the filter lets through. */
+  readonly course = computed<StudentCourse | null>(() => this.view().find((c) => c.id === this.courseId()) ?? null);
+
+  /** The topic the student has drilled into, with its subject, from the course above. */
+  readonly topic = computed<{ subject: StudentSubject; topic: StudentTopic } | null>(() => {
+    const course = this.course();
+    const id = this.topicId();
+    if (!course || !id) return null;
+    for (const subject of course.subjects)
+      for (const topic of subject.topics) if (topic.id === id) return { subject, topic };
+    return null;
+  });
 
   /** The tree with only what the filter lets through. */
   private treeFor(mode: Filter): StudentCourse[] {
@@ -283,10 +346,9 @@ export class StudentCourseworkPage implements OnInit {
     try {
       const data = await this.api.myCoursework();
       this.data.set(data);
-      // Start on the first sub-topic that is not done (else the first one), with its path open.
+      // Start on the first sub-topic that is not done (else the first one), with its course and topic open.
       const all = this.view().flatMap((course) => course.subjects.flatMap((subject) => subject.topics.flatMap((topic) => topic.subtopics.map((sub) => ({ course, subject, topic, sub })))));
       const first = all.find((x) => !x.sub.done && !x.sub.locked) ?? all.find((x) => !x.sub.locked) ?? all[0];
-      this.open.set(new Set(this.view().filter((c) => !c.locked).map((c) => `c:${c.id}`)));
       if (first) this.select(first);
     } catch (error) {
       this.error.set(error as ApiError);
@@ -295,20 +357,32 @@ export class StudentCourseworkPage implements OnInit {
     }
   }
 
-  isOpen(key: string): boolean {
-    return this.filter() !== 'all' || this.open().has(key); // while a filter is on, everything that matches is shown open
+  /** Open a course's topic tiles. */
+  pickCourse(id: string): void {
+    this.courseId.set(id);
+    this.topicId.set(null);
   }
 
-  toggle(key: string): void {
-    const next = new Set(this.open());
-    if (!next.delete(key)) next.add(key);
-    this.open.set(next);
+  /** Open a topic's sub-topic tiles. */
+  pickTopic(id: string): void {
+    this.topicId.set(id);
   }
 
+  /** Back to the course tiles. The sub-topic below stays open. */
+  backToCourses(): void {
+    this.courseId.set(null);
+    this.topicId.set(null);
+  }
+
+  /** Back to the topic tiles of the same course. */
+  backToTopics(): void {
+    this.topicId.set(null);
+  }
+
+  /** Open a sub-topic: its course and topic become the place the student is in, and the sub-topic shows below. */
   select(pick: Chosen): void {
-    const next = new Set(this.open());
-    next.add(`c:${pick.course.id}`).add(`s:${pick.course.id}:${pick.subject.paper_id}`).add(`t:${pick.topic.id}`);
-    this.open.set(next);
+    this.courseId.set(pick.course.id);
+    this.topicId.set(pick.topic.id);
     this.selectedId.set(pick.sub.id);
     this.playing.set(null);
     this.renewals = 0;
