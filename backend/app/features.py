@@ -122,12 +122,14 @@ ICON_COLOURS = [
 DEFAULT_ICON_COLOUR = ICON_COLOURS[0]["hex"]
 _COLOUR_HEXES = {option["hex"] for option in ICON_COLOURS}
 
-# The three student-view designs the admin can choose from. The key is what the website uses; the name is what the admin sees.
+# The student-view designs the admin can choose from. The key is what the website uses; the name is what the admin sees.
 # The first one is the default, so an institute that never chooses keeps the look it already has.
 DESIGNS = [
     {"key": "exam", "name": "Exam Mode", "text": "Dark and data-first. Built around mocks and percentiles."},
     {"key": "warm", "name": "Warm Focus", "text": "Light cream and amber. Calm, with a dark card for where you left off."},
     {"key": "mentor", "name": "Friendly Mentor", "text": "Mobile-first. One column, a bottom menu, and a daily plan at hand."},
+    {"key": "study", "name": "Study Planner", "text": "Crisp and structured. A weekly timetable and a syllabus map."},
+    {"key": "arena", "name": "Arena", "text": "Gamified. XP, leagues, daily challenges and badges."},
 ]
 DEFAULT_DESIGN = DESIGNS[0]["key"]
 _DESIGN_KEYS = {option["key"] for option in DESIGNS}
@@ -286,10 +288,10 @@ def design(tenant: dict) -> str:
 def save_design(repo, tenant: dict, body) -> str:
     """Save the student-view design. It must be one of DESIGNS."""
     if not isinstance(body, dict) or not isinstance(body.get("design"), str):
-        raise ValidationError("Send the design as one of the three choices.")
+        raise ValidationError("Send the design as one of the choices listed.")
     key = body["design"].strip().lower()
     if key not in _DESIGN_KEYS:
-        raise ValidationError("Choose one of the three designs.")
+        raise ValidationError("Choose one of the designs listed.")
     current = _saved(tenant)
     repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": current["icon_colour"], "design": key})
     return design(repo.get_tenant(tenant["slug"]))

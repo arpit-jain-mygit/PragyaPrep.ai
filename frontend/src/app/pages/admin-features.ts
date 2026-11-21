@@ -54,6 +54,17 @@ import { Icon } from '../ui/icon';
     .mock[data-look='mentor'] .mock-cards i { background: #ffffff; }
     .mock[data-look='mentor'] .mock-tabs { display: flex; align-items: center; padding: 6px 0; background: #ffffff; border-top: 1px solid #f3e8dc; }
     .mock[data-look='mentor'] .mock-tabs i:first-child { background: #c2410c; }
+    .mock[data-look='study'] { background: #f8fafc; color: #475569; }
+    .mock[data-look='study'] .mock-top { background: #3730a3; }
+    .mock[data-look='study'] .mock-side { background: #ffffff; border-right: 1px solid #e2e8f0; }
+    .mock[data-look='study'] .mock-hero { background: #3730a3; }
+    .mock[data-look='study'] .mock-cards i { background: #ffffff; border-color: #e2e8f0; }
+    .mock[data-look='arena'] { background: #f5f3ff; color: #4c4a6b; }
+    .mock[data-look='arena'] .mock-top { background: #2e1065; }
+    .mock[data-look='arena'] .mock-side { background: #ffffff; border-right: 2px solid #1e1b4b; }
+    .mock[data-look='arena'] .mock-hero { background: #2e1065; border: 2px solid #1e1b4b; }
+    .mock[data-look='arena'] .mock-cards i { background: #ffffff; border: 2px solid #1e1b4b; }
+    .mock[data-look='arena'] .mock-cards i:first-child { background: #bef264; }
     .mock.big[data-look='mentor'] { width: 12rem; margin: 0 auto; border-radius: 18px; }
     .preview-item { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
     .preview-item app-icon { color: var(--menu-icon, #4f46e5); }
