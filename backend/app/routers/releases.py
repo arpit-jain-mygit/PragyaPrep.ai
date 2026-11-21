@@ -66,3 +66,13 @@ def my_attempt(kind: str, tenant: dict = Depends(get_tenant), scoped: TenantRepo
 
 def _today() -> date:
     return clock.today_india()
+
+
+@router.get("/api/my/releases/{kind}/history")
+def my_history(kind: str, tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    """The student's list of Daily RC passages or Weekly DILR sets so far, newest first. Empty when the institute has the kind switched off."""
+    if kind not in releases.KINDS:
+        raise HTTPException(status_code=404, detail="That isn't available.")
+    if not features.is_on(tenant, kind):
+        return {"releases": []}
+    return {"releases": releases.history(scoped, student, kind, _today())}

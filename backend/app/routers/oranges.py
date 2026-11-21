@@ -30,3 +30,9 @@ def put_target(body: dict = Body(...), tenant: dict = Depends(get_tenant), repo:
         return {"target": oranges.set_target(repo, tenant, body.get("target"))}
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.get("/api/my/yesterday-winners")
+def my_yesterday_winners(tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    """Yesterday's top students by oranges, for the dashboard card."""
+    return oranges.yesterday_winners_for_student(scoped, tenant, student["email"])

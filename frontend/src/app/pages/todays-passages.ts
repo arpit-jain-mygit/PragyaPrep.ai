@@ -15,6 +15,7 @@ import { Icon } from '../ui/icon';
   imports: [Icon, DatePipe],
   template: `
     @if (today().daily_rc; as d) {
+      @if (dailyChallengeOn()) {
       <section class="card passage-card" id="daily-rc-card">
         <h2><app-icon name="book" [size]="18" /> Daily RC</h2>
         <p class="muted small">{{ d.date | date: 'd MMM yyyy' }}</p>
@@ -22,6 +23,7 @@ import { Icon } from '../ui/icon';
         <button class="btn secondary small" type="button" data-toggle-daily (click)="dailyOpen.set(!dailyOpen())">{{ dailyOpen() ? 'Hide passage' : 'Read passage' }}</button>
         @if (dailyOpen()) { <div class="passage-text" data-text-daily style="white-space:pre-line">{{ d.text }}</div> }
       </section>
+      }
     }
     @if (today().weekly_dilr; as w) {
       <section class="card passage-card" id="weekly-dilr-card">
@@ -38,12 +40,14 @@ export class TodaysPassages implements OnInit {
   private readonly api = inject(ApiService);
   private readonly tenants = inject(TenantService);
 
+  readonly dailyChallengeOn = () => this.tenants.isOn('daily_challenge');
   readonly today = signal<TodayReleases>({ daily_rc: null, weekly_dilr: null });
   readonly dailyOpen = signal(false);
   readonly weeklyOpen = signal(false);
 
   async ngOnInit(): Promise<void> {
     if (!this.tenants.isOn('daily_rc') && !this.tenants.isOn('weekly_dilr')) return;
+    // The Daily challenge switch decides whether the Daily RC card shows on the dashboard; the list page uses Daily RC.
     try {
       this.today.set(await this.api.myReleasesToday());
     } catch {

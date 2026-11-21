@@ -154,7 +154,7 @@ def test_a_planned_feature_can_be_named_now_but_not_switched_on(client, admin):
 # Every screen in the wireframes has a feature here, so the admin can see and name it. The screen-by-screen record
 # is in wireframe-mapping.md. A screen added to the wireframes needs a key added here too.
 WIREFRAME_SCREENS = [
-    "dashboard_points", "word_of_day", "leaderboard",
+    "dashboard_points", "word_of_day", "leaderboard", "yesterday_winners", "daily_challenge",
     "word_battle", "flashcards", "word_list", "crossword", "phrasal_verbs",
     "activity", "unresolved_doubts", "free_resources",
     "coursework", "vocabulary", "idioms",
@@ -163,6 +163,7 @@ WIREFRAME_SCREENS = [
     "analyse_topic_tests", "analyse_sectionals", "analyse_mocks", "swot",
     "forum", "forum_explore", "pi_bank", "interview_guide",
     "application_tracker", "eligibility", "tools_syllabus", "cutoffs", "loan_calculator",
+    "feedback", "help",
 ]
 
 

@@ -90,6 +90,17 @@ export interface MyLeaderboard {
   leaderboard: Leaderboard | null;
 }
 
+/** Yesterday's winners: the top students by oranges on the given day, and whether the student was one of them. */
+export interface YesterdayWinners {
+  day: string;
+  top: LeaderRow[];
+  me_in_top: boolean;
+}
+
+export interface MyYesterdayWinners {
+  yesterday_winners: YesterdayWinners | null;
+}
+
 /** How a kind of release is added: one at a time by the admin (self), or in a queue (bulk). */
 export interface ReleaseSchedule {
   mode: 'self' | 'queue';
@@ -1503,4 +1514,18 @@ export interface AskLogRow {
 
 export interface AskLog {
   rows: AskLogRow[];
+}
+
+/** One row of the Daily RC or Weekly DILR list: a past or current release, and whether the student has attempted it. */
+export interface ReleaseHistoryRow {
+  id: string;
+  date: string;
+  title: string;
+  current: boolean;
+  attempted: boolean;
+  practice_id: string | null;
+}
+
+export interface ReleaseHistory {
+  releases: ReleaseHistoryRow[];
 }

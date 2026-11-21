@@ -262,6 +262,16 @@ export const routes: Routes = [
         data: { kind: 'weekly_dilr' },
       },
       {
+        path: 'feedback',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-feedback').then((m) => m.StudentFeedback),
+      },
+      {
+        path: 'help',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-help').then((m) => m.StudentHelp),
+      },
+      {
         path: 'sectionals',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/student-sectionals').then((m) => m.StudentSectionals),

@@ -180,3 +180,31 @@ def today_for(scoped: TenantRepo, tenant: dict, today: date) -> dict:
 
 def for_student(scoped: TenantRepo, tenant: dict) -> dict:
     return today_for(scoped, tenant, clock.today_india())
+
+
+HISTORY_LIMIT = 30
+
+
+def history(scoped: TenantRepo, student: dict, kind: str, today: date) -> list[dict]:
+    """Past and current releases of one kind, newest first, for the student's list page. Future releases are not listed.
+
+    Each row says whether it is the one shown today or this week, and whether the student has already opened its practice test.
+    """
+    check_kind(kind)
+    attempts = {item.get("release_id"): item["id"] for item in scoped.list_practice(student["email"]) if item.get("release_id")}
+    titles = {row["id"]: row["title"] for row in scoped.list_passages()}
+    rows = []
+    for row in scoped.list_releases(kind):
+        start = date.fromisoformat(row["date"])
+        if start > today:
+            continue
+        rows.append({
+            "id": row["id"],
+            "date": row["date"],
+            "title": titles.get(row["passage_id"], "Untitled passage"),
+            "current": current_release(scoped, kind, today) is not None and current_release(scoped, kind, today)["id"] == row["id"],
+            "attempted": row["id"] in attempts,
+            "practice_id": attempts.get(row["id"]),
+        })
+    rows.sort(key=lambda item: item["date"], reverse=True)
+    return rows[:HISTORY_LIMIT]

@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
-import { AskLog, FeatureRow, MyLeaderboard, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow } from './models';
+import { AskLog, FeatureRow, MyLeaderboard, MyYesterdayWinners, ReleaseHistory, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow } from './models';
 
 /** Turn whatever went wrong into one simple shape the screens can show. */
 export function toApiError(error: unknown): ApiError {
@@ -459,7 +459,7 @@ export class ApiService {
     return this.get('/api/free/sample');
   }
 
-  sendSupport(body: { message: string; page?: string; screenshot?: string }): Promise<{ sent: boolean }> {
+  sendSupport(body: { message: string; page?: string; screenshot?: string; kind?: 'feedback'; rating?: number }): Promise<{ sent: boolean }> {
     return this.post('/api/support', body);
   }
 
@@ -518,6 +518,16 @@ export class ApiService {
   /** The leaderboard for the last seven days (null when the institute has it switched off). */
   myLeaderboard(): Promise<MyLeaderboard> {
     return this.get('/api/my/leaderboard');
+  }
+
+  /** Past and current Daily RC passages or Weekly DILR sets, newest first (empty when the institute has the kind off). */
+  releaseHistory(kind: 'daily_rc' | 'weekly_dilr'): Promise<ReleaseHistory> {
+    return this.get(`/api/my/releases/${kind}/history`);
+  }
+
+  /** Yesterday's top three students by oranges (null when the institute has it switched off). */
+  myYesterdayWinners(): Promise<MyYesterdayWinners> {
+    return this.get('/api/my/yesterday-winners');
   }
 
   /** The institute's daily target for oranges. */

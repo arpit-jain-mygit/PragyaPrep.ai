@@ -34,6 +34,8 @@ const PAGES: Record<string, string[]> = {
   tests: ['learning', 'tests'],
   results: ['learning', 'results'],
   notices: ['notices'],
+  feedback: ['feedback'],
+  help: ['help'],
 };
 
 interface MenuItem {

@@ -62,8 +62,21 @@ def platform_admin_email(repo: Repo) -> str | None:
     return (platform or {}).get("admin_email") or None
 
 
+FEEDBACK = "feedback"
+MIN_RATING, MAX_RATING = 1, 5
+
+
+def clean_rating(raw) -> int:
+    """A feedback rating from 1 to 5 stars. Required for feedback."""
+    if isinstance(raw, bool) or not isinstance(raw, int) or not MIN_RATING <= raw <= MAX_RATING:
+        raise ValidationError("Choose a rating from 1 to 5 stars.")
+    return raw
+
+
 def send(repo: Repo, mailer, tenant: dict, member: dict, body: dict) -> None:
     message = clean_message(body.get("message"))
+    feedback = body.get("kind") == FEEDBACK
+    rating = clean_rating(body.get("rating")) if feedback else None
     page = " ".join(str(body.get("page") or "").split())[:MAX_PAGE]
     attachment = clean_screenshot(body.get("screenshot"))
     to = platform_admin_email(repo)
@@ -75,10 +88,13 @@ def send(repo: Repo, mailer, tenant: dict, member: dict, body: dict) -> None:
     ]
     if page:
         lines.append(f"Page: {page}")
+    if feedback:
+        lines.append(f"Feedback rating: {rating} of {MAX_RATING} stars")
     lines += ["", message]
     if attachment:
         lines += ["", "A screenshot is attached."]
-    subject = f"[PragyaPrep support] {tenant['name']}: {message.splitlines()[0][:60]}"
+    label = "feedback" if feedback else "support"
+    subject = f"[PragyaPrep {label}] {tenant['name']}: {message.splitlines()[0][:60]}"
     try:
         mailer.send(Email(to=to, from_name=f"{name} via PragyaPrep", subject=subject, body="\n".join(lines), reply_to=member["email"], attachments=(attachment,) if attachment else ()))
     except Exception:

@@ -10,12 +10,13 @@ import { StudentTiles } from './student-tiles';
 import { WordOfDay } from './word-of-day';
 import { DashboardProgress } from './dashboard-progress';
 import { LeaderboardCard } from './leaderboard';
+import { YesterdayWinnersCard } from './yesterday-winners';
 import { TodaysPassages } from './todays-passages';
 
 /** A student's home page: a greeting and action tiles. Payment arrives in a later step. */
 @Component({
   selector: 'app-student-home',
-  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome, WordOfDay, DashboardProgress, LeaderboardCard, TodaysPassages],
+  imports: [Avatar, BatchList, Icon, StudentTiles, FreeHome, WordOfDay, DashboardProgress, LeaderboardCard, YesterdayWinnersCard, TodaysPassages],
   template: `
     @if (error(); as problem) {
       <div class="alert error" role="alert">{{ problem.detail }}</div>
@@ -29,6 +30,7 @@ import { TodaysPassages } from './todays-passages';
       </div>
       <app-dashboard-progress />
       <app-leaderboard />
+      <app-yesterday-winners />
       <app-todays-passages />
       <app-student-tiles />
       <app-word-of-day />

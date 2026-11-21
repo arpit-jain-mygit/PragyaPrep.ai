@@ -102,3 +102,34 @@ def leaderboard_for_student(scoped: TenantRepo, tenant: dict, viewer_email: str)
     if not features.is_on(tenant, "leaderboard"):
         return {"leaderboard": None}
     return {"leaderboard": leaderboard(scoped, tenant, viewer_email, clock.today_india())}
+
+
+# ---- Yesterday's winners: the top students by oranges on yesterday's day ----
+
+WINNERS_TOP = 3
+
+
+def _count_on(scoped: TenantRepo, members: list[dict], day: date) -> list[dict]:
+    """How many oranges each approved student collected on one day, most first."""
+    scores = []
+    for member in members:
+        count = sum(1 for row in scoped.list_done(member["email"]) if _day(row["done_at"]) == day)
+        scores.append({"email": member["email"], "name": _display_name(member), "oranges": count})
+    scores.sort(key=lambda row: (-row["oranges"], row["name"], row["email"]))
+    return scores
+
+
+def yesterday_winners(scoped: TenantRepo, tenant: dict, viewer_email: str, today: date) -> dict:
+    """The top three students for yesterday, and whether the viewer was one of them. Students with no oranges are left out."""
+    yesterday = today - timedelta(days=1)
+    members = [m for m in scoped.all_members_by_status("approved") if m.get("role", "student") == "student"]
+    scores = [row for row in _count_on(scoped, members, yesterday) if row["oranges"] > 0]
+    top = [{"rank": position, "name": row["name"], "oranges": row["oranges"], "me": row["email"] == viewer_email} for position, row in enumerate(scores[:WINNERS_TOP], 1)]
+    return {"day": yesterday.isoformat(), "top": top, "me_in_top": any(row["me"] for row in top)}
+
+
+def yesterday_winners_for_student(scoped: TenantRepo, tenant: dict, viewer_email: str) -> dict:
+    """Yesterday's winners for a student. Nothing is shown when the institute has switched them off."""
+    if not features.is_on(tenant, "yesterday_winners"):
+        return {"yesterday_winners": None}
+    return {"yesterday_winners": yesterday_winners(scoped, tenant, viewer_email, clock.today_india())}

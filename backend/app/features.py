@@ -21,6 +21,8 @@ CATALOGUE = [
     ("dashboard_points", "Dashboard", "Oranges", True),
     ("word_of_day", "Dashboard", "Word of the day", True),
     ("leaderboard", "Dashboard", "Leaderboard", True),
+    ("yesterday_winners", "Dashboard", "Yesterday's winners", True),
+    ("daily_challenge", "Dashboard", "Daily challenge", True),  # the dashboard card for today's Daily RC passage
     ("word_battle", "Vocab builder", "Word battle", False),
     ("flashcards", "Vocab builder", "Flashcards", False),
     ("word_list", "Vocab builder", "Word list", False),
@@ -54,6 +56,9 @@ CATALOGUE = [
     ("forum_explore", "Forum", "Explore", False),
     ("pi_bank", "Interview", "Question bank", True),
     ("interview_guide", "Interview", "Guide", False),
+    # Help
+    ("feedback", "Help", "Feedback", True),
+    ("help", "Help", "Help", True),
     # Tools
     ("application_tracker", "Tools", "Applications", True),
     ("eligibility", "Tools", "Eligibility", True),

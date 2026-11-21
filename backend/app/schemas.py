@@ -525,6 +525,8 @@ class SupportIn(BaseModel):
     message: Any = None
     page: Any = None
     screenshot: Any = None
+    kind: Any = None  # "feedback" for a student's rating and comments; anything else (or none) is a support message
+    rating: Any = None  # 1 to 5 stars, for feedback only
 
 
 class PracticeIn(BaseModel):

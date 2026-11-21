@@ -33,3 +33,15 @@ def my_syllabus(tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends
 def my_filter_topics(tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
     _on(tenant, "filter_topics")
     return past_papers.filter_topics(scoped)
+
+
+@router.get("/api/my/filter-topics/questions")
+def my_filter_questions(paper: str | None = None, topic: str | None = None, difficulty: str | None = None, year: int | None = None, tenant: dict = Depends(get_tenant), scoped: TenantRepo = Depends(get_tenant_repo), student: dict = Depends(require_roles(STUDENT))):
+    """Questions for the Filter topics viewer. Filters are optional; the years and difficulty levels offered are returned too."""
+    _on(tenant, "filter_topics")
+    if difficulty and difficulty not in past_papers.DIFFICULTY_LEVELS:
+        raise HTTPException(status_code=422, detail="Choose easy, medium or hard.")
+    result = past_papers.question_viewer(scoped, paper=paper, topic=topic, difficulty=difficulty, year=year)
+    result["years"] = past_papers.question_years(scoped)
+    result["difficulties"] = list(past_papers.DIFFICULTY_LEVELS)
+    return result

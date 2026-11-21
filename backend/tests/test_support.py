@@ -120,3 +120,29 @@ def test_ensure_platform_admin_fills_in_a_missing_admin_address_on_the_platform_
     repo.update_tenant("platform", admin_email="")
     tenants.ensure_platform_admin(repo, "boss@platform.example", "Arpit Jain")
     assert repo.get_tenant("platform")["admin_email"] == "boss@platform.example"
+
+
+def test_feedback_carries_its_star_rating_and_its_own_subject(client, asha, mailer):
+    before = len(mailer.sent)
+    response = send(client, asha, kind="feedback", rating=4, message="Vocab packs load quickly.")
+    assert response.status_code == 202
+    mail = mailer.sent[before:][0]
+    assert mail.subject.startswith("[PragyaPrep feedback]")
+    assert "Feedback rating: 4 of 5 stars" in mail.body
+    assert mail.reply_to == "asha@example.com"
+
+
+@pytest.mark.parametrize("rating", [None, 0, 6, "4", True, 2.5])
+def test_feedback_needs_a_rating_from_one_to_five(client, asha, mailer, rating):
+    before = len(mailer.sent)
+    response = send(client, asha, kind="feedback", rating=rating, message="Good.")
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Choose a rating from 1 to 5 stars."
+    assert len(mailer.sent) == before
+
+
+def test_a_support_message_ignores_any_rating_sent_with_it(client, asha, mailer):
+    before = len(mailer.sent)
+    assert send(client, asha, message="Help please.", rating=9).status_code == 202
+    assert mailer.sent[before:][0].subject.startswith("[PragyaPrep support]")
+    assert "Feedback rating" not in mailer.sent[before:][0].body
