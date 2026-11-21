@@ -17,6 +17,10 @@ const PAGES: Record<string, string[]> = {
   analyse_sectionals: ['analyse', 'sectionals'],
   analyse_mocks: ['analyse', 'mocks'],
   swot: ['swot'],
+  application_tracker: ['applications'],
+  pi_bank: ['interview', 'question-bank'],
+  eligibility: ['tools', 'eligibility'],
+  cutoffs: ['tools', 'cutoffs'],
   past_papers: ['past-papers'],
   past_papers_explore: ['past-papers', 'explore'],
   syllabus: ['syllabus'],
@@ -88,12 +92,26 @@ interface MenuGroup {
           }
         </section>
       }
+      @if (learningOn()) {
+        <ul class="side-items side-bottom">
+          <li>
+            <a class="side-item" data-key="learning" [routerLink]="['/', slug(), 'learning']" routerLinkActive="active">
+              <span>My Learning</span>
+            </a>
+          </li>
+        </ul>
+      }
     </nav>
   `,
 })
 export class StudentSidebar {
   private readonly tenants = inject(TenantService);
   readonly notices = inject(NoticeService);
+
+  /** Whether any learning screen is switched on. The header shows My Learning only then, and so does this menu. */
+  readonly learningOn = computed(() =>
+    ['coursework', 'live_classes', 'tests', 'results'].some((key) => this.tenants.isOn(key)),
+  );
 
   /** The institute's address part, used to build each link. */
   readonly slug = computed(() => this.tenants.slug() ?? '');

@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
-import { AskLog, FeatureRow, MyLeaderboard, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView } from './models';
+import { AskLog, FeatureRow, MyLeaderboard, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow } from './models';
 
 /** Turn whatever went wrong into one simple shape the screens can show. */
 export function toApiError(error: unknown): ApiError {
@@ -674,6 +674,94 @@ export class ApiService {
   /** Today's Daily RC passage and this week's Weekly DILR set for the student (each null when there is none). */
   myReleasesToday(): Promise<TodayReleases> {
     return this.get('/api/my/releases/today');
+  }
+
+  /** The student's own college applications, nearest deadline first. */
+  myApplications(): Promise<Application[]> {
+    return this.get('/api/my/applications');
+  }
+
+  addApplication(body: ApplicationInput): Promise<Application> {
+    return this.post('/api/my/applications', body);
+  }
+
+  changeApplication(id: string, body: ApplicationInput): Promise<Application> {
+    return this.call(firstValueFrom(this.http.put<Application>(`${this.base}/api/my/applications/${encodeURIComponent(id)}`, body)));
+  }
+
+  removeApplication(id: string): Promise<void> {
+    return this.delete(`/api/my/applications/${encodeURIComponent(id)}`);
+  }
+
+  /** The student's question bank, with their own done marks. */
+  piBank(): Promise<PiBankView> {
+    return this.get('/api/my/pi-questions');
+  }
+
+  markPiDone(id: string): Promise<void> {
+    return this.call(firstValueFrom(this.http.put<void>(`${this.base}/api/my/pi-questions/${encodeURIComponent(id)}/done`, {})));
+  }
+
+  unmarkPiDone(id: string): Promise<void> {
+    return this.delete(`/api/my/pi-questions/${encodeURIComponent(id)}/done`);
+  }
+
+  /** The admin's questions, in the order they were added. */
+  piQuestions(): Promise<PiQuestionRow[]> {
+    return this.get('/api/admin/pi-questions');
+  }
+
+  addPiQuestion(body: PiQuestionInput): Promise<PiQuestionRow> {
+    return this.post('/api/admin/pi-questions', body);
+  }
+
+  removePiQuestion(id: string): Promise<void> {
+    return this.delete(`/api/admin/pi-questions/${encodeURIComponent(id)}`);
+  }
+
+  /** The colleges with their eligibility rules, for the student's checker. */
+  myEligibility(): Promise<EligibilityCollege[]> {
+    return this.get('/api/my/eligibility');
+  }
+
+  /** The college names and the years with cutoffs, for the Cutoffs pickers. */
+  myColleges(): Promise<{ id: string; name: string; years: number[] }[]> {
+    return this.get('/api/my/colleges');
+  }
+
+  myCutoffs(college: string, year?: number): Promise<CutoffView> {
+    const params: Record<string, string> = { college };
+    if (year) params['year'] = String(year);
+    return this.get('/api/my/cutoffs', params);
+  }
+
+  adminColleges(): Promise<AdminCollege[]> {
+    return this.get('/api/admin/colleges');
+  }
+
+  addCollege(body: { name: string; rules: CollegeRule[] }): Promise<AdminCollege> {
+    return this.post('/api/admin/colleges', body);
+  }
+
+  changeCollege(id: string, body: { name: string; rules: CollegeRule[] }): Promise<AdminCollege> {
+    return this.call(firstValueFrom(this.http.put<AdminCollege>(`${this.base}/api/admin/colleges/${encodeURIComponent(id)}`, body)));
+  }
+
+  removeCollege(id: string): Promise<void> {
+    return this.delete(`/api/admin/colleges/${encodeURIComponent(id)}`);
+  }
+
+  adminCutoffs(id: string, year?: number): Promise<CutoffView> {
+    const query = year ? `?year=${year}` : '';
+    return this.get(`/api/admin/colleges/${encodeURIComponent(id)}/cutoffs${query}`);
+  }
+
+  saveCutoff(id: string, body: Omit<CutoffRow, 'id'>): Promise<CutoffRow> {
+    return this.call(firstValueFrom(this.http.put<CutoffRow>(`${this.base}/api/admin/colleges/${encodeURIComponent(id)}/cutoffs`, body)));
+  }
+
+  removeCutoff(collegeId: string, rowId: string): Promise<void> {
+    return this.delete(`/api/admin/colleges/${encodeURIComponent(collegeId)}/cutoffs/${encodeURIComponent(rowId)}`);
   }
 
   /** Analyse for one kind of test: topic tests, sectionals or mocks. */

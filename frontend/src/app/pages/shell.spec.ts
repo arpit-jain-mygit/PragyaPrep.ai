@@ -30,7 +30,7 @@ describe('Institute page frame', () => {
     const fixture = TestBed.createComponent(TenantShell);
     await settle(fixture);
     openMenu(fixture);
-    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Batches', 'Question bank', 'Tests', 'Progress', 'Announcements', 'Features and labels', 'Daily RC and DILR', 'Word of the day', 'Ask AI log']);
+    expect(all(fixture, 'nav a:not(.avatar-link)').map((a) => a.textContent?.trim())).toEqual(['Home', 'Registrations', 'Courses', 'Batches', 'Question bank', 'Tests', 'Progress', 'Announcements', 'Features and labels', 'Daily RC and DILR', 'Colleges and cutoffs', 'PI question bank', 'Word of the day', 'Ask AI log']);
     expect(all<HTMLAnchorElement>(fixture, '#institute-link')[0].getAttribute('href')).toBe('/demo/admin/institute');
     expect(all(fixture, '.who').length).toBe(0);
     expect(() => clickButton(fixture, 'Sign out')).not.toThrow();
@@ -110,7 +110,7 @@ describe('Institute page frame', () => {
     await settle(fixture);
     expect(el(fixture, '#side-home').textContent?.trim()).toBe('Dashboard');
     expect(all(fixture, '.side-heading').map((node) => node.textContent?.trim())).toEqual(['Learn', 'Practice', 'My learning']);
-    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'Videos', 'Topic tests', 'Notices']);
+    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'Videos', 'Topic tests', 'Notices', 'My Learning']);
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 

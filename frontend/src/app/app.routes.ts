@@ -64,6 +64,16 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin-institute').then((m) => m.AdminInstitutePage),
       },
       {
+        path: 'admin/colleges',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-colleges').then((m) => m.AdminCollegesPage),
+      },
+      {
+        path: 'admin/pi-bank',
+        canActivate: [signedInGuard, adminGuard],
+        loadComponent: () => import('./pages/admin-pi-bank').then((m) => m.AdminPiBankPage),
+      },
+      {
         path: 'admin/words',
         canActivate: [signedInGuard, adminGuard],
         loadComponent: () => import('./pages/admin-words').then((m) => m.AdminWordsPage),
@@ -184,6 +194,26 @@ export const routes: Routes = [
         path: 'swot',
         canActivate: [signedInGuard],
         loadComponent: () => import('./pages/student-swot').then((m) => m.StudentSwot),
+      },
+      {
+        path: 'interview/question-bank',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-pi-bank').then((m) => m.StudentPiBank),
+      },
+      {
+        path: 'tools/eligibility',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-eligibility').then((m) => m.StudentEligibility),
+      },
+      {
+        path: 'tools/cutoffs',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-cutoffs').then((m) => m.StudentCutoffs),
+      },
+      {
+        path: 'applications',
+        canActivate: [signedInGuard],
+        loadComponent: () => import('./pages/student-applications').then((m) => m.StudentApplications),
       },
       {
         path: 'past-papers',

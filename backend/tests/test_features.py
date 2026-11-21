@@ -58,7 +58,7 @@ def test_the_admin_can_change_the_order(client, admin):
 def test_a_planned_feature_cannot_be_switched_on(client, admin):
     rows = _as_sent(_listed(client, admin))
     for row in rows:
-        if row["key"] == "pi_bank":
+        if row["key"] == "interview_guide":
             row["enabled"] = True
     refused = client.put(URL, json=rows, headers=admin)
     assert refused.status_code == 422
@@ -107,7 +107,7 @@ def test_the_public_tenant_info_lists_the_built_features_in_order_with_their_swi
     by_key = {item["key"]: item for item in public}
     assert by_key["notices"]["enabled"] is False
     assert by_key["coursework"]["label"] == "Coursework (new name)"
-    assert "pi_bank" not in by_key
+    assert "interview_guide" not in by_key
 
 
 def test_one_institute_can_not_change_another_institutes_features(client, admin, make_tenant, sign_in):
@@ -141,14 +141,14 @@ def test_clean_refuses_bad_switches():
 def test_a_planned_feature_can_be_named_now_but_not_switched_on(client, admin):
     rows = _as_sent(_listed(client, admin))
     for row in rows:
-        if row["key"] == "pi_bank":
+        if row["key"] == "interview_guide":
             row["label"] = "Full vocabulary"
     saved = client.put(URL, json=rows, headers=admin)
     assert saved.status_code == 200, saved.text
-    pi = next(row for row in saved.json()["features"] if row["key"] == "pi_bank")
+    pi = next(row for row in saved.json()["features"] if row["key"] == "interview_guide")
     assert pi["label"] == "Full vocabulary" and pi["enabled"] is False
     public = client.get("/api/tenant", headers=headers("aaptprep")).json()["features"]
-    assert "pi_bank" not in [item["key"] for item in public]
+    assert "interview_guide" not in [item["key"] for item in public]
 
 
 # Every screen in the wireframes has a feature here, so the admin can see and name it. The screen-by-screen record

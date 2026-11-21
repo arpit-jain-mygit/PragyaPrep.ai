@@ -558,6 +558,113 @@ export interface AttemptLine {
   auto_submitted?: boolean;
 }
 
+/** One personal interview question, as the student sees it. */
+export interface PiQuestion {
+  id: string;
+  topic: string;
+  subtopic: string;
+  question: string;
+  hint: string;
+  done: boolean;
+}
+
+/** The student's question bank: the questions in list order, the counts, and the topics to filter by. */
+export interface PiBankView {
+  questions: PiQuestion[];
+  counts: { new: number; done: number; total: number };
+  topics: { name: string; subtopics: string[] }[];
+}
+
+/** One question as the admin keeps it. */
+export interface PiQuestionRow {
+  id: string;
+  topic: string;
+  subtopic: string;
+  question: string;
+  hint: string;
+  added_at: number;
+}
+
+/** What the admin sends when adding a question. */
+export interface PiQuestionInput {
+  topic: string;
+  subtopic: string;
+  question: string;
+  hint: string;
+}
+
+/** One eligibility rule. The value depends on the type: a date, a percent, a year, or nothing (twelfth_maths). */
+export type CollegeRuleType =
+  | 'dob_on_or_after'
+  | 'min_tenth_percent'
+  | 'min_twelfth_percent'
+  | 'tenth_year_or_later'
+  | 'twelfth_year_or_later'
+  | 'twelfth_maths';
+
+export interface CollegeRule {
+  type: CollegeRuleType;
+  value: string | number | boolean | null;
+}
+
+/** A college with its eligibility rules, as the student sees them. */
+export interface EligibilityCollege {
+  id: string;
+  name: string;
+  rules: CollegeRule[];
+}
+
+/** A college as the admin keeps it. */
+export interface AdminCollege extends EligibilityCollege {
+  created_at: string;
+  updated_at: string;
+  added_at: number;
+}
+
+/** One cutoff row. Seats, applicants and qualified are null when the admin has not entered them. */
+export interface CutoffRow {
+  id: string;
+  year: number;
+  category: string;
+  section: string;
+  cutoff: number;
+  seats: number | null;
+  applicants: number | null;
+  qualified: number | null;
+}
+
+/** One college's cutoffs for one year, with the years that have data. */
+export interface CutoffView {
+  college: { id: string; name: string };
+  years: number[];
+  year: number | null;
+  rows: CutoffRow[];
+}
+
+/** The stages a student can pick for a college application, in order. */
+export type ApplicationStatus = 'planning' | 'applied' | 'shortlisted' | 'accepted' | 'rejected' | 'withdrawn';
+
+/** One college application the student is tracking. */
+export interface Application {
+  id: string;
+  college: string;
+  programme: string;
+  status: ApplicationStatus;
+  deadline: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What the student sends when adding or changing an application. */
+export interface ApplicationInput {
+  college: string;
+  programme: string;
+  status: ApplicationStatus;
+  deadline: string | null;
+  notes: string;
+}
+
 /** Analyse for one kind of test: the summary, the score trend, and accuracy by subject and topic. */
 export interface AnalyseView {
   summary: { attempts: number; average: string | null; best: string | null };

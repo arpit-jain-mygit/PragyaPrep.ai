@@ -97,12 +97,12 @@ Status: **Built** = switched on for students when the admin chooses; **Planned**
 | img19 | SWOT analysis | `swot` | Built |
 | img20 | Forum home | `forum` | Planned |
 | img21 | Forum: Explore farmhouses | `forum_explore` | Planned |
-| img22 | Interview: PI question bank (list and flashcard) | `pi_bank` | Planned |
+| img22 | Interview: PI question bank (list and flashcard) | `pi_bank` | Built |
 | img22 | Interview: Guide | `interview_guide` | Planned |
-| img23 | Tools: Applications tracker | `application_tracker` | Planned |
-| img24 | Tools: Eligibility checker | `eligibility` | Planned |
+| img23 | Tools: Applications tracker | `application_tracker` | Built |
+| img24 | Tools: Eligibility checker | `eligibility` | Built (admin enters each college's rules) |
 | img25 | Tools: Syllabus table | `tools_syllabus` | Built |
-| img26 | Tools: Cutoffs | `cutoffs` | Planned |
+| img26 | Tools: Cutoffs | `cutoffs` | Built (admin enters cutoffs per college) |
 | img27 | Tools: Loan calculator | `loan_calculator` | Planned |
 | img28 | Admin: student record edit (registrations) | none | Existing |
 | img29 | Dashboard with menu (duplicate of img02) | as img02 | Built (cards) |

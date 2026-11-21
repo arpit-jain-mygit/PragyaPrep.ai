@@ -52,13 +52,13 @@ CATALOGUE = [
     # Forum and interview
     ("forum", "Forum", "Home", False),
     ("forum_explore", "Forum", "Explore", False),
-    ("pi_bank", "Interview", "Question bank", False),
+    ("pi_bank", "Interview", "Question bank", True),
     ("interview_guide", "Interview", "Guide", False),
     # Tools
-    ("application_tracker", "Tools", "Applications", False),
-    ("eligibility", "Tools", "Eligibility", False),
+    ("application_tracker", "Tools", "Applications", True),
+    ("eligibility", "Tools", "Eligibility", True),
     ("tools_syllabus", "Tools", "Syllabus", True),
-    ("cutoffs", "Tools", "Cutoffs", False),
+    ("cutoffs", "Tools", "Cutoffs", True),
     ("loan_calculator", "Tools", "Loan calculator", False),
     # Screen register: see wireframe-mapping.md. Every wireframe screen has a key above.
 # As-is: not in the wireframes, kept unchanged. Shown after the wireframe groups.

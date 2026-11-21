@@ -460,6 +460,29 @@ class TenantRepo:
     def delete_done(self, email: str, course_id: str, subtopic_id: str) -> None:
         self.table.delete_item(Key=self._done_key(email, course_id, subtopic_id))
 
+    # ---- PI question bank: which questions each student has marked done. Stored with the student ----
+
+    def _pi_done_key(self, email: str, question_id: str) -> dict:
+        return {"PK": self._member_key(email)["PK"], "SK": f"PIDONE#{question_id}"}
+
+    def put_pi_done(self, email: str, question_id: str, done_at: str) -> None:
+        self.table.put_item(Item={**self._pi_done_key(email, question_id), "question_id": question_id, "done_at": done_at})
+
+    def list_pi_done(self, email: str) -> list[dict]:
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with("PIDONE#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def delete_pi_done(self, email: str, question_id: str) -> None:
+        self.table.delete_item(Key=self._pi_done_key(email, question_id))
+
     # ---- Notices: messages to one student (announcements and reminders). Stored with the student ----
 
     def _notice_key(self, email: str, notice_id: str) -> dict:
@@ -483,6 +506,36 @@ class TenantRepo:
 
     def update_notice(self, email: str, notice_id: str, fields: dict) -> None:
         _update(self.table, self._notice_key(email, notice_id), fields)
+
+    # ---- Application tracker: each student's own list of college applications ----
+
+    def _application_key(self, email: str, application_id: str) -> dict:
+        return {"PK": self._member_key(email)["PK"], "SK": f"APPLY#{application_id}"}
+
+    def put_application(self, email: str, record: dict) -> None:
+        self.table.put_item(Item={**self._application_key(email, record["id"]), **record})
+
+    def get_application(self, email: str, application_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._application_key(email, application_id)).get("Item"))
+
+    def list_applications(self, email: str) -> list[dict]:
+        """Every application this student has added, in no particular order."""
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(self._member_key(email)["PK"]) & Key("SK").begins_with("APPLY#")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def update_application(self, email: str, application_id: str, fields: dict) -> None:
+        _update(self.table, self._application_key(email, application_id), fields)
+
+    def delete_application(self, email: str, application_id: str) -> None:
+        self.table.delete_item(Key=self._application_key(email, application_id))
 
     # ---- Announcements: what the admin sent, kept as a history ----
 
@@ -540,6 +593,64 @@ class TenantRepo:
 
     def delete_word(self, word_id: str) -> None:
         self.table.delete_item(Key=self._word_key(word_id))
+
+    # ---- PI question bank: the admin's questions, oldest first ----
+
+    def _pi_key(self, question_id: str) -> dict:
+        return {"PK": f"{self._prefix}PIQ#{question_id}", "SK": "META"}
+
+    def create_pi_question(self, record: dict) -> None:
+        # The sort key is the time in nanoseconds, so questions added in the same second keep the order they were added in.
+        _put_new(self.table, {**self._pi_key(record["id"]), **record, "GSI1PK": f"{self._prefix}PIQS", "GSI1SK": f"{record['added_at']:020d}#{record['id']}"})
+
+    def list_pi_questions(self, limit: int = 1000) -> list[dict]:
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}PIQS"), ScanIndexForward=True, Limit=limit)
+        return [_plain(item) for item in response["Items"]]
+
+    def delete_pi_question(self, question_id: str) -> None:
+        self.table.delete_item(Key=self._pi_key(question_id))
+
+    # ---- Colleges for the Tools screens: each college's eligibility rules, and its cutoffs by year and category ----
+
+    def _college_key(self, college_id: str) -> dict:
+        return {"PK": f"{self._prefix}COLLEGE#{college_id}", "SK": "META"}
+
+    def create_college(self, record: dict) -> None:
+        _put_new(self.table, {**self._college_key(record["id"]), **record, "GSI1PK": f"{self._prefix}COLLEGES", "GSI1SK": f"{record['added_at']:020d}#{record['id']}"})
+
+    def get_college(self, college_id: str) -> dict | None:
+        return _plain(self.table.get_item(Key=self._college_key(college_id)).get("Item"))
+
+    def list_colleges(self, limit: int = 500) -> list[dict]:
+        response = self.table.query(IndexName="GSI1", KeyConditionExpression=Key("GSI1PK").eq(f"{self._prefix}COLLEGES"), ScanIndexForward=True, Limit=limit)
+        return [_plain(item) for item in response["Items"]]
+
+    def update_college(self, record: dict) -> None:
+        _update(self.table, self._college_key(record["id"]), {"name": record["name"], "rules": record["rules"], "updated_at": record["updated_at"]})
+
+    def delete_college(self, college_id: str) -> None:
+        self.table.delete_item(Key=self._college_key(college_id))
+
+    def _cutoff_key(self, college_id: str, sort_key: str) -> dict:
+        return {"PK": f"{self._prefix}CUTOFFS#{college_id}", "SK": sort_key}
+
+    def put_cutoff(self, college_id: str, row: dict) -> None:
+        self.table.put_item(Item={**self._cutoff_key(college_id, row["id"]), **row})
+
+    def list_cutoffs(self, college_id: str) -> list[dict]:
+        items, start = [], None
+        while True:
+            args = {"KeyConditionExpression": Key("PK").eq(f"{self._prefix}CUTOFFS#{college_id}")}
+            if start:
+                args["ExclusiveStartKey"] = start
+            response = self.table.query(**args)
+            items += [_plain(item) for item in response["Items"]]
+            start = response.get("LastEvaluatedKey")
+            if not start:
+                return items
+
+    def delete_cutoff(self, college_id: str, row_id: str) -> None:
+        self.table.delete_item(Key=self._cutoff_key(college_id, row_id))
 
     def delete_access(self, email: str, course_id: str) -> None:
         self.table.delete_item(Key=self._access_key(email, course_id))
