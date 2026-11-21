@@ -111,8 +111,8 @@ describe('Institute page frame', () => {
     await settle(fixture);
     expect(el(fixture, '#side-home').textContent?.trim()).toBe('Dashboard');
     expect(all(fixture, '.side-heading').map((node) => node.textContent?.trim())).toEqual(['Learn', 'Practice', 'My learning']);
-    // Every menu heading starts closed, so only the Dashboard and My Learning links show.
-    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'My Learning']);
+    // Every menu heading starts closed, so only the Dashboard link shows. My Learning is one heading, not a second link.
+    expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard']);
     expect(all(fixture, '#notice-badge').length).toBe(0);
   });
 

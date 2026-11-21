@@ -99,26 +99,12 @@ interface MenuGroup {
           }
         </section>
       }
-      @if (learningOn()) {
-        <ul class="side-items side-bottom">
-          <li>
-            <a class="side-item" data-key="learning" [routerLink]="['/', slug(), 'learning']" routerLinkActive="active">
-              <span>My Learning</span>
-            </a>
-          </li>
-        </ul>
-      }
     </nav>
   `,
 })
 export class StudentSidebar {
   private readonly tenants = inject(TenantService);
   readonly notices = inject(NoticeService);
-
-  /** Whether any learning screen is switched on. The header shows My Learning only then, and so does this menu. */
-  readonly learningOn = computed(() =>
-    ['coursework', 'live_classes', 'tests', 'results'].some((key) => this.tenants.isOn(key)),
-  );
 
   /** The icon for a menu heading, as the institute chose it. Falls back to a plain list icon. */
   headingIcon(name: string): string {
