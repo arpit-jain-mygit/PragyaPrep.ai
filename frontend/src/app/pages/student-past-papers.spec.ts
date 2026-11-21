@@ -42,7 +42,7 @@ describe('Past papers, Syllabus and Filter topics', () => {
     fixture.detectChanges();
     env.http.expectOne(`${API}/api/my/filter-topics`).flush([{ paper: 'physics', topics: [{ name: 'Magnetism', count: 3 }] }]);
     await settle(fixture);
-    el<HTMLButtonElement>(fixture, '[data-topic="Magnetism"] button').click();
+    el<HTMLButtonElement>(fixture, '[data-topic="Magnetism"] button:not([data-view])').click();
     const request = env.http.expectOne(`${API}/api/my/practice`);
     expect(request.request.body).toEqual({ paper: 'physics', topic: 'Magnetism', count: 10 });
     request.flush({ id: 'pr1', title: 'Practice: Magnetism', question_count: 3 }, { status: 201, statusText: 'Created' });

@@ -1529,3 +1529,32 @@ export interface ReleaseHistoryRow {
 export interface ReleaseHistory {
   releases: ReleaseHistoryRow[];
 }
+
+/** One question in the Filter topics viewer. Options are shown with their reasons; the answer is there to check against. */
+export interface ViewerOption {
+  letter: string;
+  text: string;
+  why: string;
+}
+
+export interface ViewerQuestion {
+  id: string;
+  paper: string;
+  topic: string;
+  difficulty: string;
+  text: string;
+  years: number[];
+  kind: 'mcq' | 'fill_in';
+  options?: ViewerOption[];
+  correct_letter?: string | null;
+  answer?: string | string[] | null;
+  explanation?: string | null;
+}
+
+export interface QuestionViewer {
+  total: number;
+  limit: number;
+  questions: ViewerQuestion[];
+  years: number[];
+  difficulties: string[];
+}
