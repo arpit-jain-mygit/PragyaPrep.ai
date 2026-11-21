@@ -65,6 +65,10 @@ interface MenuGroup {
     .side-item.active { background: var(--brand); color: var(--brand-text); font-weight: 600; }
     .side-home { font-weight: 600; }
     .side-heading { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 0.6rem; padding: 0.35rem 0.65rem; border: 0; background: none; color: inherit; opacity: 0.7; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+    .side-label { display: inline-flex; align-items: center; gap: 0.6rem; min-width: 0; }
+    .side-label app-icon { flex: none; color: var(--brand, #2563eb); }
+    .side-item.active .side-label app-icon { color: inherit; }
+    .side-heading .side-label app-icon { color: var(--brand, #2563eb); }
     .side-heading app-icon { transition: transform 0.15s; }
     .side-heading[aria-expanded='true'] app-icon { transform: rotate(90deg); }
     .side-items { list-style: none; margin: 0; padding: 0 0 0 0.4rem; display: flex; flex-direction: column; gap: 0.15rem; }
