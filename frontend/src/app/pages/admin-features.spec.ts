@@ -19,6 +19,15 @@ const ICON_COLOUR = {
   ],
 };
 
+const STUDENT_DESIGN = {
+  design: 'exam',
+  options: [
+    { key: 'exam', name: 'Exam Mode', text: 'Dark and data-first.' },
+    { key: 'warm', name: 'Warm Focus', text: 'Light cream and amber.' },
+    { key: 'mentor', name: 'Friendly Mentor', text: 'Mobile-first.' },
+  ],
+};
+
 async function open(rows = ROWS) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('tenant_admin'));
@@ -29,6 +38,8 @@ async function open(rows = ROWS) {
   env.http.expectOne(`${API}/api/admin/features/headings`).flush({ headings: { Learn: 'book-open', Tools: 'wrench' } });
   await settle(fixture);
   env.http.expectOne(`${API}/api/admin/features/icon-colour`).flush(ICON_COLOUR);
+  await settle(fixture);
+  env.http.expectOne(`${API}/api/admin/features/design`).flush(STUDENT_DESIGN);
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -178,5 +189,36 @@ describe('Menu icon colour', () => {
     http.expectOne(`${API}/api/admin/features/icon-colour`).flush({ detail: 'Choose a colour from the list.' }, { status: 422, statusText: 'x' });
     await settle(fixture);
     expect(el(fixture, '#colour-error').textContent).toContain('Choose a colour from the list.');
+  });
+});
+
+describe('Student view design', () => {
+  it('shows the three designs and marks the one in use', async () => {
+    const { fixture } = await open();
+    expect(all(fixture, '.design-choice').length).toBe(3);
+    expect(el(fixture, '[data-design="exam"]').getAttribute('aria-checked')).toBe('true');
+    expect(el(fixture, '[data-design="warm"]').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('picks a design and saves it on its own', async () => {
+    const { fixture, http } = await open();
+    el<HTMLButtonElement>(fixture, '[data-design="mentor"]').click();
+    await settle(fixture);
+    expect(el(fixture, '[data-design="mentor"]').getAttribute('aria-checked')).toBe('true');
+    el<HTMLButtonElement>(fixture, '#save-design').click();
+    const request = http.expectOne(`${API}/api/admin/features/design`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ design: 'mentor' });
+    request.flush({ ...STUDENT_DESIGN, design: 'mentor' });
+    await settle(fixture);
+    expect(el(fixture, '#design-saved').textContent).toContain('Saved.');
+  });
+
+  it('explains a refused design', async () => {
+    const { fixture, http } = await open();
+    el<HTMLButtonElement>(fixture, '#save-design').click();
+    http.expectOne(`${API}/api/admin/features/design`).flush({ detail: 'Choose one of the three designs.' }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    expect(el(fixture, '#design-error').textContent).toContain('Choose one of the three designs.');
   });
 });

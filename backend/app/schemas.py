@@ -26,6 +26,8 @@ class TenantPublicOut(BaseModel):
     menu_headings: dict = {}
     # The colour of the menu icons: a hex colour from the recommended list.
     menu_icon_colour: str = "#4f46e5"
+    # The student-view design the admin chose: exam, warm or mentor.
+    design: str = "exam"
 
 
 # ---- Login by emailed code ----

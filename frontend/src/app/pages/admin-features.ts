@@ -18,6 +18,9 @@ import { Icon } from '../ui/icon';
     .swatch.on { border-color: var(--ink); font-weight: 600; box-shadow: 0 0 0 2px var(--ink) inset; }
     .swatch-dot { display: inline-block; width: 1rem; height: 1rem; border-radius: 50%; }
     .colour-preview { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 0.8rem; padding: 0.8rem; border: 1px dashed var(--line); border-radius: 10px; background: #fff; color: #0f172a; }
+    .design-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.6rem; margin: 0.6rem 0; }
+    .design-choice { display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start; padding: 0.8rem; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--card, #fff); color: var(--ink); font: inherit; cursor: pointer; }
+    .design-choice.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
     .preview-item { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
     .preview-item app-icon { color: var(--menu-icon, #4f46e5); }
   `],
@@ -112,6 +115,22 @@ import { Icon } from '../ui/icon';
       @if (colourSaved()) { <span class="muted small" id="colour-saved" role="status">Saved.</span> }
     </section>
 
+    <section class="card" id="student-design">
+      <h2>Student view design</h2>
+      <p class="hint">Choose how the student's home page looks. Students see the design you pick here straight away.</p>
+      <div class="design-choices" role="radiogroup" aria-label="Student view design">
+        @for (option of designOptions(); track option.key) {
+          <button type="button" class="design-choice" role="radio" [class.on]="design() === option.key" [attr.aria-checked]="design() === option.key" [attr.data-design]="option.key" (click)="pickDesign(option.key)">
+            <strong>{{ option.name }}</strong>
+            <span class="muted small">{{ option.text }}</span>
+          </button>
+        }
+      </div>
+      <button class="btn secondary" type="button" id="save-design" (click)="saveDesign()">Save design</button>
+      @if (designError(); as problem) { <div class="alert error" role="alert" id="design-error">{{ problem.detail }}</div> }
+      @if (designSaved()) { <span class="muted small" id="design-saved" role="status">Saved.</span> }
+    </section>
+
     <div class="actions">
       <button class="btn" type="button" id="save-features" [disabled]="busy()" (click)="save()">Save</button>
     </div>
@@ -140,6 +159,11 @@ export class AdminFeaturesPage implements OnInit {
   readonly colourError = signal<ApiError | null>(null);
   readonly colourSaved = signal(false);
   readonly recommendedColour = computed(() => this.colourOptions()[0]?.hex ?? '');
+  /** The three student-view designs the admin can pick from, and the one in use. */
+  readonly designOptions = signal<{ key: string; name: string; text: string }[]>([]);
+  readonly design = signal('exam');
+  readonly designError = signal<ApiError | null>(null);
+  readonly designSaved = signal(false);
 
   /** The rows grouped by area, in the order the institute chose. */
   readonly sections = computed(() => {
@@ -162,6 +186,9 @@ export class AdminFeaturesPage implements OnInit {
       const icons = await this.api.iconColour();
       this.colourOptions.set(icons.options);
       this.colour.set(icons.colour);
+      const designs = await this.api.studentDesign();
+      this.designOptions.set(designs.options);
+      this.design.set(designs.design);
     } catch (error) {
       this.loadError.set(error as ApiError);
     }
@@ -186,6 +213,24 @@ export class AdminFeaturesPage implements OnInit {
       this.colourSaved.set(true);
     } catch (error) {
       this.colourError.set(error as ApiError);
+    }
+  }
+
+  pickDesign(key: string): void {
+    this.design.set(key);
+    this.designSaved.set(false);
+  }
+
+  /** Save the student-view design on its own. Students see the saved design on their next visit or refresh. */
+  async saveDesign(): Promise<void> {
+    this.designError.set(null);
+    this.designSaved.set(false);
+    try {
+      const saved = await this.api.saveStudentDesign(this.design());
+      this.design.set(saved.design);
+      this.designSaved.set(true);
+    } catch (error) {
+      this.designError.set(error as ApiError);
     }
   }
 

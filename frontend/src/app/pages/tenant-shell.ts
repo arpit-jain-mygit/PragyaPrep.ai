@@ -19,8 +19,8 @@ import { TenantService } from '../core/tenant.service';
 @Component({
   selector: 'app-tenant-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox, Welcome, StudentSidebar],
-  // Students get the dark Exam Mode look (see styles.css); other roles keep the light one.
-  host: { '[class.exam-mode]': 'isStudent()' },
+  // Students get the design the admin chose (see styles.css); other roles keep the plain look.
+  host: { '[attr.data-design]': 'studentDesign()' },
   styles: `
     .menu-btn { color: var(--brand-text); flex: none; }
     .menu-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 40; }
@@ -129,14 +129,23 @@ import { TenantService } from '../core/tenant.service';
           </aside>
         }
       </header>
-      <div class="frame" [class.with-column]="isStudent()">
-        @if (isStudent()) {
+      <div class="frame" [class.with-column]="hasSideColumn()">
+        @if (hasSideColumn()) {
           <aside class="side-column" aria-label="Menu"><app-student-sidebar /></aside>
         }
         <main class="page">
           <router-outlet />
         </main>
       </div>
+      <!-- The phone design (mentor) has no side column, so its four main links sit in a bar at the bottom. -->
+      @if (studentDesign() === 'mentor') {
+        <nav class="tabbar" aria-label="Quick menu">
+          <a [routerLink]="['/', info.slug, 'home']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><app-icon name="home" /><span>Today</span></a>
+          @if (tenants.isOn('coursework')) { <a [routerLink]="['/', info.slug, 'learning']" routerLinkActive="active"><app-icon name="book" /><span>Learn</span></a> }
+          @if (tenants.isOn('tests')) { <a [routerLink]="['/', info.slug, 'learning', 'tests']" routerLinkActive="active"><app-icon name="clipboard" /><span>Tests</span></a> }
+          @if (tenants.isOn('notices')) { <a [routerLink]="['/', info.slug, 'notices']" routerLinkActive="active"><app-icon name="bell" /><span>Notices</span></a> }
+        </nav>
+      }
       @if (support()) { <app-support-box (close)="support.set(false)" /> }
       @if (member(); as m) { @if (!isPlatformAdmin()) { <app-welcome [role]="m.role" [tenant]="info.slug" [email]="m.email" /> } }
       <p class="footer">Powered by PragyaPrep</p>
@@ -176,6 +185,12 @@ export class TenantShell {
 
   /** Students see their links in the left menu, not in the top bar. */
   readonly isStudent = computed(() => this.member()?.role === 'student');
+
+  /** The design a student sees, as the admin chose it (exam, warm or mentor). Other roles get none. */
+  readonly studentDesign = computed(() => (this.isStudent() ? (this.tenants.info()?.design ?? 'exam') : null));
+
+  /** The side column with the menu shows for students, except in the phone design, which uses the bottom bar. */
+  readonly hasSideColumn = computed(() => this.isStudent() && this.studentDesign() !== 'mentor');
 
   /** Where the institute's name in the top bar leads. Each part of the address is its own item, so slashes aren't escaped. */
   readonly homeLink = computed(() => {

@@ -101,6 +101,19 @@ describe('Institute page frame', () => {
     ],
   };
 
+  it('gives the phone design a bottom bar and no side menu, and marks the page with the design', async () => {
+    const env = setupTestBed();
+    TestBed.inject(TenantService).info.set({ ...STUDENT_MENU, design: 'mentor' });
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    await settle(fixture);
+    expect(fixture.nativeElement.getAttribute('data-design')).toBe('mentor');
+    expect(all(fixture, '.tabbar a').map((a) => a.textContent?.trim())).toEqual(['Today', 'Learn', 'Notices']);
+    expect(all(fixture, '.side-column').length).toBe(0);
+  });
+
   it('shows a student the Dashboard link, then the menu the institute chose, in its order', async () => {
     const env = setupTestBed();
     TestBed.inject(TenantService).info.set(STUDENT_MENU);

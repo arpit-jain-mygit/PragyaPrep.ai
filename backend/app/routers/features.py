@@ -34,6 +34,20 @@ def save_icon_colour(body: dict = Body(...), tenant: dict = Depends(get_tenant),
     return {"colour": saved, "options": features.ICON_COLOURS}
 
 
+@router.get("/design")
+def get_design(tenant: dict = Depends(get_tenant), admin: dict = Depends(require_roles(TENANT_ADMIN))):
+    return {"design": features.design(tenant), "options": features.DESIGNS}
+
+
+@router.put("/design")
+def save_design(body: dict = Body(...), tenant: dict = Depends(get_tenant), repo: Repo = Depends(get_repo), admin: dict = Depends(require_roles(TENANT_ADMIN))):
+    try:
+        saved = features.save_design(repo, tenant, body)
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"design": saved, "options": features.DESIGNS}
+
+
 @router.put("/headings")
 def save_headings(body: dict = Body(...), tenant: dict = Depends(get_tenant), repo: Repo = Depends(get_repo), admin: dict = Depends(require_roles(TENANT_ADMIN))):
     try:

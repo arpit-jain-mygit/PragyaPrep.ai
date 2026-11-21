@@ -122,6 +122,16 @@ ICON_COLOURS = [
 DEFAULT_ICON_COLOUR = ICON_COLOURS[0]["hex"]
 _COLOUR_HEXES = {option["hex"] for option in ICON_COLOURS}
 
+# The three student-view designs the admin can choose from. The key is what the website uses; the name is what the admin sees.
+# The first one is the default, so an institute that never chooses keeps the look it already has.
+DESIGNS = [
+    {"key": "exam", "name": "Exam Mode", "text": "Dark and data-first. Built around mocks and percentiles."},
+    {"key": "warm", "name": "Warm Focus", "text": "Light cream and amber. Calm, with a dark card for where you left off."},
+    {"key": "mentor", "name": "Friendly Mentor", "text": "Mobile-first. One column, a bottom menu, and a daily plan at hand."},
+]
+DEFAULT_DESIGN = DESIGNS[0]["key"]
+_DESIGN_KEYS = {option["key"] for option in DESIGNS}
+
 
 def defaults() -> dict:
     """What a new institute gets: built features on with their own names, planned features off."""
@@ -130,6 +140,7 @@ def defaults() -> dict:
         "items": {key: {"enabled": built, "label": label, "icon": DEFAULT_ICONS.get(key, "list")} for key, _group, label, built in CATALOGUE},
         "headings": dict(HEADING_ICONS),
         "icon_colour": DEFAULT_ICON_COLOUR,
+        "design": DEFAULT_DESIGN,
     }
 
 
@@ -147,6 +158,8 @@ def _saved(tenant: dict) -> dict:
             base["headings"][name] = icon
     if saved.get("icon_colour") in _COLOUR_HEXES:
         base["icon_colour"] = saved["icon_colour"]
+    if saved.get("design") in _DESIGN_KEYS:
+        base["design"] = saved["design"]
     return base
 
 
@@ -200,7 +213,7 @@ def save(repo, tenant: dict, body: list) -> dict:
     sent = clean(body)
     merged_items = {**current["items"], **sent["items"]}
     rest = [key for key in current["order"] if key not in sent["items"]]
-    stored = {"order": sent["order"] + rest, "items": merged_items, "headings": current["headings"], "icon_colour": current["icon_colour"]}
+    stored = {"order": sent["order"] + rest, "items": merged_items, "headings": current["headings"], "icon_colour": current["icon_colour"], "design": current["design"]}
     repo.update_tenant(tenant["slug"], features=stored)
     return view(repo.get_tenant(tenant["slug"]))
 
@@ -244,7 +257,7 @@ def save_headings(repo, tenant: dict, body) -> dict:
         if name not in HEADING_ICONS:
             raise ValidationError(f"Unknown menu heading: {name}.")
         current["headings"][name] = _icon(icon)
-    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": current["icon_colour"]})
+    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": current["icon_colour"], "design": current["design"]})
     return headings(repo.get_tenant(tenant["slug"]))
 
 
@@ -261,5 +274,22 @@ def save_icon_colour(repo, tenant: dict, body) -> str:
     if colour not in _COLOUR_HEXES:
         raise ValidationError("Choose a colour from the list.")
     current = _saved(tenant)
-    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": colour})
+    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": colour, "design": current["design"]})
     return icon_colour(repo.get_tenant(tenant["slug"]))
+
+
+def design(tenant: dict) -> str:
+    """The student-view design the institute chose: one of DESIGNS' keys."""
+    return _saved(tenant)["design"]
+
+
+def save_design(repo, tenant: dict, body) -> str:
+    """Save the student-view design. It must be one of DESIGNS."""
+    if not isinstance(body, dict) or not isinstance(body.get("design"), str):
+        raise ValidationError("Send the design as one of the three choices.")
+    key = body["design"].strip().lower()
+    if key not in _DESIGN_KEYS:
+        raise ValidationError("Choose one of the three designs.")
+    current = _saved(tenant)
+    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": current["icon_colour"], "design": key})
+    return design(repo.get_tenant(tenant["slug"]))

@@ -544,6 +544,15 @@ export class ApiService {
     return this.call(firstValueFrom(this.http.put<{ colour: string; options: { hex: string; name: string }[] }>(`${this.base}/api/admin/features/icon-colour`, { colour })));
   }
 
+  /** The student-view design the institute uses, and the three choices the admin can pick from. */
+  studentDesign(): Promise<{ design: string; options: { key: string; name: string; text: string }[] }> {
+    return this.get('/api/admin/features/design');
+  }
+
+  saveStudentDesign(design: string): Promise<{ design: string; options: { key: string; name: string; text: string }[] }> {
+    return this.call(firstValueFrom(this.http.put<{ design: string; options: { key: string; name: string; text: string }[] }>(`${this.base}/api/admin/features/design`, { design })));
+  }
+
   saveMenuHeadings(headings: Record<string, string>): Promise<{ headings: Record<string, string> }> {
     return this.call(firstValueFrom(this.http.put<{ headings: Record<string, string> }>(`${this.base}/api/admin/features/headings`, headings)));
   }

@@ -180,6 +180,8 @@ export interface TenantInfo {
   menu_headings?: Record<string, string>;
   /** The colour of the menu icons: a hex colour from the recommended list. */
   menu_icon_colour?: string;
+  /** The student-view design the admin chose: exam, warm or mentor. */
+  design?: string;
 }
 
 /** The institute admin's My institute page. */
