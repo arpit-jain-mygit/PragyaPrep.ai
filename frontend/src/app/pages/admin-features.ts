@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ApiService } from '../core/api.service';
 import { ApiError, FeatureRow } from '../core/models';
 import { MENU_ICONS } from '../ui/icon';
@@ -11,7 +12,7 @@ import { Icon } from '../ui/icon';
  */
 @Component({
   selector: 'app-admin-features',
-  imports: [Icon],
+  imports: [Icon, NgTemplateOutlet],
   styles: [`
     .swatches { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.6rem 0; }
     .swatch { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.7rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card, #fff); color: var(--ink); font: inherit; cursor: pointer; }
@@ -21,6 +22,39 @@ import { Icon } from '../ui/icon';
     .design-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.6rem; margin: 0.6rem 0; }
     .design-choice { display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start; padding: 0.8rem; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--card, #fff); color: var(--ink); font: inherit; cursor: pointer; }
     .design-choice.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
+    .design-choice strong { font-size: 1rem; }
+    .design-preview { margin: 0.6rem 0 0.9rem; padding: 0.8rem; border: 1px solid var(--line); border-radius: 12px; background: var(--page, #f5f6f8); }
+    /* A small drawing of a student's home page in each design. The same drawing is used for the thumbnails and the big preview. */
+    .mock { display: flex; flex-direction: column; width: 100%; height: 6rem; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; font-size: 0; }
+    .mock.big { height: 17rem; }
+    .mock-top { display: block; height: 14%; }
+    .mock-body { display: flex; flex: 1; min-height: 0; }
+    .mock-side { display: flex; flex-direction: column; gap: 5px; width: 22%; padding: 6px 5px; }
+    .mock-side i { display: block; height: 5px; border-radius: 3px; background: currentColor; opacity: 0.35; }
+    .mock-main { display: flex; flex: 1; flex-direction: column; gap: 6px; min-width: 0; padding: 6px; }
+    .mock-hero { display: block; height: 32%; border-radius: 6px; }
+    .mock-cards { display: grid; flex: 1; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .mock-cards i { display: block; border-radius: 5px; border: 1px solid #e5e7eb; }
+    .mock-tabs { display: none; }
+    .mock-tabs i { display: block; flex: 1; height: 5px; margin: 0 4px; border-radius: 3px; background: #9ca3af; }
+    .mock[data-look='exam'] { background: #0b1220; color: #94a3b8; }
+    .mock[data-look='exam'] .mock-top { background: #2563eb; }
+    .mock[data-look='exam'] .mock-side { background: #0f172a; }
+    .mock[data-look='exam'] .mock-hero { background: #2563eb; }
+    .mock[data-look='exam'] .mock-cards i { background: #111a2e; border-color: #1e293b; }
+    .mock[data-look='warm'] { background: #fbf8f3; color: #57534e; }
+    .mock[data-look='warm'] .mock-top { background: #b45309; }
+    .mock[data-look='warm'] .mock-side { background: #ffffff; border-right: 1px solid #e7e1d8; }
+    .mock[data-look='warm'] .mock-hero { background: #1c1917; }
+    .mock[data-look='warm'] .mock-cards i { background: #ffffff; }
+    .mock[data-look='mentor'] { background: #fff7f0; color: #6b7280; }
+    .mock[data-look='mentor'] .mock-top { background: #0f766e; }
+    .mock[data-look='mentor'] .mock-side { display: none; }
+    .mock[data-look='mentor'] .mock-hero { background: #0f766e; }
+    .mock[data-look='mentor'] .mock-cards i { background: #ffffff; }
+    .mock[data-look='mentor'] .mock-tabs { display: flex; align-items: center; padding: 6px 0; background: #ffffff; border-top: 1px solid #f3e8dc; }
+    .mock[data-look='mentor'] .mock-tabs i:first-child { background: #c2410c; }
+    .mock.big[data-look='mentor'] { width: 12rem; margin: 0 auto; border-radius: 18px; }
     .preview-item { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
     .preview-item app-icon { color: var(--menu-icon, #4f46e5); }
   `],
@@ -117,19 +151,39 @@ import { Icon } from '../ui/icon';
 
     <section class="card" id="student-design">
       <h2>Student view design</h2>
-      <p class="hint">Choose how the student's home page looks. Students see the design you pick here straight away.</p>
+      <p class="hint">Choose how the student's home page looks. Students see the design you pick here after you save it and they next load the site.</p>
       <div class="design-choices" role="radiogroup" aria-label="Student view design">
         @for (option of designOptions(); track option.key) {
-          <button type="button" class="design-choice" role="radio" [class.on]="design() === option.key" [attr.aria-checked]="design() === option.key" [attr.data-design]="option.key" (click)="pickDesign(option.key)">
+          <button type="button" class="design-choice" role="radio" [class.on]="design() === option.key" [attr.aria-checked]="design() === option.key" [attr.data-choice]="option.key" (click)="pickDesign(option.key)">
+            <ng-container *ngTemplateOutlet="drawing; context: { key: option.key, big: false }" />
             <strong>{{ option.name }}</strong>
             <span class="muted small">{{ option.text }}</span>
           </button>
         }
       </div>
+      <div class="design-preview" id="design-preview" [attr.data-look]="design()"aria-label="Preview of the student home page in the chosen design">
+        <p class="muted small">Student home page in <strong>{{ designName() }}</strong></p>
+        <ng-container *ngTemplateOutlet="drawing; context: { key: design(), big: true }" />
+      </div>
       <button class="btn secondary" type="button" id="save-design" (click)="saveDesign()">Save design</button>
       @if (designError(); as problem) { <div class="alert error" role="alert" id="design-error">{{ problem.detail }}</div> }
       @if (designSaved()) { <span class="muted small" id="design-saved" role="status">Saved.</span> }
     </section>
+
+    <!-- The drawing of a student's home page, in the design named by key. Used for the thumbnails and the big preview. -->
+    <ng-template #drawing let-key="key" let-big="big">
+      <span class="mock" [class.big]="big" [attr.data-look]="key" aria-hidden="true">
+        <span class="mock-top"></span>
+        <span class="mock-body">
+          <span class="mock-side"><i></i><i></i><i></i><i></i></span>
+          <span class="mock-main">
+            <span class="mock-hero"></span>
+            <span class="mock-cards"><i></i><i></i><i></i><i></i></span>
+          </span>
+        </span>
+        <span class="mock-tabs"><i></i><i></i><i></i><i></i></span>
+      </span>
+    </ng-template>
 
     <div class="actions">
       <button class="btn" type="button" id="save-features" [disabled]="busy()" (click)="save()">Save</button>
@@ -164,6 +218,7 @@ export class AdminFeaturesPage implements OnInit {
   readonly design = signal('exam');
   readonly designError = signal<ApiError | null>(null);
   readonly designSaved = signal(false);
+  readonly designName = computed(() => this.designOptions().find((option) => option.key === this.design())?.name ?? '');
 
   /** The rows grouped by area, in the order the institute chose. */
   readonly sections = computed(() => {

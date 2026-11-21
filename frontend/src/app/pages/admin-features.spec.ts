@@ -196,15 +196,26 @@ describe('Student view design', () => {
   it('shows the three designs and marks the one in use', async () => {
     const { fixture } = await open();
     expect(all(fixture, '.design-choice').length).toBe(3);
-    expect(el(fixture, '[data-design="exam"]').getAttribute('aria-checked')).toBe('true');
-    expect(el(fixture, '[data-design="warm"]').getAttribute('aria-checked')).toBe('false');
+    expect(el(fixture, '[data-choice="exam"]').getAttribute('aria-checked')).toBe('true');
+    expect(el(fixture, '[data-choice="warm"]').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('draws a small picture of each design and a larger one for the chosen design', async () => {
+    const { fixture } = await open();
+    expect(all(fixture, '.design-choice .mock').map((node) => node.getAttribute('data-look'))).toEqual(['exam', 'warm', 'mentor']);
+    expect(el(fixture, '#design-preview').getAttribute('data-look')).toBe('exam');
+    expect(el(fixture, '#design-preview').textContent).toContain('Exam Mode');
+    el<HTMLButtonElement>(fixture, '[data-choice="warm"]').click();
+    await settle(fixture);
+    expect(el(fixture, '#design-preview').getAttribute('data-look')).toBe('warm');
+    expect(el(fixture, '#design-preview').textContent).toContain('Warm Focus');
   });
 
   it('picks a design and saves it on its own', async () => {
     const { fixture, http } = await open();
-    el<HTMLButtonElement>(fixture, '[data-design="mentor"]').click();
+    el<HTMLButtonElement>(fixture, '[data-choice="mentor"]').click();
     await settle(fixture);
-    expect(el(fixture, '[data-design="mentor"]').getAttribute('aria-checked')).toBe('true');
+    expect(el(fixture, '[data-choice="mentor"]').getAttribute('aria-checked')).toBe('true');
     el<HTMLButtonElement>(fixture, '#save-design').click();
     const request = http.expectOne(`${API}/api/admin/features/design`);
     expect(request.request.method).toBe('PUT');
