@@ -179,9 +179,9 @@ interface Chosen {
               </p>
               @if (pick.sub.note) { <p class="cw-note" id="note">{{ pick.sub.note }}</p> }
 
-              @if (pick.sub.materials.length) {
+              @if (videos(pick.sub.materials).length) {
                 <ul class="cw-material" id="material">
-                  @for (item of pick.sub.materials; track $index) {
+                  @for (item of videos(pick.sub.materials); track $index) {
                     <li>
                       @if (item.type === 'link') {
                         <app-icon name="link" [size]="16" />
@@ -411,6 +411,11 @@ export class StudentCourseworkPage implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Only the videos of a sub-topic: PDFs and links are left out of the Videos page. */
+  videos(items: StudentMaterial[]): StudentMaterial[] {
+    return items.filter((item) => item.type === 'file' && item.kind === 'mp4');
   }
 
   async openFile(pick: Chosen, item: Extract<StudentMaterial, { type: 'file' }>): Promise<void> {

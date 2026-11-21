@@ -86,12 +86,12 @@ describe('Student coursework page', () => {
     await settle(fixture);
     expect(el(fixture, '#note').textContent).toBe('Read first');
     expect(el(fixture, '#due').textContent).toContain('Done 14 Jan 2027');
+    // The Videos page shows only videos: the PDF and the link are left out.
     const items = all(fixture, '#material li').map((li) => li.textContent!.replace(/\s+/g, ' ').trim());
-    expect(items[0]).toContain('Percent notes PDF · 2 KB');
-    expect(items[1]).toContain('Lecture Video');
-    expect(items[2]).toContain('Intro');
-    expect(el<HTMLAnchorElement>(fixture, '#material a').getAttribute('href')).toBe('https://youtu.be/abc');
-    expect(el<HTMLAnchorElement>(fixture, '#material a').getAttribute('rel')).toContain('noopener');
+    expect(items.length).toBe(1);
+    expect(items[0]).toContain('Lecture Video');
+    expect(text(fixture)).not.toContain('Percent notes');
+    expect(all(fixture, '#material a').length).toBe(0);
     expect(el(fixture, '#toggle-done').textContent).toContain('Mark not complete');
   });
 
@@ -182,33 +182,23 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#crumb').textContent).toContain('CLAT');
   });
 
-  it('opens a PDF in a new tab through an expiring link', async () => {
+  it('plays a video in the page', async () => {
     const { fixture, http } = await open();
-    const tab = { opener: 'x', location: { href: '' }, close: vi.fn() } as unknown as Window;
-    vi.spyOn(window, 'open').mockReturnValue(tab);
     el(fixture, '[data-sub="Concepts"]').click();
     await settle(fixture);
     all(fixture, '#material button')[0].click();
-    http.expectOne(`${API}/api/my/courses/c1/files/f1/link`).flush({ url: 'https://files.example/a.pdf', expires_in: 300, content_type: 'application/pdf', title: 'Percent notes' });
-    await settle(fixture);
-    expect(tab.location.href).toBe('https://files.example/a.pdf');
-    expect(tab.opener).toBeNull();
-  });
-
-  it('plays a video in the page and closes the blank tab on a failed link', async () => {
-    const { fixture, http } = await open();
-    el(fixture, '[data-sub="Concepts"]').click();
-    await settle(fixture);
-    all(fixture, '#material button')[1].click();
     http.expectOne(`${API}/api/my/courses/c1/files/f2/link`).flush({ url: 'https://files.example/v.mp4', expires_in: 300, content_type: 'video/mp4', title: 'Lecture' });
     await settle(fixture);
     expect(el<HTMLVideoElement>(fixture, '#player').getAttribute('src')).toBe('https://files.example/v.mp4');
-    const tab = { opener: 'x', location: { href: '' }, close: vi.fn() } as unknown as Window;
-    vi.spyOn(window, 'open').mockReturnValue(tab);
-    all(fixture, '#material button')[0].click();
-    http.expectOne(`${API}/api/my/courses/c1/files/f1/link`).flush({ detail: 'This course is no longer available to you.' }, { status: 404, statusText: 'x' });
+  });
+
+  it('explains when a video link is refused', async () => {
+    const { fixture, http } = await open();
+    el(fixture, '[data-sub="Concepts"]').click();
     await settle(fixture);
-    expect(tab.close).toHaveBeenCalled();
+    all(fixture, '#material button')[0].click();
+    http.expectOne(`${API}/api/my/courses/c1/files/f2/link`).flush({ detail: 'This course is no longer available to you.' }, { status: 404, statusText: 'x' });
+    await settle(fixture);
     expect(text(fixture)).toContain('no longer available');
   });
 
@@ -216,7 +206,7 @@ describe('Student coursework page', () => {
     const { fixture, http } = await open();
     el(fixture, '[data-sub="Concepts"]').click();
     await settle(fixture);
-    all(fixture, '#material button')[1].click();
+    all(fixture, '#material button')[0].click();
     http.expectOne(`${API}/api/my/courses/c1/files/f2/link`).flush({ url: 'https://files.example/v1.mp4', expires_in: 300, content_type: 'video/mp4', title: 'Lecture' });
     await settle(fixture);
     for (const n of [2, 3]) {
@@ -233,7 +223,7 @@ describe('Student coursework page', () => {
   const LOCKED = (title: string) => sub({ id: `x-${title}`, title, locked: true, note: '', due: null, due_from: null, days_left: null, materials: [] });
 
   function freeMode() {
-    const free = sub({ id: 'free1', title: 'Free one', free: true, materials: [FILE] });
+    const free = sub({ id: 'free1', title: 'Free one', free: true, materials: [VIDEO] });
     return {
       summary: { total: 1, done: 0, left: 1, overdue: 0, this_week: 0 },
       courses: [
@@ -255,7 +245,7 @@ describe('Student coursework page', () => {
     expect(all(fixture, '[data-course] .cw-bar').length).toBe(0);
     expect(all(fixture, '[data-course="CLAT"]').length).toBe(1);
     expect(all(fixture, '[data-sub="Other"]').length).toBe(0);
-    expect(el(fixture, '#material').textContent).toContain('Percent notes');
+    expect(el(fixture, '#material').textContent).toContain('Lecture');
   });
 
   it('shows a locked sub-topic as locked, with no material and no Mark complete', async () => {
