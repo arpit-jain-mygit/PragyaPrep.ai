@@ -26,6 +26,7 @@ interface Chosen {
   selector: 'app-student-coursework',
   imports: [AskAi, Icon, InfoTip],
   styles: [`
+    [hidden] { display: none !important; }
     .cw-trail { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0.2rem 0 0.8rem; }
     .cw-trail-link { background: none; border: 0; padding: 0.2rem 0.4rem; color: var(--brand, #2563eb); font: inherit; cursor: pointer; border-radius: 6px; }
     .cw-trail-link:hover { background: var(--page); }
@@ -63,7 +64,7 @@ interface Chosen {
         <div class="empty-state" id="no-coursework"><app-icon name="layers" [size]="32" /><p>No coursework yet</p></div>
       } @else {
         @if (opened() !== 'all') {
-          <div class="seg-row" id="cw-filter" role="group" aria-label="Which items to show">
+          <div class="seg-row" id="cw-filter" role="group" aria-label="Which items to show" [hidden]="!!chosen()">
             <div class="seg">
               <button type="button" id="cw-scope" [attr.aria-pressed]="filter() !== 'all'" [class.on]="filter() !== 'all'" (click)="setFilter(opened())">
                 <strong id="cw-filter-count">{{ matchCount() }} {{ matchCount() === 1 ? 'item' : 'items' }}</strong> {{ label(opened()) }}
@@ -75,6 +76,16 @@ interface Chosen {
         }
 
         <!-- Where the student is: All courses, then the course, then the topic. Each part can be clicked to go back. -->
+        @if (chosen(); as pick) {
+          <!-- A video is open: the path is course › subject › topic. Course and topic go back to their tiles. -->
+          <nav class="cw-trail" id="trail" aria-label="Where you are">
+            <button type="button" class="cw-trail-link" id="trail-course" (click)="backToTopics()">{{ pick.course.name }}</button>
+            <span class="soft">›</span>
+            <span id="trail-subject">{{ pick.subject.name }}</span>
+            <span class="soft">›</span>
+            <button type="button" class="cw-trail-link" id="trail-topic" (click)="backToSubtopics()">{{ pick.topic.title }}</button>
+          </nav>
+        } @else {
         <nav class="cw-trail" id="trail" aria-label="Where you are">
           @if (course(); as c) {
             <button type="button" class="cw-trail-link" id="trail-all" (click)="backToCourses()">All courses</button>
@@ -90,8 +101,9 @@ interface Chosen {
             <strong>All courses</strong>
           }
         </nav>
+        }
 
-        <section id="tiles" aria-label="Pick a course, topic or sub-topic">
+        <section id="tiles" [hidden]="!!chosen()" aria-label="Pick a course, topic or sub-topic">
           @if (course(); as c) {
             @if (topic(); as t) {
               <!-- Level 3: the sub-topics of the chosen topic -->
@@ -164,7 +176,6 @@ interface Chosen {
         <section class="cw-detail" id="detail" aria-live="polite">
           @if (chosen(); as pick) {
             <div class="card">
-              <p class="soft cw-crumb" id="crumb">{{ pick.course.name }} › {{ pick.subject.name }} › {{ pick.topic.title }}</p>
               <h2 id="sub-name">{{ pick.sub.title }}</h2>
               @if (pick.sub.locked) {
                 <div class="empty-state" id="locked-note" style="padding: 1.2rem 0">
@@ -368,15 +379,22 @@ export class StudentCourseworkPage implements OnInit {
     this.topicId.set(id);
   }
 
-  /** Back to the course tiles. The sub-topic below stays open. */
+  /** Back to the course tiles. Any open video is closed, so the tiles show. */
   backToCourses(): void {
     this.courseId.set(null);
     this.topicId.set(null);
+    this.selectedId.set(null);
   }
 
-  /** Back to the topic tiles of the same course. */
+  /** Back to the topic tiles of the same course. Any open video is closed, so the tiles show. */
   backToTopics(): void {
     this.topicId.set(null);
+    this.selectedId.set(null);
+  }
+
+  /** Back to the sub-topic tiles of the same topic, so another video can be picked. */
+  backToSubtopics(): void {
+    this.selectedId.set(null);
   }
 
   /** Open a sub-topic: its course and topic become the place the student is in, and the sub-topic shows below. */

@@ -42,12 +42,18 @@ async function open(reply: object = data(), queryParams: Record<string, string> 
   return { ...env, fixture };
 }
 
+/** Back to the course tiles from an open video. With a video open the page shows only its path, so the tests go back this way. */
+function backToCourses(fixture: { componentInstance: StudentCourseworkPage; detectChanges: () => void }) {
+  fixture.componentInstance.backToCourses();
+  fixture.detectChanges();
+}
+
 describe('Student coursework page', () => {
   it('shows course, topic and sub-topic tiles with progress, and the overall count', async () => {
     const { fixture } = await open();
     expect(el(fixture, '#overall').textContent!.replace(/\s+/g, ' ')).toContain('1 of 2 done');
     // The page opens on the first sub-topic not done, so go up to the course tiles first.
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     expect(el(fixture, '[data-course="CAT"]').textContent).toContain('1/2');
     el(fixture, '[data-course="CAT"]').click();
@@ -59,24 +65,36 @@ describe('Student coursework page', () => {
     expect(all(fixture, '[data-sub]').map((b) => b.getAttribute('data-sub'))).toEqual(['Concepts', 'Examples']);
   });
 
-  it('shows the way back as a trail of links', async () => {
+  it('shows the path to the open video as course › subject › topic', async () => {
     const { fixture } = await open();
-    expect(el(fixture, '#trail').textContent).toContain('CAT');
-    expect(el(fixture, '#trail').textContent).toContain('Percentages');
+    // The separators are spaced by the layout, so compare the words without the spaces.
+    expect(el(fixture, '#trail').textContent!.replace(/\s+/g, '')).toBe('CAT›QuantitativeAbility›Percentages');
+    expect(all(fixture, '#trail-all').length).toBe(0); // no "All courses" while a video is open
+  });
+
+  it('goes back from the open video to its topic tiles, then to all courses', async () => {
+    const { fixture } = await open();
     el(fixture, '#trail-course').click();
     await settle(fixture);
     expect(all(fixture, '[data-topic]').length).toBe(1);
     expect(all(fixture, '[data-sub]').length).toBe(0);
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     expect(all(fixture, '[data-course]').length).toBe(1);
-    expect(el(fixture, '#sub-name').textContent).toBe('Examples'); // the sub-topic below stays open
+  });
+
+  it('goes back from the open video to its sub-topic tiles, to pick another video', async () => {
+    const { fixture } = await open();
+    el(fixture, '#trail-topic').click();
+    await settle(fixture);
+    expect(all(fixture, '[data-sub]').map((b) => b.getAttribute('data-sub'))).toEqual(['Concepts', 'Examples']);
+    expect(all(fixture, '#sub-name').length).toBe(0); // no video is open until a tile is picked
   });
 
   it('starts on the first sub-topic that is not done, with its path open', async () => {
     const { fixture } = await open();
     expect(el(fixture, '#sub-name').textContent).toBe('Examples');
-    expect(el(fixture, '#crumb').textContent).toContain('CAT › Quantitative Ability › Percentages');
+    expect(el(fixture, '#trail').textContent).toContain('Quantitative Ability');
     expect(el(fixture, '[data-sub="Examples"]').getAttribute('aria-current')).toBe('true');
   });
 
@@ -124,7 +142,7 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#overall').textContent!.replace(/\s+/g, ' ')).toContain('2 of 2 done');
     expect(el(fixture, '#sub-name').textContent).toBe('Examples');
     expect(el(fixture, '#toggle-done').textContent).toContain('Mark not complete');
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     expect(el(fixture, '[data-course="CAT"]').textContent).toContain('2/2');
   });
@@ -153,7 +171,7 @@ describe('Student coursework page', () => {
 
   it('drills from course to topic to sub-topic and back up', async () => {
     const { fixture } = await open();
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     expect(all(fixture, '[data-topic]').length).toBe(0); // course tiles only, no topics yet
     el(fixture, '[data-course="CAT"]').click();
@@ -170,7 +188,7 @@ describe('Student coursework page', () => {
       subjects: [{ paper_id: 'quantitative-ability', name: 'Quantitative Ability', due: null, progress: { total: 1, done: 0 }, topics: [{ id: 't9', title: 'Percentages', due: null, progress: { total: 1, done: 0 }, subtopics: [sub({ id: 'x1', title: 'CLAT version' })] }] }],
     }];
     const { fixture } = await open(data({ extra }));
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     expect(all(fixture, '[data-course]').map((c) => c.getAttribute('data-course'))).toEqual(['CAT', 'CLAT']);
     el(fixture, '[data-course="CLAT"]').click();
@@ -179,7 +197,7 @@ describe('Student coursework page', () => {
     await settle(fixture);
     el(fixture, '[data-sub="CLAT version"]').click();
     await settle(fixture);
-    expect(el(fixture, '#crumb').textContent).toContain('CLAT');
+    expect(el(fixture, '#trail').textContent).toContain('CLAT');
   });
 
   it('plays a video in the page', async () => {
@@ -239,13 +257,13 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#free-note').textContent).toContain('Free sample');
     expect(el(fixture, '[data-sub="Free one"]').textContent).toContain('Free');
     expect(all(fixture, '[data-sub="Paid one"] app-icon').length).toBe(1);
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     expect(el(fixture, '[data-course="CAT"]').querySelector('.cw-count')).toBeNull();
     expect(all(fixture, '[data-course] .cw-bar').length).toBe(0);
     expect(all(fixture, '[data-course="CLAT"]').length).toBe(1);
     expect(all(fixture, '[data-sub="Other"]').length).toBe(0);
-    expect(el(fixture, '#material').textContent).toContain('Lecture');
+    expect(all(fixture, '#material').length).toBe(0); // going back to the courses closes the video
   });
 
   it('shows a locked sub-topic as locked, with no material and no Mark complete', async () => {
@@ -255,7 +273,7 @@ describe('Student coursework page', () => {
     expect(el(fixture, '#locked-note').textContent).toContain('This is locked');
     expect(all(fixture, '#toggle-done').length).toBe(0);
     expect(all(fixture, '#material').length).toBe(0);
-    el(fixture, '#trail-all').click();
+    backToCourses(fixture);
     await settle(fixture);
     el(fixture, '[data-course="CLAT"]').click();
     await settle(fixture);
