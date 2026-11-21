@@ -1,8 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
-import { AnalyseView, ApiError } from '../core/models';
+import { AnalyseFilters, AnalyseView, ApiError } from '../core/models';
 
 const HEADINGS: Record<'topic' | 'sectional' | 'mock', { heading: string; hint: string }> = {
   topic: { heading: 'Topic test analytics', hint: 'How you are doing on the topic tests you have taken, by subject and topic.' },
@@ -16,10 +17,26 @@ const HEADINGS: Record<'topic' | 'sectional' | 'mock', { heading: string; hint: 
  */
 @Component({
   selector: 'app-student-analyse',
-  imports: [DatePipe],
+  imports: [DatePipe, FormsModule],
   template: `
     <div class="page-head"><h1>{{ heading() }}</h1></div>
     <p class="hint">{{ hint() }}</p>
+
+    <section class="card analyse-filters" id="analyse-filters" aria-label="Filters">
+      <label class="small">Subject
+        <select id="filter-subject" name="subject" [(ngModel)]="subject" (ngModelChange)="reload()">
+          <option value="">All subjects</option>
+          @for (option of view()?.subject_options ?? []; track option.id) { <option [value]="option.id">{{ option.name }}</option> }
+        </select>
+      </label>
+      <label class="small">From
+        <input id="filter-start" type="date" name="start" [(ngModel)]="start" (ngModelChange)="reload()" />
+      </label>
+      <label class="small">To
+        <input id="filter-end" type="date" name="end" [(ngModel)]="end" (ngModelChange)="reload()" />
+      </label>
+      <button class="btn secondary small" type="button" id="filter-clear" (click)="clear()">Clear filters</button>
+    </section>
 
     @if (error(); as problem) { <div class="alert error" role="alert" id="analyse-error">{{ problem.detail }}</div> }
     @if (view(); as v) {
@@ -73,12 +90,29 @@ export class StudentAnalyse implements OnInit {
 
   readonly view = signal<AnalyseView | null>(null);
   readonly error = signal<ApiError | null>(null);
+  subject = '';
+  start = '';
+  end = '';
 
   async ngOnInit(): Promise<void> {
+    await this.reload();
+  }
+
+  /** Load the analysis with the current filters. The subject list comes back from the server, so it stays complete. */
+  async reload(): Promise<void> {
+    this.error.set(null);
+    const filters: AnalyseFilters = { subject: this.subject, start: this.start, end: this.end };
     try {
-      this.view.set(await this.api.myAnalyse(this.kind));
+      this.view.set(await this.api.myAnalyse(this.kind, filters));
     } catch (error) {
       this.error.set(error as ApiError);
     }
+  }
+
+  clear(): void {
+    this.subject = '';
+    this.start = '';
+    this.end = '';
+    void this.reload();
   }
 }

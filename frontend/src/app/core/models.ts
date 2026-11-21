@@ -688,6 +688,16 @@ export interface AnalyseView {
     accuracy: string;
     topics: { topic: string; correct: number; wrong: number; unanswered: number; questions: number; accuracy: string }[];
   }[];
+  /** The subjects the student has attempts in, before any filter, so the filter can offer them. */
+  subject_options: { id: string; name: string }[];
+  filters: { subject: string | null; start: string | null; end: string | null };
+}
+
+/** The Analyse filters: a subject, and a start and end date for when the attempt began. Blank means no filter. */
+export interface AnalyseFilters {
+  subject?: string;
+  start?: string;
+  end?: string;
 }
 
 /** SWOT from the last ten sectional and mock attempts. Needs a few attempts before it judges. */

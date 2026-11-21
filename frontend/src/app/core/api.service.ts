@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
-import { AskLog, FeatureRow, MyLeaderboard, MyYesterdayWinners, ReleaseHistory, QuestionViewer, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow } from './models';
+import { AskLog, FeatureRow, MyLeaderboard, MyYesterdayWinners, ReleaseHistory, QuestionViewer, AnalyseFilters, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow } from './models';
 
 /** Turn whatever went wrong into one simple shape the screens can show. */
 export function toApiError(error: unknown): ApiError {
@@ -775,8 +775,10 @@ export class ApiService {
   }
 
   /** Analyse for one kind of test: topic tests, sectionals or mocks. */
-  myAnalyse(view: 'topic' | 'sectional' | 'mock'): Promise<AnalyseView> {
-    return this.get(`/api/my/analyse/${view}`);
+  myAnalyse(view: 'topic' | 'sectional' | 'mock', filters: AnalyseFilters = {}): Promise<AnalyseView> {
+    const params: Record<string, string> = {};
+    for (const [key, value] of Object.entries(filters)) if (value) params[key] = value;
+    return this.get(`/api/my/analyse/${view}`, params);
   }
 
   /** SWOT from the student's last sectional and mock attempts. */

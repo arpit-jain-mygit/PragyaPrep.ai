@@ -70,3 +70,31 @@ def test_a_switched_off_analyse_screen_is_not_available(client, admin, asha):
     sent = [{"key": row["key"], "enabled": False if row["key"] == "analyse_mocks" else row["enabled"], "label": row["label"]} for row in rows]
     assert client.put("/api/admin/features", json=sent, headers=admin).status_code == 200
     assert _view(client, asha, "mock").status_code == 404
+
+
+def test_the_subject_filter_keeps_only_that_subject(client, admin, school, asha, six):
+    mock = make_test(client, admin, school, six, title="Full mock", kind="mock")
+    _right_attempt(client, asha, mock, six)
+    body = client.get("/api/my/analyse/mock", params={"subject": "chemistry"}, headers=asha).json()
+    assert body["summary"]["attempts"] == 0
+    assert body["subjects"] == []
+    everything = _view(client, asha, "mock").json()
+    assert [option["id"] for option in everything["subject_options"]] == ["physics"]
+
+
+def test_the_date_filter_keeps_attempts_that_started_inside_it(client, admin, school, asha, six):
+    mock = make_test(client, admin, school, six, title="Full mock", kind="mock")
+    _right_attempt(client, asha, mock, six)
+    attempt = _view(client, asha, "mock").json()["trend"][0]
+    day = attempt["started_at"][:10]
+    inside = client.get("/api/my/analyse/mock", params={"start": day, "end": day}, headers=asha).json()
+    assert inside["summary"]["attempts"] == 1
+    later = client.get("/api/my/analyse/mock", params={"start": "2999-01-01"}, headers=asha).json()
+    assert later["summary"]["attempts"] == 0
+    assert later["filters"]["start"] == "2999-01-01"
+
+
+def test_a_bad_date_is_refused(client, asha):
+    response = client.get("/api/my/analyse/mock", params={"start": "tomorrow"}, headers=asha)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Choose a date as year-month-day."

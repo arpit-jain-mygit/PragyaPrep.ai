@@ -75,4 +75,19 @@ describe('SWOT', () => {
     expect(el(fixture, '#swot-strengths [data-topic="Optics"]').textContent).toContain('90%');
     expect(el(fixture, '#swot-weaknesses [data-topic="Algebra"]').textContent).toContain('30%');
   });
+
+  it('asks the server again with the subject and date filters when the student changes them', async () => {
+    const { fixture, http } = await open('mock', { ...VIEW, subject_options: [{ id: 'physics', name: 'Physics' }], filters: {} });
+    const subject = el<HTMLSelectElement>(fixture, '#filter-subject');
+    subject.value = 'physics';
+    subject.dispatchEvent(new Event('change'));
+    http.expectOne((req) => req.url === `${API}/api/my/analyse/mock` && req.params.get('subject') === 'physics').flush({ ...VIEW, subject_options: [{ id: 'physics', name: 'Physics' }], filters: { subject: 'physics', start: null, end: null } });
+    await settle(fixture);
+    const start = el<HTMLInputElement>(fixture, '#filter-start');
+    start.value = '2026-11-01';
+    start.dispatchEvent(new Event('input'));
+    http.expectOne((req) => req.url === `${API}/api/my/analyse/mock` && req.params.get('start') === '2026-11-01' && req.params.get('subject') === 'physics').flush(VIEW);
+    await settle(fixture);
+    expect(el(fixture, '#analyse-summary').textContent).toContain('2');
+  });
 });

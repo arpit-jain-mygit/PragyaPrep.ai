@@ -7,10 +7,13 @@
 
 Each attempt keeps its own per-topic counts when it is submitted (see attempts.score), so nothing is re-marked here.
 """
+from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
 from app import attempts as attempt_rules
+from app import clock
 from app.repo import TenantRepo
+from app.tenants import ValidationError
 
 VIEWS = {"topic": "topic", "sectional": "sectional", "mock": "mock"}
 SWOT_ATTEMPTS = 10
@@ -34,10 +37,42 @@ def _submitted(scoped: TenantRepo, member: dict) -> list[dict]:
     return sorted((a for a in rows if a["status"] == "submitted"), key=lambda a: (a["started_at"], a["test_id"], a["number"]))
 
 
-def view(scoped: TenantRepo, member: dict, kind: str) -> dict:
-    """Summary, trend and accuracy by topic for the student's attempts of one kind of test."""
+def _day(started_at: str) -> date:
+    """The Indian calendar day an attempt started on. A time with no zone is taken as UTC."""
+    moment = datetime.fromisoformat(started_at)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(clock.INDIA).date()
+
+
+def _parse_day(raw) -> date | None:
+    """A date from the student's filter (YYYY-MM-DD), or None when the filter is blank."""
+    if raw in (None, ""):
+        return None
+    try:
+        return date.fromisoformat(str(raw))
+    except ValueError:
+        raise ValidationError("Choose a date as year-month-day.")
+
+
+def view(scoped: TenantRepo, member: dict, kind: str, subject: str | None = None, start=None, end=None) -> dict:
+    """Summary, trend and accuracy by topic for the student's attempts of one kind of test.
+
+    Filters (all optional): a subject (its topics only), and a start and end date for when the attempt began.
+    subject_options lists the subjects the student has attempts in, before any filter, so the filter can offer them.
+    """
     kinds = _kinds(scoped, member)
-    done = [a for a in _submitted(scoped, member) if kinds.get(a["test_id"]) == kind]
+    everything = [a for a in _submitted(scoped, member) if kinds.get(a["test_id"]) == kind]
+    options = [{"id": row["id"], "name": row["name"]} for row in attempt_rules.by_subject(everything)]
+    first, last = _parse_day(start), _parse_day(end)
+    done = everything
+    if first or last:
+        done = [a for a in done if (first is None or _day(a["started_at"]) >= first) and (last is None or _day(a["started_at"]) <= last)]
+    if subject:
+        done = [a for a in done if any(key.split("|", 1)[0] == subject for key in (a.get("topics") or {}))]
+    subjects = attempt_rules.by_subject(done)
+    if subject:
+        subjects = [row for row in subjects if row["id"] == subject]
     percentages = [Decimal(a["percentage"]) for a in done]
     average = (sum(percentages) / len(percentages)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if percentages else None
     return {
@@ -47,7 +82,9 @@ def view(scoped: TenantRepo, member: dict, kind: str) -> dict:
             "best": attempt_rules._fmt(max(percentages)) if percentages else None,
         },
         "trend": [{"title": a["title"], "percentage": a["percentage"], "started_at": a["started_at"]} for a in done[-TREND_ATTEMPTS:]],
-        "subjects": attempt_rules.by_subject(done),
+        "subjects": subjects,
+        "subject_options": options,
+        "filters": {"subject": subject or None, "start": first.isoformat() if first else None, "end": last.isoformat() if last else None},
     }
 
 
