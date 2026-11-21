@@ -66,16 +66,16 @@ interface MenuGroup {
     .side-home { font-weight: 600; }
     .side-heading { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 0.6rem; padding: 0.35rem 0.65rem; border: 0; background: none; color: inherit; opacity: 0.7; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
     .side-label { display: inline-flex; align-items: center; gap: 0.6rem; min-width: 0; }
-    .side-label app-icon { flex: none; color: var(--brand, #2563eb); }
+    .side-label app-icon { flex: none; color: var(--menu-icon, var(--brand, #2563eb)); }
     .side-item.active .side-label app-icon { color: inherit; }
-    .side-heading .side-label app-icon { color: var(--brand, #2563eb); }
+    .side-heading .side-label app-icon { color: var(--menu-icon, var(--brand, #2563eb)); }
     .side-heading app-icon { transition: transform 0.15s; }
     .side-heading[aria-expanded='true'] app-icon { transform: rotate(90deg); }
     .side-items { list-style: none; margin: 0; padding: 0 0 0 0.4rem; display: flex; flex-direction: column; gap: 0.15rem; }
     .side-badge { min-width: 1.4rem; padding: 0 0.4rem; border-radius: 999px; background: var(--danger, #b91c1c); color: #fff; font-size: 0.75rem; text-align: center; }
   `,
   template: `
-    <nav class="side-nav" aria-label="Student menu">
+    <nav class="side-nav" aria-label="Student menu" [style.--menu-icon]="iconColour()">
       <a class="side-item side-home" id="side-home" [routerLink]="['/', slug(), 'home']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <span class="side-label"><app-icon [name]="headingIcon('Dashboard')" [size]="16" /> Dashboard</span>
       </a>
@@ -124,6 +124,9 @@ export class StudentSidebar {
   headingIcon(name: string): string {
     return this.tenants.info()?.menu_headings?.[name] ?? 'list';
   }
+
+  /** The colour of the menu icons, as the institute chose it. Falls back to the recommended indigo. */
+  readonly iconColour = computed(() => this.tenants.info()?.menu_icon_colour ?? '#4f46e5');
 
   /** The institute's address part, used to build each link. */
   readonly slug = computed(() => this.tenants.slug() ?? '');

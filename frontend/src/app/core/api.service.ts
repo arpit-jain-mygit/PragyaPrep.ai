@@ -536,6 +536,14 @@ export class ApiService {
     return this.get('/api/admin/features/headings');
   }
 
+  iconColour(): Promise<{ colour: string; options: { hex: string; name: string }[] }> {
+    return this.get('/api/admin/features/icon-colour');
+  }
+
+  saveIconColour(colour: string): Promise<{ colour: string; options: { hex: string; name: string }[] }> {
+    return this.call(firstValueFrom(this.http.put<{ colour: string; options: { hex: string; name: string }[] }>(`${this.base}/api/admin/features/icon-colour`, { colour })));
+  }
+
   saveMenuHeadings(headings: Record<string, string>): Promise<{ headings: Record<string, string> }> {
     return this.call(firstValueFrom(this.http.put<{ headings: Record<string, string> }>(`${this.base}/api/admin/features/headings`, headings)));
   }

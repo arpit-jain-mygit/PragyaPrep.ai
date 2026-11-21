@@ -92,3 +92,36 @@ def test_an_unknown_heading_or_icon_is_refused(client, admin):
     response = client.put(HEADINGS, json={"Learn": "not-an-icon"}, headers=admin)
     assert response.status_code == 422
     assert response.json()["detail"] == "Choose an icon from the list."
+
+
+COLOUR = "/api/admin/features/icon-colour"
+
+
+def test_menu_icons_start_in_the_recommended_colour_and_students_see_it(client, admin):
+    assert client.get("/api/tenant", headers={"X-Tenant": "aaptprep"}).json()["menu_icon_colour"] == "#4f46e5"
+    body = client.get(COLOUR, headers=admin).json()
+    assert body["colour"] == "#4f46e5"
+    assert body["options"][0] == {"hex": "#4f46e5", "name": "Indigo"}  # the recommendation comes first
+
+
+def test_the_admin_can_pick_a_colour_from_the_list(client, admin):
+    response = client.put(COLOUR, json={"colour": "#DC2626"}, headers=admin)
+    assert response.status_code == 200
+    assert response.json()["colour"] == "#dc2626"
+    assert client.get("/api/tenant", headers={"X-Tenant": "aaptprep"}).json()["menu_icon_colour"] == "#dc2626"
+
+
+def test_a_colour_outside_the_list_is_refused(client, admin):
+    response = client.put(COLOUR, json={"colour": "#ffffff"}, headers=admin)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Choose a colour from the list."
+    assert client.put(COLOUR, json={"colour": 5}, headers=admin).status_code == 422
+
+
+def test_saving_other_settings_keeps_the_icon_colour(client, admin):
+    client.put(COLOUR, json={"colour": "#059669"}, headers=admin)
+    client.put(HEADINGS, json={"Tools": "target"}, headers=admin)
+    rows = client.get("/api/admin/features", headers=admin).json()["features"]
+    sent = [{"key": row["key"], "enabled": row["enabled"], "label": row["label"], "icon": row["icon"]} for row in rows]
+    client.put("/api/admin/features", json=sent, headers=admin)
+    assert client.get("/api/tenant", headers={"X-Tenant": "aaptprep"}).json()["menu_icon_colour"] == "#059669"

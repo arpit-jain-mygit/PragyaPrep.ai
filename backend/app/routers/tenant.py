@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api", tags=["tenant"])
 
 @router.get("/tenant", response_model=TenantPublicOut)
 def tenant_info(tenant: dict = Depends(get_tenant)):
-    return {**tenant, "branding": {**tenant["branding"], "text_color": text_color_of(tenant), "logo_url": logo_url(tenant)}, "profile": institute_profile.public_profile(tenant), "features": features.public(tenant), "menu_headings": features.headings(tenant)}
+    return {**tenant, "branding": {**tenant["branding"], "text_color": text_color_of(tenant), "logo_url": logo_url(tenant)}, "profile": institute_profile.public_profile(tenant), "features": features.public(tenant), "menu_headings": features.headings(tenant), "menu_icon_colour": features.icon_colour(tenant)}
 
 
 @router.get("/logo/{slug}", include_in_schema=True)

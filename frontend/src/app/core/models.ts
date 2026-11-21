@@ -178,6 +178,8 @@ export interface TenantInfo {
   features?: PublicFeature[];
   /** The icon for each menu heading (heading name to icon name). */
   menu_headings?: Record<string, string>;
+  /** The colour of the menu icons: a hex colour from the recommended list. */
+  menu_icon_colour?: string;
 }
 
 /** The institute admin's My institute page. */

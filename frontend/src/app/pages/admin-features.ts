@@ -12,6 +12,15 @@ import { Icon } from '../ui/icon';
 @Component({
   selector: 'app-admin-features',
   imports: [Icon],
+  styles: [`
+    .swatches { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.6rem 0; }
+    .swatch { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.7rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card, #fff); color: var(--ink); font: inherit; cursor: pointer; }
+    .swatch.on { border-color: var(--ink); font-weight: 600; box-shadow: 0 0 0 2px var(--ink) inset; }
+    .swatch-dot { display: inline-block; width: 1rem; height: 1rem; border-radius: 50%; }
+    .colour-preview { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 0.8rem; padding: 0.8rem; border: 1px dashed var(--line); border-radius: 10px; background: #fff; color: #0f172a; }
+    .preview-item { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .preview-item app-icon { color: var(--menu-icon, #4f46e5); }
+  `],
   template: `
     <div class="page-head"><h1><app-icon name="layers" /> Features and labels</h1></div>
     <p class="hint" id="features-intro">Choose which screens your students see, what each one is called, and the order they appear in. A screen marked <strong>Coming later</strong> is not built yet, so it can't be switched on, but you can name it now.</p>
@@ -81,6 +90,28 @@ import { Icon } from '../ui/icon';
       @if (headingsSaved()) { <span class="muted small" id="headings-saved" role="status">Saved.</span> }
     </section>
 
+    <section class="card" id="icon-colour">
+      <h2>Menu icon colour</h2>
+      <p class="hint">The colour of the icons in the student's left menu. Pale colours look dull on white, so use a strong one. The first colour is recommended.</p>
+      <div class="swatches" role="radiogroup" aria-label="Menu icon colour">
+        @for (option of colourOptions(); track option.hex) {
+          <button type="button" class="swatch" role="radio" [class.on]="colour() === option.hex" [attr.aria-checked]="colour() === option.hex" [attr.data-colour]="option.hex" (click)="pickColour(option.hex)">
+            <span class="swatch-dot" [style.background]="option.hex"></span>
+            <span>{{ option.name }}</span>
+            @if (option.hex === recommendedColour()) { <span class="tag">Recommended</span> }
+          </button>
+        }
+      </div>
+      <div class="colour-preview" id="colour-preview" aria-label="Preview of the menu icons" [style.--menu-icon]="colour()">
+        <span class="preview-item"><app-icon name="book-open" [size]="18" /> Learn</span>
+        <span class="preview-item"><app-icon name="play" [size]="18" /> Videos</span>
+        <span class="preview-item"><app-icon name="clipboard" [size]="18" /> Topic tests</span>
+      </div>
+      <button class="btn secondary" type="button" id="save-colour" (click)="saveColour()">Save colour</button>
+      @if (colourError(); as problem) { <div class="alert error" role="alert" id="colour-error">{{ problem.detail }}</div> }
+      @if (colourSaved()) { <span class="muted small" id="colour-saved" role="status">Saved.</span> }
+    </section>
+
     <div class="actions">
       <button class="btn" type="button" id="save-features" [disabled]="busy()" (click)="save()">Save</button>
     </div>
@@ -103,6 +134,12 @@ export class AdminFeaturesPage implements OnInit {
   readonly headings = signal<Record<string, string>>({});
   readonly headingsError = signal<ApiError | null>(null);
   readonly headingsSaved = signal(false);
+  /** The colours the admin can pick for the menu icons, recommended first. */
+  readonly colourOptions = signal<{ hex: string; name: string }[]>([]);
+  readonly colour = signal('#4f46e5');
+  readonly colourError = signal<ApiError | null>(null);
+  readonly colourSaved = signal(false);
+  readonly recommendedColour = computed(() => this.colourOptions()[0]?.hex ?? '');
 
   /** The rows grouped by area, in the order the institute chose. */
   readonly sections = computed(() => {
@@ -122,6 +159,9 @@ export class AdminFeaturesPage implements OnInit {
       this.rows.set(answer.features);
       this.target.set(answer.oranges_target ?? 10);
       this.headings.set((await this.api.menuHeadings()).headings);
+      const icons = await this.api.iconColour();
+      this.colourOptions.set(icons.options);
+      this.colour.set(icons.colour);
     } catch (error) {
       this.loadError.set(error as ApiError);
     }
@@ -129,6 +169,24 @@ export class AdminFeaturesPage implements OnInit {
 
   read(event: Event): number {
     return Number((event.target as HTMLInputElement).value);
+  }
+
+  pickColour(hex: string): void {
+    this.colour.set(hex);
+    this.colourSaved.set(false);
+  }
+
+  /** Save the menu icon colour on its own, so it doesn't need the other settings to be saved too. */
+  async saveColour(): Promise<void> {
+    this.colourError.set(null);
+    this.colourSaved.set(false);
+    try {
+      const saved = await this.api.saveIconColour(this.colour());
+      this.colour.set(saved.colour);
+      this.colourSaved.set(true);
+    } catch (error) {
+      this.colourError.set(error as ApiError);
+    }
   }
 
   setHeadingIcon(name: string, icon: string): void {

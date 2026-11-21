@@ -107,12 +107,29 @@ HEADING_ICONS = {
 }
 
 
+# The colours an institute can pick for the student's menu icons. Each one is strong enough to read on white
+# (at least 3 to 1 contrast, the WCAG guide for icons). The first one is the recommendation, and the default.
+ICON_COLOURS = [
+    {"hex": "#4f46e5", "name": "Indigo"},
+    {"hex": "#0891b2", "name": "Cyan"},
+    {"hex": "#059669", "name": "Emerald"},
+    {"hex": "#7c3aed", "name": "Violet"},
+    {"hex": "#db2777", "name": "Pink"},
+    {"hex": "#dc2626", "name": "Red"},
+    {"hex": "#d97706", "name": "Amber"},
+    {"hex": "#0f172a", "name": "Ink"},
+]
+DEFAULT_ICON_COLOUR = ICON_COLOURS[0]["hex"]
+_COLOUR_HEXES = {option["hex"] for option in ICON_COLOURS}
+
+
 def defaults() -> dict:
     """What a new institute gets: built features on with their own names, planned features off."""
     return {
         "order": [key for key, *_ in CATALOGUE],
         "items": {key: {"enabled": built, "label": label, "icon": DEFAULT_ICONS.get(key, "list")} for key, _group, label, built in CATALOGUE},
         "headings": dict(HEADING_ICONS),
+        "icon_colour": DEFAULT_ICON_COLOUR,
     }
 
 
@@ -128,6 +145,8 @@ def _saved(tenant: dict) -> dict:
     for name, icon in (saved.get("headings") or {}).items():
         if name in base["headings"] and icon in MENU_ICONS:
             base["headings"][name] = icon
+    if saved.get("icon_colour") in _COLOUR_HEXES:
+        base["icon_colour"] = saved["icon_colour"]
     return base
 
 
@@ -181,7 +200,7 @@ def save(repo, tenant: dict, body: list) -> dict:
     sent = clean(body)
     merged_items = {**current["items"], **sent["items"]}
     rest = [key for key in current["order"] if key not in sent["items"]]
-    stored = {"order": sent["order"] + rest, "items": merged_items, "headings": current["headings"]}
+    stored = {"order": sent["order"] + rest, "items": merged_items, "headings": current["headings"], "icon_colour": current["icon_colour"]}
     repo.update_tenant(tenant["slug"], features=stored)
     return view(repo.get_tenant(tenant["slug"]))
 
@@ -225,5 +244,22 @@ def save_headings(repo, tenant: dict, body) -> dict:
         if name not in HEADING_ICONS:
             raise ValidationError(f"Unknown menu heading: {name}.")
         current["headings"][name] = _icon(icon)
-    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"]})
+    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": current["icon_colour"]})
     return headings(repo.get_tenant(tenant["slug"]))
+
+
+def icon_colour(tenant: dict) -> str:
+    """The colour of the menu icons, as students see them: a hex colour from ICON_COLOURS."""
+    return _saved(tenant)["icon_colour"]
+
+
+def save_icon_colour(repo, tenant: dict, body) -> str:
+    """Save the colour of the menu icons. It must be one of ICON_COLOURS."""
+    if not isinstance(body, dict) or not isinstance(body.get("colour"), str):
+        raise ValidationError("Send the colour as a hex code from the list.")
+    colour = body["colour"].strip().lower()
+    if colour not in _COLOUR_HEXES:
+        raise ValidationError("Choose a colour from the list.")
+    current = _saved(tenant)
+    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"], "icon_colour": colour})
+    return icon_colour(repo.get_tenant(tenant["slug"]))

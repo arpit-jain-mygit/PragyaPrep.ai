@@ -69,6 +69,7 @@ def test_public_info_comes_back_for_a_known_institute(client, make_tenant):
     body = response.json()
     features = body.pop("features")
     assert body.pop("menu_headings")["Learn"] == "book-open"
+    assert body.pop("menu_icon_colour") == "#4f46e5"
     assert body == {
         "slug": "aaptprep",
         "name": "AAPT Prep",
@@ -83,7 +84,7 @@ def test_public_info_comes_back_for_a_known_institute(client, make_tenant):
 def test_public_info_never_includes_private_fields(client, make_tenant):
     make_tenant("aaptprep")
     body = client.get("/api/tenant", headers=tenant_headers("aaptprep")).json()
-    assert set(body) == {"slug", "name", "branding", "profile", "features", "menu_headings"}
+    assert set(body) == {"slug", "name", "branding", "profile", "features", "menu_headings", "menu_icon_colour"}
 
 
 def test_the_header_is_not_case_sensitive_and_ignores_spaces(client, make_tenant):

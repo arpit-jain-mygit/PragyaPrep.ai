@@ -10,6 +10,15 @@ const ROWS = [
   { key: 'mocks', group: 'Practice', default_label: 'Mocks', built: false, enabled: false, label: 'Mocks', position: 2 },
 ];
 
+const ICON_COLOUR = {
+  colour: '#4f46e5',
+  options: [
+    { hex: '#4f46e5', name: 'Indigo' },
+    { hex: '#0891b2', name: 'Cyan' },
+    { hex: '#dc2626', name: 'Red' },
+  ],
+};
+
 async function open(rows = ROWS) {
   const env = setupTestBed();
   env.sessions.save(sessionFor('tenant_admin'));
@@ -18,6 +27,8 @@ async function open(rows = ROWS) {
   env.http.expectOne(`${API}/api/admin/features`).flush({ features: rows, oranges_target: 10 });
   await settle(fixture);
   env.http.expectOne(`${API}/api/admin/features/headings`).flush({ headings: { Learn: 'book-open', Tools: 'wrench' } });
+  await settle(fixture);
+  env.http.expectOne(`${API}/api/admin/features/icon-colour`).flush(ICON_COLOUR);
   await settle(fixture);
   return { ...env, fixture };
 }
@@ -134,5 +145,38 @@ describe('Features and labels', () => {
     request.flush({ headings: { Learn: 'target', Tools: 'wrench' } });
     await settle(fixture);
     expect(el(fixture, '#headings-saved').textContent).toContain('Saved.');
+  });
+});
+
+describe('Menu icon colour', () => {
+  it('shows the colours with the first one recommended, and marks the saved one', async () => {
+    const { fixture } = await open();
+    const swatches = all(fixture, '.swatch');
+    expect(swatches.length).toBe(3);
+    expect(el(fixture, '[data-colour="#4f46e5"]').textContent).toContain('Recommended');
+    expect(el(fixture, '[data-colour="#4f46e5"]').getAttribute('aria-checked')).toBe('true');
+    expect(el(fixture, '[data-colour="#dc2626"]').textContent).not.toContain('Recommended');
+  });
+
+  it('previews the picked colour and saves it on its own', async () => {
+    const { fixture, http } = await open();
+    el<HTMLButtonElement>(fixture, '[data-colour="#dc2626"]').click();
+    await settle(fixture);
+    expect(el(fixture, '[data-colour="#dc2626"]').getAttribute('aria-checked')).toBe('true');
+    el<HTMLButtonElement>(fixture, '#save-colour').click();
+    const request = http.expectOne(`${API}/api/admin/features/icon-colour`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ colour: '#dc2626' });
+    request.flush({ ...ICON_COLOUR, colour: '#dc2626' });
+    await settle(fixture);
+    expect(el(fixture, '#colour-saved').textContent).toContain('Saved.');
+  });
+
+  it('explains a refused colour', async () => {
+    const { fixture, http } = await open();
+    el<HTMLButtonElement>(fixture, '#save-colour').click();
+    http.expectOne(`${API}/api/admin/features/icon-colour`).flush({ detail: 'Choose a colour from the list.' }, { status: 422, statusText: 'x' });
+    await settle(fixture);
+    expect(el(fixture, '#colour-error').textContent).toContain('Choose a colour from the list.');
   });
 });

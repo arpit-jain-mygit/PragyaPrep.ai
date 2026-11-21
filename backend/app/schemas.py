@@ -24,6 +24,8 @@ class TenantPublicOut(BaseModel):
     features: list = []
     # The icon for each menu heading (heading name to icon name).
     menu_headings: dict = {}
+    # The colour of the menu icons: a hex colour from the recommended list.
+    menu_icon_colour: str = "#4f46e5"
 
 
 # ---- Login by emailed code ----
