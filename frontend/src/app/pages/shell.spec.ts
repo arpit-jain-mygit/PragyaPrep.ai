@@ -92,8 +92,9 @@ describe('Institute page frame', () => {
   /** A student's institute, with the menu items switched on, as the server lists them. */
   const STUDENT_MENU = {
     ...DEMO,
+    menu_headings: { Dashboard: 'grid', Learn: 'book-open', Practice: 'clipboard', 'My learning': 'video' },
     features: [
-      { key: 'coursework', group: 'Learn', label: 'Videos', enabled: true },
+      { key: 'coursework', group: 'Learn', label: 'Videos', enabled: true, icon: 'play' },
       { key: 'topic_tests', group: 'Practice', label: 'Topic tests', enabled: true },
       { key: 'daily_rc', group: 'Practice', label: 'Daily RC', enabled: false },
       { key: 'notices', group: 'My learning', label: 'Notices', enabled: true },
@@ -113,6 +114,23 @@ describe('Institute page frame', () => {
     // Every menu heading starts closed, so only the Dashboard and My Learning links show.
     expect(all(fixture, '.side-item').map((node) => node.textContent?.trim())).toEqual(['Dashboard', 'My Learning']);
     expect(all(fixture, '#notice-badge').length).toBe(0);
+  });
+
+  it('shows each menu item with the icon the institute chose for it', async () => {
+    const env = setupTestBed();
+    TestBed.inject(TenantService).info.set(STUDENT_MENU);
+    env.sessions.save(sessionFor('student'));
+    const fixture = TestBed.createComponent(TenantShell);
+    await settle(fixture);
+    env.http.expectOne(`${API}/api/my/notices`).flush({ unread: 0, action_unread: 0, notices: [] });
+    await settle(fixture);
+    el<HTMLButtonElement>(fixture, '.side-heading').click();
+    fixture.detectChanges();
+    const videos = el(fixture, '[data-key="coursework"]');
+    expect(videos.getAttribute('data-icon')).toBe('play');
+    expect(videos.querySelector('svg')).not.toBeNull();
+    expect(el(fixture, '.side-heading').querySelector('svg')).not.toBeNull();
+    expect(el(fixture, '#side-home').querySelector('svg')).not.toBeNull();
   });
 
   it('shows the unread count on Notices in the menu', async () => {

@@ -22,6 +22,8 @@ class TenantPublicOut(BaseModel):
     profile: dict = {}
     # Which screens the institute shows, with their labels (built features only).
     features: list = []
+    # The icon for each menu heading (heading name to icon name).
+    menu_headings: dict = {}
 
 
 # ---- Login by emailed code ----

@@ -127,7 +127,7 @@ export class ApiService {
     return this.get('/api/admin/features');
   }
 
-  saveFeatures(rows: { key: string; enabled: boolean; label: string }[]): Promise<{ features: FeatureRow[] }> {
+  saveFeatures(rows: { key: string; enabled: boolean; label: string; icon: string }[]): Promise<{ features: FeatureRow[] }> {
     return this.call(firstValueFrom(this.http.put<{ features: FeatureRow[] }>(`${this.base}/api/admin/features`, rows)));
   }
 
@@ -531,6 +531,15 @@ export class ApiService {
   }
 
   /** The institute's daily target for oranges. */
+  /** The icon each menu heading shows, for the admin's Menu headings section. */
+  menuHeadings(): Promise<{ headings: Record<string, string> }> {
+    return this.get('/api/admin/features/headings');
+  }
+
+  saveMenuHeadings(headings: Record<string, string>): Promise<{ headings: Record<string, string> }> {
+    return this.call(firstValueFrom(this.http.put<{ headings: Record<string, string> }>(`${this.base}/api/admin/features/headings`, headings)));
+  }
+
   setOrangesTarget(target: number): Promise<{ target: number }> {
     return this.call(firstValueFrom(this.http.put<{ target: number }>(`${this.base}/api/admin/oranges-target`, { target })));
   }

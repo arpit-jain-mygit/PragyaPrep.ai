@@ -17,6 +17,8 @@ async function open(rows = ROWS) {
   fixture.detectChanges();
   env.http.expectOne(`${API}/api/admin/features`).flush({ features: rows, oranges_target: 10 });
   await settle(fixture);
+  env.http.expectOne(`${API}/api/admin/features/headings`).flush({ headings: { Learn: 'book-open', Tools: 'wrench' } });
+  await settle(fixture);
   return { ...env, fixture };
 }
 
@@ -38,8 +40,8 @@ describe('Features and labels', () => {
     name.dispatchEvent(new Event('input'));
     await settle(fixture);
     el<HTMLButtonElement>(fixture, '#save-features').click();
-    const body = http.expectOne(`${API}/api/admin/features`).request.body as { key: string; enabled: boolean; label: string }[];
-    expect(body.find((row) => row.key === 'mocks')).toEqual({ key: 'mocks', enabled: false, label: 'Full mocks' });
+    const body = http.expectOne(`${API}/api/admin/features`).request.body as { key: string; enabled: boolean; label: string; icon: string }[];
+    expect(body.find((row) => row.key === 'mocks')).toEqual({ key: 'mocks', enabled: false, label: 'Full mocks', icon: 'list' });
   });
 
   it('switches a built screen off and renames it, then saves exactly those settings in order', async () => {
@@ -55,9 +57,9 @@ describe('Features and labels', () => {
     const request = http.expectOne(`${API}/api/admin/features`);
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual([
-      { key: 'coursework', enabled: true, label: 'Lessons' },
-      { key: 'notices', enabled: false, label: 'Notices' },
-      { key: 'mocks', enabled: false, label: 'Mocks' },
+      { key: 'coursework', enabled: true, label: 'Lessons', icon: 'list' },
+      { key: 'notices', enabled: false, label: 'Notices', icon: 'list' },
+      { key: 'mocks', enabled: false, label: 'Mocks', icon: 'list' },
     ]);
   });
 
@@ -116,5 +118,21 @@ describe('Features and labels', () => {
     http.expectOne(`${API}/api/admin/oranges-target`).flush({ detail: 'The daily target must be from 1 to 100.' }, { status: 422, statusText: 'Unprocessable' });
     await settle(fixture);
     expect(el(fixture, '#target-error').textContent).toContain('from 1 to 100');
+  });
+
+  it('lists the menu headings with their icons, and saves a changed icon on its own', async () => {
+    const { fixture, http } = await open();
+    expect(el(fixture, '[data-heading="Learn"]').textContent).toContain('Learn');
+    const select = el<HTMLSelectElement>(fixture, '[data-heading="Learn"] select');
+    expect(select.value).toBe('book-open');
+    select.value = 'target';
+    select.dispatchEvent(new Event('change'));
+    el<HTMLButtonElement>(fixture, '#save-headings').click();
+    const request = http.expectOne(`${API}/api/admin/features/headings`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ Learn: 'target', Tools: 'wrench' });
+    request.flush({ headings: { Learn: 'target', Tools: 'wrench' } });
+    await settle(fixture);
+    expect(el(fixture, '#headings-saved').textContent).toContain('Saved.');
   });
 });

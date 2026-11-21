@@ -24,6 +24,8 @@ export interface PublicFeature {
   group: string;
   label: string;
   enabled: boolean;
+  /** The menu icon, from the admin's choice. Older saved screens may have none, so students fall back to a plain list icon. */
+  icon?: string;
 }
 
 /** One row on the admin's Features & labels page: every feature, built or planned. */
@@ -164,6 +166,7 @@ export interface FeatureRow {
   built: boolean;
   enabled: boolean;
   label: string;
+  icon?: string;
   position: number;
 }
 
@@ -173,6 +176,8 @@ export interface TenantInfo {
   branding: Branding;
   profile?: InstituteProfile;
   features?: PublicFeature[];
+  /** The icon for each menu heading (heading name to icon name). */
+  menu_headings?: Record<string, string>;
 }
 
 /** The institute admin's My institute page. */

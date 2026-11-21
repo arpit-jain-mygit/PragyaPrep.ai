@@ -74,11 +74,46 @@ CATALOGUE = [
 ]
 
 _BY_KEY = {key: {"key": key, "group": group, "default_label": label, "built": built} for key, group, label, built in CATALOGUE}
+# The icons a menu item can show. Each name must be drawn in the student app's icon set (frontend/src/app/ui/icon.ts);
+# a test checks that every name here is there. The admin picks from this list.
+MENU_ICONS = [
+    "grid", "home", "play", "book", "book-open", "clipboard", "file", "layers", "chart", "calendar", "list", "filter",
+    "search", "shuffle", "flag", "target", "history", "clock", "check", "message", "user", "wrench", "smile", "star",
+    "help", "bell", "building", "video", "pencil",
+]
+
+# The icon each menu item starts with, following the wireframes. The admin can change any of them.
+DEFAULT_ICONS = {
+    "dashboard_points": "grid", "word_of_day": "star", "leaderboard": "chart", "yesterday_winners": "flag", "daily_challenge": "target",
+    "word_battle": "pencil", "flashcards": "layers", "word_list": "list", "crossword": "grid", "phrasal_verbs": "message",
+    "activity": "user", "unresolved_doubts": "help", "free_resources": "book",
+    "coursework": "play", "vocabulary": "book", "idioms": "book-open",
+    "topic_tests": "clipboard", "sectionals": "file", "mocks": "layers", "daily_rc": "calendar", "weekly_dilr": "calendar",
+    "past_papers": "history", "past_papers_explore": "search", "syllabus": "list", "filter_topics": "filter",
+    "analyse_topic_tests": "chart", "analyse_sectionals": "chart", "analyse_mocks": "chart", "swot": "target",
+    "forum": "message", "forum_explore": "search", "pi_bank": "user", "interview_guide": "book-open",
+    "feedback": "smile", "help": "help",
+    "application_tracker": "clipboard", "eligibility": "check", "tools_syllabus": "list", "cutoffs": "clock", "loan_calculator": "wrench",
+    "live_classes": "video", "tests": "clipboard", "results": "chart", "notices": "bell",
+}
+
+
+# The menu headings (the groups in the student's left menu, plus the Dashboard link) and the icon each starts with.
+# The admin can change them on the Features and labels page; they are kept apart from the screens.
+HEADING_ICONS = {
+    "Dashboard": "grid", "Vocab builder": "book", "Overview": "chart", "Learn": "book-open", "Practice": "clipboard",
+    "Past papers": "history", "Analyse": "chart", "Forum": "message", "Interview": "user", "Tools": "wrench",
+    "Help": "help", "My learning": "video",
+}
 
 
 def defaults() -> dict:
     """What a new institute gets: built features on with their own names, planned features off."""
-    return {"order": [key for key, *_ in CATALOGUE], "items": {key: {"enabled": built, "label": label} for key, _group, label, built in CATALOGUE}}
+    return {
+        "order": [key for key, *_ in CATALOGUE],
+        "items": {key: {"enabled": built, "label": label, "icon": DEFAULT_ICONS.get(key, "list")} for key, _group, label, built in CATALOGUE},
+        "headings": dict(HEADING_ICONS),
+    }
 
 
 def _saved(tenant: dict) -> dict:
@@ -90,6 +125,9 @@ def _saved(tenant: dict) -> dict:
             base["items"][key] = {**base["items"][key], **item}
     order = [key for key in (saved.get("order") or []) if key in base["items"]]
     base["order"] = order + [key for key in base["order"] if key not in order]
+    for name, icon in (saved.get("headings") or {}).items():
+        if name in base["headings"] and icon in MENU_ICONS:
+            base["headings"][name] = icon
     return base
 
 
@@ -98,6 +136,12 @@ def _label(raw) -> str:
     if not 1 <= len(value) <= MAX_LABEL:
         raise ValidationError(f"A label must be 1 to {MAX_LABEL} characters.")
     return value
+
+
+def _icon(raw) -> str:
+    if raw not in MENU_ICONS:
+        raise ValidationError("Choose an icon from the list.")
+    return raw
 
 
 def clean(raw) -> dict:
@@ -125,7 +169,8 @@ def clean(raw) -> dict:
         if enabled and not _BY_KEY[key]["built"]:
             raise ValidationError(f"{_BY_KEY[key]['default_label']} isn't built yet, so it can't be switched on.")
         label = _label(entry.get("label", _BY_KEY[key]["default_label"]))
-        items[key] = {"enabled": enabled, "label": label}
+        icon = _icon(entry.get("icon", DEFAULT_ICONS.get(key, "list")))
+        items[key] = {"enabled": enabled, "label": label, "icon": icon}
         order.append(key)
     return {"order": order, "items": items}
 
@@ -136,7 +181,7 @@ def save(repo, tenant: dict, body: list) -> dict:
     sent = clean(body)
     merged_items = {**current["items"], **sent["items"]}
     rest = [key for key in current["order"] if key not in sent["items"]]
-    stored = {"order": sent["order"] + rest, "items": merged_items}
+    stored = {"order": sent["order"] + rest, "items": merged_items, "headings": current["headings"]}
     repo.update_tenant(tenant["slug"], features=stored)
     return view(repo.get_tenant(tenant["slug"]))
 
@@ -148,7 +193,7 @@ def view(tenant: dict) -> list[dict]:
     for position, key in enumerate(current["order"]):
         meta = _BY_KEY[key]
         item = current["items"][key]
-        out.append({**meta, "label": item["label"], "enabled": item["enabled"], "position": position})
+        out.append({**meta, "label": item["label"], "enabled": item["enabled"], "icon": item["icon"], "position": position})
     return out
 
 
@@ -160,7 +205,25 @@ def is_on(tenant: dict, key: str) -> bool:
 def public(tenant: dict) -> list[dict]:
     """What students and visitors need: the built features, with their labels, in order. Planned features are not shown."""
     return [
-        {"key": item["key"], "group": item["group"], "label": item["label"], "enabled": item["enabled"]}
+        {"key": item["key"], "group": item["group"], "label": item["label"], "enabled": item["enabled"], "icon": item["icon"]}
         for item in view(tenant)
         if item["built"]
     ]
+
+
+def headings(tenant: dict) -> dict:
+    """The icon for each menu heading, as students see them: heading name to icon name."""
+    return dict(_saved(tenant)["headings"])
+
+
+def save_headings(repo, tenant: dict, body) -> dict:
+    """Save the admin's icon for one or more menu headings. Headings not sent keep their icon. Returns every heading's icon."""
+    if not isinstance(body, dict):
+        raise ValidationError("Send the headings as a map of heading to icon.")
+    current = _saved(tenant)
+    for name, icon in body.items():
+        if name not in HEADING_ICONS:
+            raise ValidationError(f"Unknown menu heading: {name}.")
+        current["headings"][name] = _icon(icon)
+    repo.update_tenant(tenant["slug"], features={"order": current["order"], "items": current["items"], "headings": current["headings"]})
+    return headings(repo.get_tenant(tenant["slug"]))

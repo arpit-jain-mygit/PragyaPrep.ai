@@ -41,6 +41,7 @@ const PAGES: Record<string, string[]> = {
 interface MenuItem {
   key: string;
   label: string;
+  icon: string;
   link: string[];
 }
 
@@ -72,20 +73,20 @@ interface MenuGroup {
   template: `
     <nav class="side-nav" aria-label="Student menu">
       <a class="side-item side-home" id="side-home" [routerLink]="['/', slug(), 'home']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        <span>Dashboard</span>
+        <span class="side-label"><app-icon [name]="headingIcon('Dashboard')" [size]="16" /> Dashboard</span>
       </a>
       @for (group of groups(); track group.name) {
         <section class="side-group" [attr.data-group]="group.name">
           <button class="side-heading" type="button" [attr.aria-expanded]="!isFolded(group.name)" (click)="toggle(group.name)">
-            <span>{{ group.name }}</span>
+            <span class="side-label"><app-icon [name]="headingIcon(group.name)" [size]="14" /> {{ group.name }}</span>
             <app-icon name="chevron-right" [size]="14" />
           </button>
           @if (!isFolded(group.name)) {
             <ul class="side-items">
               @for (item of group.items; track item.key) {
                 <li>
-                  <a class="side-item" [attr.data-key]="item.key" [routerLink]="item.link" routerLinkActive="active">
-                    <span>{{ item.label }}</span>
+                  <a class="side-item" [attr.data-key]="item.key" [attr.data-icon]="item.icon" [routerLink]="item.link" routerLinkActive="active">
+                    <span class="side-label"><app-icon [name]="item.icon" [size]="16" /> {{ item.label }}</span>
                     @if (item.key === 'notices' && notices.unread() > 0) { <span class="side-badge" id="side-notice-badge">{{ notices.unread() }}</span> }
                   </a>
                 </li>
@@ -115,6 +116,11 @@ export class StudentSidebar {
     ['coursework', 'live_classes', 'tests', 'results'].some((key) => this.tenants.isOn(key)),
   );
 
+  /** The icon for a menu heading, as the institute chose it. Falls back to a plain list icon. */
+  headingIcon(name: string): string {
+    return this.tenants.info()?.menu_headings?.[name] ?? 'list';
+  }
+
   /** The institute's address part, used to build each link. */
   readonly slug = computed(() => this.tenants.slug() ?? '');
 
@@ -134,7 +140,7 @@ export class StudentSidebar {
         group = { name: row.group, items: [] };
         groups.push(group);
       }
-      group.items.push({ key: row.key, label: row.label, link: ['/', this.slug(), ...page] });
+      group.items.push({ key: row.key, label: row.label, icon: row.icon ?? 'list', link: ['/', this.slug(), ...page] });
     }
     return groups;
   });
