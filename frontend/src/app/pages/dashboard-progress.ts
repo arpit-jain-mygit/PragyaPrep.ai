@@ -16,8 +16,8 @@ import { Icon } from '../ui/icon';
       <section class="card dashboard-progress" id="todays-progress">
         <h2><app-icon name="flag" [size]="18" /> Today's progress</h2>
         <p><strong data-collected>{{ o.collected_today }}</strong> of <span data-target>{{ o.target }}</span> oranges today</p>
-        <div role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()" style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin:8px 0">
-          <span data-bar [style.width.%]="percent()" style="display:block;height:100%;background:#f97316"></span>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()">
+          <span class="progress-fill" data-bar [style.width.%]="percent()"></span>
         </div>
         <p class="muted small" data-streak>{{ o.days_strong }} {{ o.days_strong === 1 ? 'day' : 'days' }} strong in a row · {{ o.collected_total }} oranges so far</p>
       </section>

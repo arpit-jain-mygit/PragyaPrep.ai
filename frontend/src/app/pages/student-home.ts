@@ -28,28 +28,31 @@ import { TodaysPassages } from './todays-passages';
         <h1 class="greeting"><app-avatar [url]="m.avatar_url" [first]="m.first_name" [last]="m.last_name" [email]="m.email" [size]="76" /> Welcome, {{ m.first_name }}</h1>
         <span class="muted small">{{ m.email }}</span>
       </div>
-      <app-dashboard-progress />
-      <app-leaderboard />
-      <app-yesterday-winners />
-      <app-todays-passages />
-      <app-student-tiles />
-      <app-word-of-day />
-      @if (batches().length) {
-        <section class="card" id="my-batches"><h2><app-icon name="layers" [size]="18" /> My {{ batches().length === 1 ? 'batch' : 'batches' }}</h2><app-batch-list [batches]="batches()" /></section>
-      }
-      @if (contact(); as c) {
-        <section class="card" id="contact-institute">
-          <h2><app-icon name="building" [size]="18" /> Contact your institute</h2>
-          @if (c.description) { <p class="muted">{{ c.description }}</p> }
-          @if (c.exam_categories.length) { <p class="row">@for (x of c.exam_categories; track x) { <span class="chip approved">{{ x }}</span> }</p> }
-          <ul class="plain-list">
-            @if (c.city) { <li><app-icon name="flag" [size]="16" /> {{ c.city }}</li> }
-            @if (c.contact_phone) { <li><app-icon name="clock" [size]="16" /> <a [href]="'tel:' + c.contact_phone">{{ c.contact_phone }}</a></li> }
-            @if (c.contact_email) { <li><app-icon name="mail" [size]="16" /> <a [href]="'mailto:' + c.contact_email">{{ c.contact_email }}</a></li> }
-            @if (c.website) { <li><app-icon name="link" [size]="16" /> <a [href]="c.website" target="_blank" rel="noopener noreferrer">{{ c.website }}</a></li> }
-          </ul>
-        </section>
-      }
+      <!-- The cards sit in a grid: on wide screens two per row (Exam Mode), and the wide ones take a full row. -->
+      <div class="home-grid">
+        <app-dashboard-progress class="wide" />
+        <app-leaderboard />
+        <app-yesterday-winners />
+        <app-todays-passages />
+        <app-student-tiles class="wide" />
+        <app-word-of-day />
+        @if (batches().length) {
+          <section class="card" id="my-batches"><h2><app-icon name="layers" [size]="18" /> My {{ batches().length === 1 ? 'batch' : 'batches' }}</h2><app-batch-list [batches]="batches()" /></section>
+        }
+        @if (contact(); as c) {
+          <section class="card" id="contact-institute">
+            <h2><app-icon name="building" [size]="18" /> Contact your institute</h2>
+            @if (c.description) { <p class="muted">{{ c.description }}</p> }
+            @if (c.exam_categories.length) { <p class="row">@for (x of c.exam_categories; track x) { <span class="chip approved">{{ x }}</span> }</p> }
+            <ul class="plain-list">
+              @if (c.city) { <li><app-icon name="flag" [size]="16" /> {{ c.city }}</li> }
+              @if (c.contact_phone) { <li><app-icon name="clock" [size]="16" /> <a [href]="'tel:' + c.contact_phone">{{ c.contact_phone }}</a></li> }
+              @if (c.contact_email) { <li><app-icon name="mail" [size]="16" /> <a [href]="'mailto:' + c.contact_email">{{ c.contact_email }}</a></li> }
+              @if (c.website) { <li><app-icon name="link" [size]="16" /> <a [href]="c.website" target="_blank" rel="noopener noreferrer">{{ c.website }}</a></li> }
+            </ul>
+          </section>
+        }
+      </div>
     } @else if (!error()) {
       <p class="muted">Loading…</p>
     }

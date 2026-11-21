@@ -763,3 +763,30 @@ img.qimg { cursor: zoom-in; }
   .feature-row { grid-template-columns: auto minmax(0, 1fr) auto; }
   .feature-row .move { grid-column: 2 / 4; justify-self: start; }
 }
+
+/* Exam Mode (student view, design B): a dark, data-first look. It changes only the neutral colours.
+   The institute keeps its own brand colour, so buttons, the top bar and the active menu item stay its colour. */
+.exam-mode {
+  display: block;
+  min-height: 100vh;
+  --page: #0b1220;
+  --card: #111a2e;
+  --ink: #e5e7eb;
+  --muted: #94a3b8;
+  --line: #1e293b;
+  background: var(--page);
+  color: var(--ink);
+}
+.exam-mode .page { width: 100%; max-width: 80rem; }
+/* The home cards sit in two columns on wide screens; cards marked wide take the full row. */
+.home-grid { display: block; }
+.exam-mode .home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; align-items: start; }
+.exam-mode .home-grid > .wide { grid-column: 1 / -1; }
+/* Today's progress is the hero card: it takes the brand colour, so the day's number stands out. */
+.progress-track { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.progress-fill { display: block; height: 100%; background: #f97316; }
+.exam-mode .dashboard-progress { background: var(--brand); color: var(--brand-text); border-color: transparent; }
+.exam-mode .dashboard-progress h2 { color: var(--brand-text); }
+.exam-mode .dashboard-progress .progress-track { background: rgba(0, 0, 0, 0.25); }
+.exam-mode .dashboard-progress .progress-fill { background: var(--brand-text); }
+.exam-mode .dashboard-progress .muted { color: inherit; opacity: 0.8; }

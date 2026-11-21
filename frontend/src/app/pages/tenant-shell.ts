@@ -19,6 +19,8 @@ import { TenantService } from '../core/tenant.service';
 @Component({
   selector: 'app-tenant-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, Avatar, Icon, SupportBox, Welcome, StudentSidebar],
+  // Students get the dark Exam Mode look (see styles.css); other roles keep the light one.
+  host: { '[class.exam-mode]': 'isStudent()' },
   styles: `
     .menu-btn { color: var(--brand-text); flex: none; }
     .menu-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 40; }
