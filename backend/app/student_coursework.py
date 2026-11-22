@@ -67,6 +67,8 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
     free = coursework.free_pick(scoped)
     summary = {"total": 0, "done": 0, "left": 0, "overdue": 0, "this_week": 0}
     courses = []
+    # True when the student can open a course with English > Vocabulary in its plan. Drives the Vocabulary link in My Learning.
+    vocabulary = False
     for course_id, has_access in _courses_to_show(scoped, member):
         try:
             plan = coursework.tree(scoped, course_id)
@@ -102,6 +104,8 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
                     })
                 if not subtopics:
                     continue
+                if has_access and subject["paper_id"] == "english" and topic["title"].strip().lower() == "vocabulary":
+                    vocabulary = True
                 finished = sum(1 for s in subtopics if s["done"])
                 summary["total"] += sum(1 for s in subtopics if not s["locked"])
                 summary["done"] += finished
@@ -118,7 +122,7 @@ def tree(scoped: TenantRepo, member: dict) -> dict:
             continue
         courses.append({"id": course_id, "name": plan["course"]["name"], "locked": not has_access, "progress": _progress(course_total, course_done), "overdue": course_overdue, "subjects": subjects})
     summary["left"] = summary["total"] - summary["done"]
-    return {"summary": summary, "courses": courses}
+    return {"summary": summary, "courses": courses, "vocabulary": vocabulary}
 
 
 def set_done(scoped: TenantRepo, member: dict, course_id: str, subtopic_id: str, done: bool) -> dict:

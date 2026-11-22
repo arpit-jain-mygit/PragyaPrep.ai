@@ -1076,6 +1076,8 @@ export interface StudentCourse {
 export interface StudentCoursework {
   summary: { total: number; done: number; left: number; overdue: number; this_week: number };
   courses: StudentCourse[];
+  // True when the student can open a course with English > Vocabulary. Shows the Vocabulary link in My Learning.
+  vocabulary?: boolean;
 }
 
 export interface StudentLiveClass {
