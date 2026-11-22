@@ -27,12 +27,11 @@ describe('My Learning', () => {
     expect(el(fixture, 'router-outlet')).not.toBeNull();
   });
 
-  it('shows the Vocabulary link in a new tab only when the student has the English Vocabulary course', async () => {
+  it('shows the Vocabulary tab only when the student has the English Vocabulary course', async () => {
     const fixture = await openWithPlan(true);
     const tabs = all<HTMLAnchorElement>(fixture, 'nav.tabs a');
     expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Topic tests', 'Results', 'Vocabulary']);
-    expect(tabs[5].getAttribute('href')).toBe('https://d20eivggluollb.cloudfront.net');
-    expect(tabs[5].getAttribute('target')).toBe('_blank');
+    expect(tabs[5].getAttribute('href')).toBe('/demo/learning/vocabulary');
   });
 });
 
@@ -42,7 +41,7 @@ describe('Student routes', () => {
 
   it('puts coursework, tests and results under My Learning, coursework first', () => {
     const learning = named('learning')[0];
-    expect(learning.children!.map((c) => c.path)).toEqual(['', 'live', 'tests', 'topics', 'results']);
+    expect(learning.children!.map((c) => c.path)).toEqual(['', 'live', 'tests', 'topics', 'results', 'vocabulary']);
     expect(learning.canActivate?.length).toBe(1);
   });
 

@@ -21,7 +21,7 @@ import { InfoTip } from '../ui/info-tip';
       @if (tenants.isOn('results')) { <a class="tab with-icon" id="tab-results" [routerLink]="['/', tenants.slug(), 'learning', 'results']" routerLinkActive="active"><app-icon name="chart" [size]="16" /> {{ tenants.labelOf('results', 'Results') }}</a> }
       <!-- Opens the English Vocabulary app in a new tab. It is a separate site, so it is a plain link, not a route. Shown only with the course. -->
       @if (showVocabulary()) {
-        <a class="tab with-icon" id="tab-vocabulary" [href]="vocabularyUrl" target="_blank" rel="noopener"><app-icon name="book" [size]="16" /> Vocabulary</a>
+        <a class="tab with-icon" id="tab-vocabulary" [routerLink]="['/', tenants.slug(), 'learning', 'vocabulary']" routerLinkActive="active"><app-icon name="book" [size]="16" /> Vocabulary</a>
       }
     </nav>
     <router-outlet />
@@ -32,8 +32,6 @@ export class StudentLearning implements OnInit {
   private readonly api = inject(ApiService);
   // The Vocabulary link is shown only when the student has a course with English > Vocabulary. Hidden until the answer arrives.
   readonly showVocabulary = signal(false);
-  // Where the English Vocabulary app is served. Dev address for now; move to a config value before a real institute uses it.
-  readonly vocabularyUrl = 'https://d20eivggluollb.cloudfront.net';
 
   ngOnInit() {
     this.api.myCoursework()

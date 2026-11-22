@@ -170,6 +170,8 @@ export const routes: Routes = [
           { path: 'tests', loadComponent: () => import('./pages/student-tests').then((m) => m.StudentTests) },
           { path: 'topics', loadComponent: () => import('./pages/topic-tests').then((m) => m.TopicTests) },
           { path: 'results', loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults) },
+          // The English Vocabulary app (Word Wizard), shown inside My Learning.
+          { path: 'vocabulary', loadComponent: () => import('./pages/student-vocabulary').then((m) => m.StudentVocabulary) },
         ],
       },
       {
