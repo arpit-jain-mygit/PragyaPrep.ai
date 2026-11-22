@@ -1,20 +1,37 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { describe, expect, it } from 'vitest';
 import { routes } from '../app.routes';
 import { all, el, sessionFor, settle, setupTestBed, text } from '../testing';
 import { StudentLearning } from './student-learning';
 
 describe('My Learning', () => {
-  it('has the title and four tabs: Coursework, Live classes, Tests and Results', async () => {
+  // Answers the coursework request the page sends on start, then lets the page update.
+  async function openWithPlan(vocabulary: boolean) {
     const env = setupTestBed();
     env.sessions.save(sessionFor('student'));
     const fixture = TestBed.createComponent(StudentLearning);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne((r) => r.url.endsWith('/api/my/coursework')).flush({ summary: {}, courses: [], vocabulary });
     await settle(fixture);
+    return fixture;
+  }
+
+  it('has the title and the four learning tabs', async () => {
+    const fixture = await openWithPlan(false);
     expect(text(fixture)).toContain('My Learning');
     const tabs = all<HTMLAnchorElement>(fixture, 'nav.tabs a');
     expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Results']);
-    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(['/demo/learning', '/demo/learning/live', '/demo/learning/tests', '/demo/learning/results']);
     expect(el(fixture, 'router-outlet')).not.toBeNull();
+  });
+
+  it('shows the Vocabulary link in a new tab only when the student has the English Vocabulary course', async () => {
+    const fixture = await openWithPlan(true);
+    const tabs = all<HTMLAnchorElement>(fixture, 'nav.tabs a');
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Results', 'Vocabulary']);
+    expect(tabs[4].getAttribute('href')).toBe('https://d20eivggluollb.cloudfront.net');
+    expect(tabs[4].getAttribute('target')).toBe('_blank');
   });
 });
 

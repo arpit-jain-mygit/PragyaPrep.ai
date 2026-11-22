@@ -252,3 +252,17 @@ def test_progress_moves_with_the_student_when_their_email_is_changed(client, adm
     scoped.move_member("asha@example.com", {k: v for k, v in member.items() if k not in ("PK", "SK", "GSI1PK", "GSI1SK")} | {"email": "asha.new@example.com"})
     assert scoped.list_done("asha@example.com") == []
     assert [(d["course_id"], d["subtopic_id"]) for d in scoped.list_done("asha.new@example.com")] == [(school["cat"]["id"], item["id"])]
+
+
+def test_vocabulary_is_flagged_only_for_a_student_who_can_open_english_vocabulary(client, admin, school, asha, sign_in):
+    """The My Learning Vocabulary link shows only when the course has English > Vocabulary with a published sub-topic."""
+    assert mine(client, asha)["vocabulary"] is False  # the CAT plan has no English subject yet
+    cid = school["cat"]["id"]
+    # The course must include English as one of its subjects before a topic can be added under it.
+    assert client.patch(f"/api/admin/courses/{cid}", json={"papers": [QUANT, "english"]}, headers=admin).status_code == 200
+    eng = topic(client, admin, cid, "Vocabulary", "english")
+    sub(client, admin, cid, eng["id"], "Root words", note="Start here", status="published")
+    assert mine(client, asha)["vocabulary"] is True
+    # A student without access to that course does not get the link, even though the course exists.
+    ravi = sign_in("aaptprep", "ravi@example.com")
+    assert mine(client, ravi)["vocabulary"] is False
