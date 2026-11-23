@@ -43,8 +43,7 @@ describe('Student routes', () => {
     const learning = named('learning')[0];
     expect(learning.children!.map((c) => c.path)).toEqual([
       '', 'live', 'tests', 'topics', 'results', 'vocabulary',
-      'study-hub', 'study-hub/english', 'study-hub/:subject', 'study-hub/:subject/learn', 'study-hub/:subject/learn/:chapter',
-      'study-hub/:subject/quiz', 'study-hub/:subject/quiz/:chapter', 'study-hub/:subject/tests',
+      'study-hub',
     ]);
     expect(learning.canActivate?.length).toBe(1);
   });

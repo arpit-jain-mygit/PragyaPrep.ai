@@ -173,15 +173,32 @@ export const routes: Routes = [
           // The English Vocabulary app (Word Wizard), shown inside My Learning.
           { path: 'vocabulary', loadComponent: () => import('./pages/student-vocabulary').then((m) => m.StudentVocabulary) },
           // Study Hub: Wren & Martin grammar, Cambridge Maths and Cambridge English, built into the app (no iframe).
-          // 'english' comes before ':subject' so it is not read as a subject.
-          { path: 'study-hub', loadComponent: () => import('./pages/study-hub-home').then((m) => m.StudyHubHome) },
-          { path: 'study-hub/english', loadComponent: () => import('./pages/study-hub-english').then((m) => m.StudyHubEnglish) },
-          { path: 'study-hub/:subject', loadComponent: () => import('./pages/study-hub-subject').then((m) => m.StudyHubSubject) },
-          { path: 'study-hub/:subject/learn', loadComponent: () => import('./pages/study-hub-learn-list').then((m) => m.StudyHubLearnList) },
-          { path: 'study-hub/:subject/learn/:chapter', loadComponent: () => import('./pages/study-hub-learn-chapter').then((m) => m.StudyHubLearnChapter) },
-          { path: 'study-hub/:subject/quiz', loadComponent: () => import('./pages/study-hub-quiz-map').then((m) => m.StudyHubQuizMap) },
-          { path: 'study-hub/:subject/quiz/:chapter', loadComponent: () => import('./pages/study-hub-quiz-play').then((m) => m.StudyHubQuizPlay) },
-          { path: 'study-hub/:subject/tests', loadComponent: () => import('./pages/study-hub-test').then((m) => m.StudyHubTest) },
+          // The shell draws the menu and the wizard's points; each child is one screen.
+          {
+            path: 'study-hub',
+            loadComponent: () => import('./study-hub/shell').then((m) => m.StudyHubShell),
+            children: [
+              { path: '', loadComponent: () => import('./study-hub/hub.page').then((m) => m.HubPage) },
+              { path: 'board', loadComponent: () => import('./study-hub/leaderboard.page').then((m) => m.LeaderboardPage) },
+              { path: 'wren-martin', loadComponent: () => import('./study-hub/wm-home.page').then((m) => m.WmHomePage) },
+              { path: 'wren-martin/learn', loadComponent: () => import('./study-hub/wm-learn-list.page').then((m) => m.WmLearnListPage) },
+              { path: 'wren-martin/learn/:chapter', loadComponent: () => import('./study-hub/wm-learn-chapter.page').then((m) => m.WmLearnChapterPage) },
+              { path: 'wren-martin/quiz', loadComponent: () => import('./study-hub/wm-quiz-map.page').then((m) => m.WmQuizMapPage) },
+              { path: 'wren-martin/quiz/:chapter', loadComponent: () => import('./study-hub/wm-quiz-play.page').then((m) => m.WmQuizPlayPage) },
+              { path: 'wren-martin/tests', loadComponent: () => import('./study-hub/wm-test.page').then((m) => m.WmTestPage) },
+              { path: 'wren-martin/shop', loadComponent: () => import('./study-hub/shop.page').then((m) => m.ShopPage) },
+              { path: 'wren-martin/board', loadComponent: () => import('./study-hub/leaderboard.page').then((m) => m.LeaderboardPage) },
+              { path: 'cambridge', loadComponent: () => import('./study-hub/cm-home.page').then((m) => m.CmHomePage) },
+              { path: 'cambridge/learn', loadComponent: () => import('./study-hub/cm-learn-list.page').then((m) => m.CmLearnListPage) },
+              { path: 'cambridge/learn/:chapter', loadComponent: () => import('./study-hub/cm-learn-chapter.page').then((m) => m.CmLearnChapterPage) },
+              { path: 'cambridge/quiz', loadComponent: () => import('./study-hub/cm-quiz-map.page').then((m) => m.CmQuizMapPage) },
+              { path: 'cambridge/quiz/:chapter', loadComponent: () => import('./study-hub/cm-quiz-play.page').then((m) => m.CmQuizPlayPage) },
+              { path: 'cambridge/tests', loadComponent: () => import('./study-hub/cm-test.page').then((m) => m.CmTestPage) },
+              { path: 'cambridge/shop', loadComponent: () => import('./study-hub/shop.page').then((m) => m.ShopPage) },
+              { path: 'cambridge/board', loadComponent: () => import('./study-hub/leaderboard.page').then((m) => m.LeaderboardPage) },
+              { path: 'cambridge/english', loadComponent: () => import('./study-hub/cm-english.page').then((m) => m.CmEnglishPage) },
+            ],
+          },
         ],
       },
       {

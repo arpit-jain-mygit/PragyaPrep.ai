@@ -50,6 +50,11 @@ def questions(chapter):
     return [public_question(q) for q in _questions(chapter)]
 
 
+def question_with_answer(chapter, question_id):
+    """The full question, including the answer and reasons. Used on the server to mark an answer."""
+    return _find_question(chapter, question_id)
+
+
 def check_answer(chapter, question_id, choice):
     """Mark one quiz answer. Returns None for an unknown question, else correct and the explanation."""
     q = _find_question(chapter, question_id)
