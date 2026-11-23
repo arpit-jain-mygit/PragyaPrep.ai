@@ -17,8 +17,6 @@ const LETTERS = ['A', 'B', 'C', 'D'];
 
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
-    } @else if (!code()) {
-      <p class="hint">Start your wizard on <a [routerLink]="learn + '/vocabulary'">Word Wizard</a> first, so your points are saved.</p>
     } @else if (loading()) {
       <p class="sub">Shuffling the questions...</p>
     } @else if (finished()) {
@@ -132,6 +130,18 @@ export class WmQuizPlayPage implements OnChanges {
   }
 
   ngOnChanges() {
+    // Make the wizard first, if this student has none yet, then load the questions.
+    this.loading.set(true);
+    this.player.ensure().subscribe({
+      next: () => this.loadQuestions(),
+      error: () => {
+        this.error.set('Could not start your wizard. Please try again.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private loadQuestions() {
     const code = this.code();
     const chapter = Number(this.chapter);
     if (!code) {

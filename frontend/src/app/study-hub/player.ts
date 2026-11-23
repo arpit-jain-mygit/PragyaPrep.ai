@@ -1,5 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
+import { SessionService } from '../core/session.service';
+import { TenantService } from '../core/tenant.service';
 import { StudyHubApi } from './api';
 import { Profile } from './models';
 
@@ -10,6 +12,8 @@ const KEY = 'studyhub.code';
 @Injectable({ providedIn: 'root' })
 export class PlayerService {
   private api = inject(StudyHubApi);
+  private sessions = inject(SessionService);
+  private tenants = inject(TenantService);
   readonly profile = signal<Profile | null>(null);
 
   savedCode(): string | null {
@@ -35,6 +39,23 @@ export class PlayerService {
       /* ignore */
     }
     this.profile.set(null);
+  }
+
+  // The wizard to play with. A student who has none yet gets one on the spot, named after their first name,
+  // so their first quiz already earns points and candies.
+  ensure(): Observable<Profile> {
+    const current = this.profile();
+    if (current) return of(current);
+    const saved = this.savedCode();
+    if (saved) {
+      return this.resume(saved).pipe(catchError(() => this.create(this.studentName())));
+    }
+    return this.create(this.studentName());
+  }
+
+  private studentName(): string {
+    const first = (this.sessions.member(this.tenants.slug())?.first_name ?? '').trim().slice(0, 16);
+    return first.length >= 2 ? first : 'Wizard';
   }
 
   create(name: string): Observable<Profile> {

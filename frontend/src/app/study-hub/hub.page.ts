@@ -1,5 +1,4 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TenantService } from '../core/tenant.service';
 import { learnBase } from './base';
@@ -8,11 +7,11 @@ import { AvatarComponent } from './avatar';
 import { PlayerService } from './player';
 
 // Study Hub home: four tiles, one wizard code for all of them.
-// With no wizard yet, the start card (name or code) sits under the tiles, as in the Study Hub.
+// A wizard is started elsewhere; this page only greets a wizard already on this device.
 @Component({
   selector: 'app-study-hub-home',
   standalone: true,
-  imports: [FormsModule, RouterLink, AvatarComponent],
+  imports: [RouterLink, AvatarComponent],
   template: `
     @if (player.profile(); as p) {
       <section class="hero">
@@ -55,25 +54,6 @@ import { PlayerService } from './player';
     @if (player.profile(); as p) {
       <p class="center"><a [routerLink]="hub + '/board'">🏆 See the leaderboard</a></p>
       <p class="center small"><button class="link" (click)="switchPlayer()">Play as someone else</button></p>
-    } @else {
-      <section class="card form">
-        <label for="name">Choose a wizard name</label>
-        <input id="name" maxlength="16" [(ngModel)]="name" placeholder="e.g. Maya" autocomplete="off">
-        <button class="btn block" (click)="start()" [disabled]="busy() || !name.trim()">
-          {{ busy() ? 'Starting...' : 'Start my spellbook' }}
-        </button>
-
-        <hr>
-
-        <label for="code">Already have a wizard code?</label>
-        <div class="row">
-          <input id="code" maxlength="6" [(ngModel)]="code" placeholder="6 letters" autocomplete="off" style="text-transform:uppercase">
-          <button class="btn ghost" (click)="resume()" [disabled]="busy() || code.trim().length < 6">Open</button>
-        </div>
-        @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
-        }
-      </section>
     }
   `,
   styles: [`
@@ -112,10 +92,6 @@ export class HubPage implements OnInit {
   readonly learn = learnBase(inject(TenantService));
   readonly hub = this.learn + '/study-hub';
   emojiById = signal<Record<string, string>>({});
-  name = '';
-  code = '';
-  busy = signal(false);
-  error = signal('');
 
   ngOnInit() {
     this.api.shop().subscribe({
@@ -123,44 +99,11 @@ export class HubPage implements OnInit {
     });
     const saved = this.player.savedCode();
     if (saved && !this.player.profile()) {
-      this.busy.set(true);
-      this.player.resume(saved).subscribe({
-        next: () => this.busy.set(false),
-        error: () => {
-          this.player.forget();
-          this.busy.set(false);
-        },
-      });
+      this.player.resume(saved).subscribe({ error: () => this.player.forget() });
     }
-  }
-
-  start() {
-    this.busy.set(true);
-    this.error.set('');
-    this.player.create(this.name.trim()).subscribe({
-      next: () => this.busy.set(false),
-      error: () => {
-        this.busy.set(false);
-        this.error.set('Could not start. Please try again.');
-      },
-    });
-  }
-
-  resume() {
-    this.busy.set(true);
-    this.error.set('');
-    this.player.resume(this.code).subscribe({
-      next: () => this.busy.set(false),
-      error: () => {
-        this.busy.set(false);
-        this.error.set('No wizard has that code. Check the letters and try again.');
-      },
-    });
   }
 
   switchPlayer() {
     this.player.forget();
-    this.name = '';
-    this.code = '';
   }
 }
