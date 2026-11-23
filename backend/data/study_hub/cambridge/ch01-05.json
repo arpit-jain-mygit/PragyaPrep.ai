@@ -1,0 +1,953 @@
+{
+  "chapters": [
+    {
+      "chapter": 1,
+      "title": "Negative numbers, indices and roots",
+      "notes": [
+        {
+          "heading": "Multiplying and dividing negative numbers",
+          "paragraphs": [
+            "Same signs give a positive answer. Different signs give a negative answer. For example, (-6) x (-4) = 24 and (-20) / 5 = -4.",
+            "A quick way to remember it: + x + = +, + x - = -, - x + = -, - x - = +. Division follows the same sign rules as multiplication.",
+            "Estimate first by rounding the numbers, then check the sign of your answer."
+          ]
+        },
+        {
+          "heading": "Squares, cubes and brackets",
+          "paragraphs": [
+            "A square means a number multiplied by itself. A cube means a number multiplied by itself three times.",
+            "Brackets matter. (-3)^2 = (-3) x (-3) = 9, but -3^2 means -(3 x 3) = -9. Similarly (-4)^3 = -64 and -4^3 = -64.",
+            "Work out the power before you apply a minus sign that is outside the brackets."
+          ]
+        },
+        {
+          "heading": "Square roots and cube roots",
+          "paragraphs": [
+            "A positive number has two square roots, one positive and one negative. The square root of 81 is 9 or -9. The symbol for the positive root alone is written as the square root of 81 = 9.",
+            "A negative number has no real square root.",
+            "Every number has one cube root. The cube root of 8 is 2, and the cube root of -27 is -3."
+          ]
+        },
+        {
+          "heading": "Index laws",
+          "paragraphs": [
+            "Any number (except 0) to the power 0 is 1. For example, 5^0 = 1.",
+            "When the base is the same: a^m x a^n = a^(m+n), a^m / a^n = a^(m-n) and (a^m)^n = a^(mn).",
+            "The index laws only work when the base is the same. You cannot use them on 2^3 x 3^2."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Work out (-6) x (-4).",
+          "answer": "24",
+          "options": [
+            "-24",
+            "-10",
+            "10",
+            "24"
+          ],
+          "explanation": "Two negative signs make a positive answer. 6 x 4 = 24.",
+          "id": "c01-q01"
+        },
+        {
+          "stem": "Work out (-20) / 5.",
+          "answer": "-4",
+          "options": [
+            "4",
+            "-4",
+            "-15",
+            "25"
+          ],
+          "explanation": "Different signs give a negative answer. 20 / 5 = 4, so the answer is -4.",
+          "id": "c01-q02"
+        },
+        {
+          "stem": "Fill in the gap: 3 x (-7) = ____",
+          "blank": "3 x (-7) = ____",
+          "answer": "-21",
+          "options": [
+            "-21",
+            "21",
+            "-10",
+            "-4"
+          ],
+          "explanation": "3 x 7 = 21 and the signs are different, so the answer is -21.",
+          "id": "c01-q03"
+        },
+        {
+          "stem": "Work out (-3)^2.",
+          "answer": "9",
+          "options": [
+            "-9",
+            "9",
+            "-6",
+            "6"
+          ],
+          "explanation": "(-3) x (-3) = 9. A negative number squared is positive.",
+          "id": "c01-q04"
+        },
+        {
+          "stem": "Work out -3^2.",
+          "answer": "-9",
+          "options": [
+            "9",
+            "-9",
+            "-6",
+            "6"
+          ],
+          "explanation": "The power applies first: 3^2 = 9, then the minus sign gives -9. Brackets are not there, so only 3 is squared.",
+          "id": "c01-q05"
+        },
+        {
+          "stem": "Work out (-4)^3.",
+          "answer": "-64",
+          "options": [
+            "-64",
+            "64",
+            "-12",
+            "12"
+          ],
+          "explanation": "(-4) x (-4) x (-4) = 16 x (-4) = -64. A negative number cubed stays negative.",
+          "id": "c01-q06"
+        },
+        {
+          "stem": "What are the square roots of 81?",
+          "answer": "9 and -9",
+          "options": [
+            "9 and -9",
+            "9 only",
+            "81 and -81",
+            "-9 only"
+          ],
+          "explanation": "A positive number has two square roots: 9 x 9 = 81 and (-9) x (-9) = 81.",
+          "write": false,
+          "id": "c01-q07"
+        },
+        {
+          "stem": "The cube root of -27 is 3.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False",
+            "Only if rounded",
+            "Cannot be found"
+          ],
+          "explanation": "(-3) x (-3) x (-3) = -27, so the cube root of -27 is -3, not 3.",
+          "id": "c01-q08"
+        },
+        {
+          "stem": "Work out 5^0.",
+          "answer": "1",
+          "options": [
+            "0",
+            "1",
+            "5",
+            "10"
+          ],
+          "explanation": "Any non-zero number to the power 0 is 1.",
+          "id": "c01-q09"
+        },
+        {
+          "stem": "Fill in the gap: a^4 x a^3 = a^____",
+          "blank": "a^4 x a^3 = a^____",
+          "answer": "7",
+          "options": [
+            "7",
+            "12",
+            "8",
+            "1"
+          ],
+          "explanation": "When multiplying powers of the same base, add the indices: 4 + 3 = 7.",
+          "id": "c01-q10"
+        },
+        {
+          "stem": "Simplify (x^2)^3.",
+          "answer": "x^6",
+          "options": [
+            "x^5",
+            "x^6",
+            "x^8",
+            "x^9"
+          ],
+          "explanation": "Multiply the indices: 2 x 3 = 6.",
+          "id": "c01-q11"
+        },
+        {
+          "stem": "Work out 2^6 / 2^4.",
+          "answer": "4",
+          "options": [
+            "4",
+            "8",
+            "12",
+            "64"
+          ],
+          "explanation": "Subtract the indices: 2^(6-4) = 2^2 = 4.",
+          "id": "c01-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 2,
+      "title": "2D and 3D shapes",
+      "notes": [
+        {
+          "heading": "Quadrilaterals and their properties",
+          "paragraphs": [
+            "A square has four equal sides, four right angles and opposite sides parallel. Its diagonals are equal, cross at right angles and cut each other in half.",
+            "A rectangle has four right angles and opposite sides equal. Its diagonals are equal and cut each other in half, but they do not cross at right angles.",
+            "A rhombus has four equal sides. Its diagonals cross at right angles and cut each other in half, but they are not equal.",
+            "A parallelogram has opposite sides parallel and equal. Its diagonals cut each other in half, but they are not equal and not at right angles.",
+            "A kite has two pairs of equal sides next to each other. Its diagonals cross at right angles.",
+            "A trapezium has one pair of parallel sides. An isosceles trapezium has two equal non-parallel sides."
+          ]
+        },
+        {
+          "heading": "Families of shapes",
+          "paragraphs": [
+            "A square is a special rectangle and also a special rhombus. A rectangle and a rhombus are both special parallelograms. A parallelogram is a special trapezium. A rhombus is also a special kite."
+          ]
+        },
+        {
+          "heading": "Symmetry",
+          "paragraphs": [
+            "A square has 4 lines of symmetry and rotational symmetry of order 4. A rectangle has 2 lines of symmetry and order 2. A rhombus has 2 lines of symmetry and order 2. A kite has 1 line of symmetry.",
+            "A parallelogram has no lines of symmetry but it has rotational symmetry of order 2.",
+            "A regular polygon has as many lines of symmetry as it has sides. Its order of rotational symmetry is also the number of sides."
+          ]
+        },
+        {
+          "heading": "Diagonals of polygons",
+          "paragraphs": [
+            "From one vertex of an n-sided polygon you can draw n - 3 diagonals. The total number of diagonals is n(n - 3) / 2."
+          ]
+        },
+        {
+          "heading": "3D shapes and Euler's rule",
+          "paragraphs": [
+            "A polyhedron is a solid with flat faces. Use V for vertices, F for faces and E for edges.",
+            "Euler's rule: V + F - E = 2. For example, a triangular prism has 6 vertices, 5 faces and 9 edges: 6 + 5 - 9 = 2.",
+            "Use Euler's rule to find a missing number. If V = 6 and F = 8, then E = 12."
+          ]
+        },
+        {
+          "heading": "Circles and circumference",
+          "paragraphs": [
+            "The circumference of a circle is C = pi x d, or C = 2 x pi x r. Use pi = 3.142 when told to.",
+            "The distance a wheel travels in one turn is its circumference. For several turns, multiply the circumference by the number of turns."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "A quadrilateral has four equal sides and four right angles. What is its name?",
+          "answer": "Square",
+          "options": [
+            "Square",
+            "Rhombus",
+            "Rectangle",
+            "Kite"
+          ],
+          "explanation": "Equal sides and right angles describe a square.",
+          "id": "c02-q01"
+        },
+        {
+          "stem": "How many lines of symmetry does a rectangle that is not a square have?",
+          "answer": "2",
+          "options": [
+            "1",
+            "2",
+            "4",
+            "0"
+          ],
+          "explanation": "A rectangle has two lines of symmetry, through the middles of opposite sides.",
+          "id": "c02-q02"
+        },
+        {
+          "stem": "What is the order of rotational symmetry of a parallelogram?",
+          "answer": "2",
+          "options": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "explanation": "A parallelogram looks the same after a half turn, so its order is 2.",
+          "id": "c02-q03"
+        },
+        {
+          "stem": "How many lines of symmetry does a regular octagon have?",
+          "answer": "8",
+          "options": [
+            "4",
+            "6",
+            "8",
+            "16"
+          ],
+          "explanation": "A regular polygon has as many lines of symmetry as it has sides. An octagon has 8 sides.",
+          "id": "c02-q04"
+        },
+        {
+          "stem": "What is the order of rotational symmetry of a regular hexagon?",
+          "answer": "6",
+          "options": [
+            "3",
+            "6",
+            "8",
+            "12"
+          ],
+          "explanation": "A regular hexagon has 6 sides, so its order of rotational symmetry is 6.",
+          "id": "c02-q05"
+        },
+        {
+          "stem": "A polygon has 9 sides. How many diagonals does it have?",
+          "answer": "27",
+          "options": [
+            "18",
+            "24",
+            "27",
+            "36"
+          ],
+          "explanation": "Use n(n - 3) / 2 with n = 9: 9 x 6 / 2 = 27.",
+          "id": "c02-q06"
+        },
+        {
+          "stem": "A cube has 8 vertices and 6 faces. How many edges does it have?",
+          "answer": "12",
+          "options": [
+            "10",
+            "12",
+            "14",
+            "16"
+          ],
+          "explanation": "Euler's rule: V + F - E = 2, so 8 + 6 - E = 2 and E = 12.",
+          "id": "c02-q07"
+        },
+        {
+          "stem": "Fill in the gap: A triangular prism has 6 vertices and 9 edges. It has ____ faces.",
+          "blank": "A triangular prism has 6 vertices and 9 edges. It has ____ faces.",
+          "answer": "5",
+          "options": [
+            "5",
+            "4",
+            "6",
+            "9"
+          ],
+          "explanation": "Euler's rule: 6 + F - 9 = 2, so F = 5. It has 2 triangles and 3 rectangles.",
+          "id": "c02-q08"
+        },
+        {
+          "stem": "Find the circumference of a circle with diameter 10 cm. Use pi = 3.142 and give your answer to 1 decimal place.",
+          "answer": "31.4 cm",
+          "options": [
+            "31.4 cm",
+            "62.8 cm",
+            "314.2 cm",
+            "15.7 cm"
+          ],
+          "explanation": "C = pi x d = 3.142 x 10 = 31.42, which is 31.4 cm to 1 decimal place.",
+          "id": "c02-q09"
+        },
+        {
+          "stem": "A wheel has a radius of 35 cm. How far does it travel in one full turn? Use pi = 3.142 and give your answer to 1 decimal place.",
+          "answer": "219.9 cm",
+          "options": [
+            "219.9 cm",
+            "109.9 cm",
+            "110.0 cm",
+            "2199.4 cm"
+          ],
+          "explanation": "C = 2 x pi x r = 2 x 3.142 x 35 = 219.94, which is 219.9 cm.",
+          "id": "c02-q10"
+        },
+        {
+          "stem": "A kite has two pairs of equal opposite sides.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False",
+            "Only sometimes",
+            "Cannot tell"
+          ],
+          "explanation": "A kite has two pairs of equal sides that are next to each other (adjacent), not opposite.",
+          "id": "c02-q11"
+        },
+        {
+          "stem": "Fill in the gap: The diagonals of a rhombus cross at 90 degrees, so they are ____ to each other.",
+          "blank": "The diagonals of a rhombus cross at 90 degrees, so they are ____ to each other.",
+          "answer": "perpendicular",
+          "options": [
+            "perpendicular",
+            "parallel",
+            "equal",
+            "unequal"
+          ],
+          "explanation": "Perpendicular means meeting at a right angle.",
+          "id": "c02-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 3,
+      "title": "Collecting data",
+      "notes": [
+        {
+          "heading": "Primary and secondary data",
+          "paragraphs": [
+            "Primary data is collected by the person doing the study, for example by a survey or an experiment.",
+            "Secondary data is collected by someone else, for example from the internet, a book or a newspaper."
+          ]
+        },
+        {
+          "heading": "Ways to collect data",
+          "paragraphs": [
+            "Interviews let you explain questions and ask follow-up questions, but they take time and cost money. People may also give answers they think you want to hear.",
+            "Postal questionnaires can reach many people cheaply. But many people do not return them, and you cannot explain a question to them.",
+            "Closed questions (tick a box) are quick to analyse. Open questions give richer answers, but they are harder to analyse."
+          ]
+        },
+        {
+          "heading": "Sampling",
+          "paragraphs": [
+            "A sample should represent the population. Random selection helps to avoid bias.",
+            "Random sample: everyone has an equal chance of being chosen.",
+            "Stratified sample: split the population into groups and take people from each group in the same proportion as the group sizes. For example, 400 boys and 100 girls with a sample of 100 gives 80 boys and 20 girls.",
+            "Systematic sample: choose every nth person from a list.",
+            "Convenience sample: choose people who are easy to reach. This is often biased.",
+            "Volunteer sample: only people who want to take part. This is often biased because only interested people reply.",
+            "A bigger sample is usually more reliable, but it costs more to collect."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "A researcher carries out her own survey of students. What type of data is this?",
+          "answer": "Primary",
+          "options": [
+            "Primary",
+            "Secondary",
+            "Raw",
+            "Biased"
+          ],
+          "explanation": "Data collected by the person doing the study is primary data.",
+          "id": "c03-q01"
+        },
+        {
+          "stem": "Fill in the gap: Figures taken from a government website are ____ data.",
+          "blank": "Figures taken from a government website are ____ data.",
+          "answer": "secondary",
+          "options": [
+            "secondary",
+            "primary",
+            "random",
+            "closed"
+          ],
+          "explanation": "Data collected by someone else and then used is secondary data.",
+          "id": "c03-q02"
+        },
+        {
+          "stem": "A sample must keep the same proportion of each group as the population. What is this method called?",
+          "answer": "Stratified",
+          "options": [
+            "Stratified",
+            "Systematic",
+            "Convenience",
+            "Volunteer"
+          ],
+          "explanation": "A stratified sample takes people from each group in proportion to the group size.",
+          "id": "c03-q03"
+        },
+        {
+          "stem": "A school has 400 boys and 100 girls. A stratified sample of 100 students is taken. How many girls are in the sample?",
+          "answer": "20",
+          "options": [
+            "10",
+            "20",
+            "25",
+            "80"
+          ],
+          "explanation": "The ratio of boys to girls is 4 : 1. In a sample of 100, there are 80 boys and 20 girls.",
+          "id": "c03-q04"
+        },
+        {
+          "stem": "A survey only asks people standing outside a supermarket. What type of sample is this?",
+          "answer": "Convenience",
+          "options": [
+            "Convenience",
+            "Stratified",
+            "Random",
+            "Systematic"
+          ],
+          "explanation": "People are chosen because they are easy to reach, so it is a convenience sample.",
+          "id": "c03-q05"
+        },
+        {
+          "stem": "Every 10th person on a list is chosen for a survey. What type of sample is this?",
+          "answer": "Systematic",
+          "options": [
+            "Systematic",
+            "Random",
+            "Quota",
+            "Stratified"
+          ],
+          "explanation": "Choosing every nth person from a list is a systematic sample.",
+          "id": "c03-q06"
+        },
+        {
+          "stem": "A bigger sample is always less accurate than a smaller one.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False",
+            "Only for postal surveys",
+            "Cannot tell"
+          ],
+          "explanation": "A bigger sample is usually more reliable, not less.",
+          "id": "c03-q07"
+        },
+        {
+          "stem": "Fill in the gap: A postal questionnaire is cheap, but many people do not ____ the form.",
+          "blank": "A postal questionnaire is cheap, but many people do not ____ the form.",
+          "answer": "return",
+          "options": [
+            "return",
+            "read",
+            "sign",
+            "count"
+          ],
+          "explanation": "Many people do not send back postal questionnaires.",
+          "id": "c03-q08"
+        },
+        {
+          "stem": "The question 'Do you play a sport? Yes or No' is an example of which type of question?",
+          "answer": "Closed",
+          "options": [
+            "Closed",
+            "Open",
+            "Biased",
+            "Primary"
+          ],
+          "explanation": "The answer choices are fixed, so it is a closed question.",
+          "id": "c03-q09"
+        },
+        {
+          "stem": "Why might a volunteer sample be biased?",
+          "answer": "Only people who are interested tend to reply",
+          "options": [
+            "Only people who are interested tend to reply",
+            "It is always the largest sample",
+            "It uses random numbers",
+            "It covers every group equally"
+          ],
+          "explanation": "People who volunteer are often the ones who care most about the topic, so the results are not typical.",
+          "write": false,
+          "id": "c03-q10"
+        },
+        {
+          "stem": "A pupil picks the first 20 names on an alphabetical list. Is this a random sample? Answer yes or no.",
+          "answer": "No",
+          "options": [
+            "Yes",
+            "No",
+            "Sometimes",
+            "Cannot tell"
+          ],
+          "explanation": "The first 20 names are not chosen at random, so it is not a random sample.",
+          "id": "c03-q11"
+        },
+        {
+          "stem": "A questionnaire is sent to 1000 people and 600 of them reply. What percentage of questionnaires were returned?",
+          "answer": "60%",
+          "options": [
+            "40%",
+            "60%",
+            "16%",
+            "600%"
+          ],
+          "explanation": "600 / 1000 x 100 = 60%.",
+          "id": "c03-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 4,
+      "title": "Factors and rational numbers",
+      "notes": [
+        {
+          "heading": "Prime and composite numbers",
+          "paragraphs": [
+            "A prime number has exactly two factors: 1 and itself. The number 1 is not prime.",
+            "Primes up to 40 are 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31 and 37.",
+            "A composite number has more than two factors, such as 4, 6, 8 and 9."
+          ]
+        },
+        {
+          "heading": "Prime factors",
+          "paragraphs": [
+            "Write a number as a product of prime factors using a factor tree. Then write it in index form. For example, 60 = 2^2 x 3 x 5."
+          ]
+        },
+        {
+          "heading": "HCF and LCM",
+          "paragraphs": [
+            "The highest common factor (HCF) is found from the prime factors that both numbers share, using the lowest powers.",
+            "The lowest common multiple (LCM) uses every prime factor, using the highest powers.",
+            "Check: HCF x LCM = the product of the two numbers."
+          ]
+        },
+        {
+          "heading": "Rational numbers",
+          "paragraphs": [
+            "A rational number can be written as a fraction a/b, where a and b are integers and b is not zero. For example, 0.75 = 3/4 and -12 = -12/1.",
+            "Natural numbers are 1, 2, 3 and so on. Integers include negative numbers and zero. Every natural number is an integer, and every integer is rational.",
+            "Between any two rational numbers there is always another rational number."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Is 1 a prime number? Answer No or Yes.",
+          "answer": "No",
+          "options": [
+            "No",
+            "Yes",
+            "Sometimes",
+            "It is composite"
+          ],
+          "explanation": "A prime number has exactly two factors. The number 1 has only one factor.",
+          "id": "c04-q01"
+        },
+        {
+          "stem": "Write 60 as a product of prime factors in index form.",
+          "answer": "2^2 x 3 x 5",
+          "options": [
+            "2^2 x 3 x 5",
+            "2 x 3 x 10",
+            "2^3 x 7.5",
+            "4 x 3 x 5"
+          ],
+          "explanation": "60 = 2 x 2 x 3 x 5 = 2^2 x 3 x 5. Each factor must be prime.",
+          "id": "c04-q02"
+        },
+        {
+          "stem": "Find the HCF of 12 and 18.",
+          "answer": "6",
+          "options": [
+            "2",
+            "3",
+            "6",
+            "36"
+          ],
+          "explanation": "12 = 2^2 x 3 and 18 = 2 x 3^2. The common part is 2 x 3 = 6.",
+          "id": "c04-q03"
+        },
+        {
+          "stem": "Find the LCM of 4 and 6.",
+          "answer": "12",
+          "options": [
+            "10",
+            "12",
+            "24",
+            "2"
+          ],
+          "explanation": "4 = 2^2 and 6 = 2 x 3. The LCM is 2^2 x 3 = 12.",
+          "id": "c04-q04"
+        },
+        {
+          "stem": "Fill in the gap: The HCF of 24 and 36 is ____.",
+          "blank": "The HCF of 24 and 36 is ____.",
+          "answer": "12",
+          "options": [
+            "12",
+            "6",
+            "4",
+            "72"
+          ],
+          "explanation": "24 = 2^3 x 3 and 36 = 2^2 x 3^2. The HCF is 2^2 x 3 = 12.",
+          "id": "c04-q05"
+        },
+        {
+          "stem": "Write 0.75 as a fraction in its simplest form.",
+          "answer": "3/4",
+          "options": [
+            "3/4",
+            "7/5",
+            "3/7",
+            "75/10"
+          ],
+          "explanation": "0.75 = 75/100 = 3/4 when simplified.",
+          "id": "c04-q06"
+        },
+        {
+          "stem": "Every rational number can be written as a fraction with an integer top and a non-zero integer bottom.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False",
+            "Only for decimals",
+            "Only for whole numbers"
+          ],
+          "explanation": "That is the definition of a rational number.",
+          "id": "c04-q07"
+        },
+        {
+          "stem": "Find a rational number between 1/4 and 1/2.",
+          "answer": "3/8",
+          "options": [
+            "3/8",
+            "1/8",
+            "3/4",
+            "1/4"
+          ],
+          "explanation": "3/8 = 0.375, which lies between 0.25 and 0.5. The other options are not between 1/4 and 1/2.",
+          "id": "c04-q08"
+        },
+        {
+          "stem": "Fill in the gap: 30 = 2 x 3 x ____. Write the missing prime factor.",
+          "blank": "30 = 2 x 3 x ____. Write the missing prime factor.",
+          "answer": "5",
+          "options": [
+            "5",
+            "6",
+            "10",
+            "15"
+          ],
+          "explanation": "2 x 3 x 5 = 30, and 5 is prime.",
+          "id": "c04-q09"
+        },
+        {
+          "stem": "What is the smallest number that both 6 and 8 divide into exactly?",
+          "answer": "24",
+          "options": [
+            "2",
+            "14",
+            "24",
+            "48"
+          ],
+          "explanation": "This is the LCM of 6 and 8. 6 = 2 x 3 and 8 = 2^3, so LCM = 2^3 x 3 = 24.",
+          "id": "c04-q10"
+        },
+        {
+          "stem": "The product of two rational numbers is always rational.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False",
+            "Only if both are whole numbers",
+            "Only if both are negative"
+          ],
+          "explanation": "Multiplying two fractions gives a fraction, so the product is rational.",
+          "id": "c04-q11"
+        },
+        {
+          "stem": "What is the HCF of 36 and 48?",
+          "answer": "12",
+          "options": [
+            "4",
+            "12",
+            "72",
+            "144"
+          ],
+          "explanation": "36 = 2^2 x 3^2 and 48 = 2^4 x 3. The HCF is 2^2 x 3 = 12.",
+          "id": "c04-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 5,
+      "title": "Expressions",
+      "notes": [
+        {
+          "heading": "Expressions, equations and formulae",
+          "paragraphs": [
+            "An expression has numbers, letters and operations but no equals sign, for example 2y + 5.",
+            "An equation has an equals sign, for example 7x - 1 = x + 5.",
+            "A formula is an equation that links quantities, for example A = l x w."
+          ]
+        },
+        {
+          "heading": "BIDMAS and substitution",
+          "paragraphs": [
+            "BIDMAS gives the order of working: Brackets, Indices, Division and Multiplication (left to right), Addition and Subtraction (left to right).",
+            "To substitute, put the numbers in place of the letters, then follow BIDMAS. For example, 5x^2 + 3 with x = -2 gives 5 x 4 + 3 = 23. Here x^2 = (-2)^2 = 4, not -4."
+          ]
+        },
+        {
+          "heading": "Simplifying and collecting like terms",
+          "paragraphs": [
+            "Only like terms can be added. 3x + 2x = 5x, but 3x + 2y cannot be simplified.",
+            "n^2 means n x n. 2n^2 is not the same as (2n)^2 = 4n^2."
+          ]
+        },
+        {
+          "heading": "Expanding brackets",
+          "paragraphs": [
+            "Multiply the outside term by every term inside the brackets. For example, n(n - 3) = n^2 - 3n.",
+            "5p(2p + 3q) = 10p^2 + 15pq. 3p^2(p - 2q) = 3p^3 - 6p^2q.",
+            "A common mistake: 4(2n + 5) = 8n + 20, not 8n + 5. Every term inside must be multiplied."
+          ]
+        },
+        {
+          "heading": "Factorising",
+          "paragraphs": [
+            "Factorising takes out the highest common factor (HCF) of all the terms and puts it outside the brackets. For example, 18n - 6 = 6(3n - 1).",
+            "a^2b + 7ab = ab(a + 7). 8pq - 12p = 4p(2q - 3)."
+          ]
+        },
+        {
+          "heading": "Forming expressions",
+          "paragraphs": [
+            "Name the unknown with a letter, build the expression step by step and check it by substituting a number."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Expand 4(2n + 5).",
+          "answer": "8n + 20",
+          "options": [
+            "8n + 5",
+            "8n + 20",
+            "6n + 20",
+            "8n + 9"
+          ],
+          "explanation": "Multiply both terms inside the brackets by 4: 8n + 20.",
+          "id": "c05-q01"
+        },
+        {
+          "stem": "Expand and simplify n(n - 3).",
+          "answer": "n^2 - 3n",
+          "options": [
+            "n^2 - 3n",
+            "n^2 + 3n",
+            "n - 3n",
+            "2n - 3"
+          ],
+          "explanation": "n x n = n^2 and n x (-3) = -3n.",
+          "id": "c05-q02"
+        },
+        {
+          "stem": "Factorise 18n - 6.",
+          "answer": "6(3n - 1)",
+          "options": [
+            "6(3n - 1)",
+            "6(3n + 1)",
+            "3(6n - 1)",
+            "18(n - 6)"
+          ],
+          "explanation": "The highest common factor of 18n and 6 is 6. Dividing each term by 6 gives 3n and -1.",
+          "id": "c05-q03"
+        },
+        {
+          "stem": "Factorise 8pq - 12p.",
+          "answer": "4p(2q - 3)",
+          "options": [
+            "4p(2q - 3)",
+            "4p(2q + 3)",
+            "-4p(2q - 3)",
+            "12p(2q - 3)"
+          ],
+          "explanation": "The highest common factor is 4p. 8pq / 4p = 2q and -12p / 4p = -3.",
+          "id": "c05-q04"
+        },
+        {
+          "stem": "Find the value of 5x^2 + 3 when x = -2.",
+          "answer": "23",
+          "options": [
+            "23",
+            "-17",
+            "43",
+            "13"
+          ],
+          "explanation": "x^2 = (-2)^2 = 4, so 5 x 4 + 3 = 23.",
+          "id": "c05-q05"
+        },
+        {
+          "stem": "Simplify 3x + 2y + 2x - y.",
+          "answer": "5x + y",
+          "options": [
+            "5x + y",
+            "5x + 3y",
+            "5xy",
+            "x + y"
+          ],
+          "explanation": "Collect the x terms: 3x + 2x = 5x. Collect the y terms: 2y - y = y.",
+          "id": "c05-q06"
+        },
+        {
+          "stem": "Fill in the gap: 4a x 3b = ____ab",
+          "blank": "4a x 3b = ____ab",
+          "answer": "12",
+          "options": [
+            "12",
+            "7",
+            "1",
+            "24"
+          ],
+          "explanation": "Multiply the numbers 4 x 3 = 12 and the letters a x b = ab.",
+          "id": "c05-q07"
+        },
+        {
+          "stem": "Write an expression for the total cost of n pens at $3 each plus a $5 bag.",
+          "answer": "3n + 5",
+          "options": [
+            "3n + 5",
+            "3(n + 5)",
+            "n + 8",
+            "5n + 3"
+          ],
+          "explanation": "The pens cost 3 x n = 3n and the bag costs 5, so the total is 3n + 5.",
+          "id": "c05-q08"
+        },
+        {
+          "stem": "The expression 3(g - 2) means multiply g by 3 and then subtract 2.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False",
+            "Only if g is positive",
+            "Only if g is a whole number"
+          ],
+          "explanation": "The brackets come first: subtract 2 from g, then multiply the result by 3. It equals 3g - 6, not 3g - 2.",
+          "id": "c05-q09"
+        },
+        {
+          "stem": "Expand 3p^2(p - 2q).",
+          "answer": "3p^3 - 6p^2q",
+          "options": [
+            "3p^3 - 6p^2q",
+            "3p^2 - 6p^2q",
+            "3p^3 - 2q",
+            "3p^3 + 6p^2q"
+          ],
+          "explanation": "3p^2 x p = 3p^3 and 3p^2 x (-2q) = -6p^2q.",
+          "id": "c05-q10"
+        },
+        {
+          "stem": "Factorise a^2b + 7ab.",
+          "answer": "ab(a + 7)",
+          "options": [
+            "ab(a + 7)",
+            "a(ab + 7)",
+            "ab(a + 7b)",
+            "a^2(b + 7)"
+          ],
+          "explanation": "The highest common factor of a^2b and 7ab is ab. Dividing gives a and 7.",
+          "id": "c05-q11"
+        },
+        {
+          "stem": "Find the value of 2a - b when a = 3 and b = -4.",
+          "answer": "10",
+          "options": [
+            "10",
+            "2",
+            "-10",
+            "-2"
+          ],
+          "explanation": "2 x 3 - (-4) = 6 + 4 = 10.",
+          "id": "c05-q12"
+        }
+      ]
+    }
+  ]
+}

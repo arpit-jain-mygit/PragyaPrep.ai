@@ -22,15 +22,15 @@ describe('My Learning', () => {
     const fixture = await openWithPlan(false);
     expect(text(fixture)).toContain('My Learning');
     const tabs = all<HTMLAnchorElement>(fixture, 'nav.tabs a');
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Topic tests', 'Results']);
-    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(['/demo/learning', '/demo/learning/live', '/demo/learning/tests', '/demo/learning/topics', '/demo/learning/results']);
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Topic tests', 'Results', 'Study Hub']);
+    expect(tabs.map((t) => t.getAttribute('href'))).toEqual(['/demo/learning', '/demo/learning/live', '/demo/learning/tests', '/demo/learning/topics', '/demo/learning/results', '/demo/learning/study-hub']);
     expect(el(fixture, 'router-outlet')).not.toBeNull();
   });
 
   it('shows the Vocabulary tab only when the student has the English Vocabulary course', async () => {
     const fixture = await openWithPlan(true);
     const tabs = all<HTMLAnchorElement>(fixture, 'nav.tabs a');
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Topic tests', 'Results', 'Vocabulary']);
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Coursework', 'Live classes', 'Tests', 'Topic tests', 'Results', 'Vocabulary', 'Study Hub']);
     expect(tabs[5].getAttribute('href')).toBe('/demo/learning/vocabulary');
   });
 });
@@ -41,7 +41,11 @@ describe('Student routes', () => {
 
   it('puts coursework, tests and results under My Learning, coursework first', () => {
     const learning = named('learning')[0];
-    expect(learning.children!.map((c) => c.path)).toEqual(['', 'live', 'tests', 'topics', 'results', 'vocabulary']);
+    expect(learning.children!.map((c) => c.path)).toEqual([
+      '', 'live', 'tests', 'topics', 'results', 'vocabulary',
+      'study-hub', 'study-hub/english', 'study-hub/:subject', 'study-hub/:subject/learn', 'study-hub/:subject/learn/:chapter',
+      'study-hub/:subject/quiz', 'study-hub/:subject/quiz/:chapter', 'study-hub/:subject/tests',
+    ]);
     expect(learning.canActivate?.length).toBe(1);
   });
 

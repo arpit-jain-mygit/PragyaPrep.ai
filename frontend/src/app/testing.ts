@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 // Shared helpers for the tests. Not part of the app itself.
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -49,6 +50,8 @@ export function setupTestBed(options: { queryParams?: Record<string, string>; pa
             paramMap: convertToParamMap(options.params ?? {}),
             data: options.data ?? {},
           },
+          // Same values as the snapshot, as an observable: pages that follow a route change read this.
+          paramMap: of(convertToParamMap(options.params ?? {})),
         },
       },
     ],

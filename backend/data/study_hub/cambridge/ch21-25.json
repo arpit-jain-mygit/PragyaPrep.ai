@@ -1,0 +1,920 @@
+{
+  "chapters": [
+    {
+      "chapter": 21,
+      "title": "Probability 2",
+      "notes": [
+        {
+          "heading": "Combined events",
+          "paragraphs": [
+            "Successive events happen one after another, for example tossing a coin twice or rolling two dice.",
+            "Mutually exclusive events cannot happen at the same time. If A and B are mutually exclusive, P(A or B) = P(A) + P(B).",
+            "Use a list, a sample space diagram or a tree diagram to show all the outcomes. Check that the number of outcomes is the product of the choices. For example, 3 starters x 4 mains = 12 meals."
+          ]
+        },
+        {
+          "heading": "Sample space diagrams",
+          "paragraphs": [
+            "For two dice, a sample space diagram has 6 x 6 = 36 equally likely outcomes. The sum of 7 appears 6 times, so P(sum = 7) = 6/36 = 1/6.",
+            "The sum of 4 appears 3 times, so P(sum = 4) = 3/36 = 1/12."
+          ]
+        },
+        {
+          "heading": "Equally likely outcomes",
+          "paragraphs": [
+            "Probability = favourable outcomes / total outcomes, only when the outcomes are equally likely.",
+            "Having two outcomes does not mean each has probability 1/2. Always list the outcomes to check."
+          ]
+        },
+        {
+          "heading": "Venn diagrams",
+          "paragraphs": [
+            "A Venn diagram sorts outcomes into sets. The overlap is the outcomes in both sets. For example, if 12 like tea, 8 like coffee and 4 like both, then 12 + 8 - 4 = 16 like at least one drink."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "A restaurant has 3 starters and 4 mains. How many different meals (one starter and one main) are there?",
+          "answer": "12",
+          "options": [
+            "12",
+            "7",
+            "6",
+            "10"
+          ],
+          "explanation": "3 x 4 = 12 different meals.",
+          "id": "c21-q01"
+        },
+        {
+          "stem": "A coin is tossed twice. What is the probability of two heads?",
+          "answer": "1/4",
+          "options": [
+            "1/4",
+            "1/2",
+            "1/3",
+            "3/4"
+          ],
+          "explanation": "The outcomes are HH, HT, TH and TT. Only HH is two heads, so 1/4.",
+          "id": "c21-q02"
+        },
+        {
+          "stem": "Two dice are rolled. How many outcomes are in the sample space?",
+          "answer": "36",
+          "options": [
+            "36",
+            "12",
+            "6",
+            "64"
+          ],
+          "explanation": "Each die has 6 results, so 6 x 6 = 36.",
+          "id": "c21-q03"
+        },
+        {
+          "stem": "Two dice are rolled. What is the probability that the total is 7?",
+          "answer": "1/6",
+          "options": [
+            "1/6",
+            "1/12",
+            "1/36",
+            "7/36"
+          ],
+          "explanation": "Six outcomes make 7: (1,6), (2,5), (3,4), (4,3), (5,2), (6,1). 6/36 = 1/6.",
+          "id": "c21-q04"
+        },
+        {
+          "stem": "Two dice are rolled. What is the probability that the total is 4?",
+          "answer": "1/12",
+          "options": [
+            "1/12",
+            "1/9",
+            "1/6",
+            "1/4"
+          ],
+          "explanation": "Three outcomes make 4: (1,3), (2,2), (3,1). 3/36 = 1/12.",
+          "id": "c21-q05"
+        },
+        {
+          "stem": "Fill in the gap: A coin is tossed twice. P(at least one head) = ____",
+          "blank": "A coin is tossed twice. P(at least one head) = ____",
+          "answer": "3/4",
+          "options": [
+            "3/4",
+            "1/2",
+            "1/4",
+            "1"
+          ],
+          "explanation": "Only TT has no heads, so the probability is 1 - 1/4 = 3/4.",
+          "id": "c21-q06"
+        },
+        {
+          "stem": "If there are two possible outcomes, each has probability 1/2.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "This only holds when the two outcomes are equally likely. For example, a biased coin does not give 1/2.",
+          "id": "c21-q07"
+        },
+        {
+          "stem": "A bag has 3 red and 2 blue balls. A ball is taken out, put back, then another is taken out. What is the probability that both are red?",
+          "answer": "9/25",
+          "options": [
+            "9/25",
+            "6/25",
+            "3/5",
+            "4/25"
+          ],
+          "explanation": "The ball is replaced, so P = 3/5 x 3/5 = 9/25.",
+          "id": "c21-q08"
+        },
+        {
+          "stem": "If events A and B are mutually exclusive, P(A or B) = P(A) + P(B).",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "Mutually exclusive events cannot happen together, so their probabilities add.",
+          "id": "c21-q09"
+        },
+        {
+          "stem": "A coin is tossed and then tossed again. What is the probability of a head followed by a tail?",
+          "answer": "1/4",
+          "options": [
+            "1/4",
+            "1/2",
+            "1/8",
+            "1/3"
+          ],
+          "explanation": "The outcome HT is one of four equally likely outcomes, so 1/4.",
+          "id": "c21-q10"
+        },
+        {
+          "stem": "In a group of 20 people, 12 like tea, 8 like coffee and 4 like both. How many people like neither drink?",
+          "answer": "4",
+          "options": [
+            "4",
+            "0",
+            "8",
+            "16"
+          ],
+          "explanation": "Like at least one: 12 + 8 - 4 = 16. Neither: 20 - 16 = 4.",
+          "id": "c21-q11"
+        },
+        {
+          "stem": "Two dice are rolled. What is the probability of at least one 6?",
+          "answer": "11/36",
+          "options": [
+            "11/36",
+            "1/6",
+            "1/3",
+            "12/36"
+          ],
+          "explanation": "There are 36 outcomes. 25 have no 6. So 36 - 25 = 11 have at least one 6.",
+          "id": "c21-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 22,
+      "title": "Ratio and proportion",
+      "notes": [
+        {
+          "heading": "Proportion",
+          "paragraphs": [
+            "A proportion is a part divided by the whole. Use fractions to write a proportion, and the proportions of all parts add to 1.",
+            "Example: if red is 5/7 of a mixture, the rest is 1 - 5/7 = 2/7. So the ratio red : other is 5 : 2."
+          ]
+        },
+        {
+          "heading": "Simplifying ratios",
+          "paragraphs": [
+            "Write all quantities in the same units first. For example, 300 g : 1.5 kg = 300 g : 1500 g = 1 : 5.",
+            "If there are decimals or fractions, multiply every part by the same number to get whole numbers. For example, 0.2 : 0.4 : 0.6 = 1 : 2 : 3."
+          ]
+        },
+        {
+          "heading": "Comparing ratios",
+          "paragraphs": [
+            "To compare proportions, make one part the same in both ratios. For example, red : white = 2 : 3 is red 2/5 = 0.4 of the mixture. Red : white = 4 : 5 is red 4/9 = 0.44... of the mixture. So 4 : 5 has more red."
+          ]
+        },
+        {
+          "heading": "Sharing in a ratio",
+          "paragraphs": [
+            "Add the parts to find the total number of parts. Find the value of one part, then multiply each share by its part.",
+            "Example: share 580 in the ratio 2 : 3 : 5. There are 10 parts, so one part is 58. The shares are 116, 174 and 290.",
+            "Best buy questions compare the price per unit."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Share 480 in the ratio 3 : 5 : 8. What is the largest share?",
+          "answer": "240",
+          "options": [
+            "240",
+            "150",
+            "90",
+            "480"
+          ],
+          "explanation": "There are 16 parts. One part is 480 / 16 = 30. The largest share is 8 x 30 = 240.",
+          "id": "c22-q01"
+        },
+        {
+          "stem": "In a mixture, red is 5/7 and yellow is 2/7. What is the ratio of red to yellow?",
+          "answer": "5 : 2",
+          "options": [
+            "5 : 2",
+            "5 : 7",
+            "7 : 2",
+            "2 : 5"
+          ],
+          "explanation": "The proportions are 5/7 and 2/7, so the ratio is 5 : 2.",
+          "id": "c22-q02"
+        },
+        {
+          "stem": "Write 300 g : 1.5 kg as a ratio in its simplest form.",
+          "answer": "1 : 5",
+          "options": [
+            "1 : 5",
+            "3 : 15",
+            "1 : 2",
+            "300 : 1.5"
+          ],
+          "explanation": "Change 1.5 kg to 1500 g. 300 : 1500 = 1 : 5.",
+          "id": "c22-q03"
+        },
+        {
+          "stem": "Simplify the ratio 0.2 : 0.4 : 0.6.",
+          "answer": "1 : 2 : 3",
+          "options": [
+            "1 : 2 : 3",
+            "2 : 4 : 6",
+            "1 : 4 : 6",
+            "2 : 3 : 6"
+          ],
+          "explanation": "Multiply by 10: 2 : 4 : 6. Divide by 2: 1 : 2 : 3.",
+          "id": "c22-q04"
+        },
+        {
+          "stem": "Fill in the gap: Share 580 in the ratio 2 : 3 : 5. The middle share is ____",
+          "blank": "Share 580 in the ratio 2 : 3 : 5. The middle share is ____",
+          "answer": "174",
+          "options": [
+            "174",
+            "116",
+            "290",
+            "58"
+          ],
+          "explanation": "One part is 58, so the middle share is 3 x 58 = 174.",
+          "id": "c22-q05"
+        },
+        {
+          "stem": "In paint A, red : white = 2 : 3. In paint B, red : white = 4 : 5. Which paint has a higher proportion of red?",
+          "answer": "Paint B",
+          "options": [
+            "Paint B",
+            "Paint A",
+            "They are the same",
+            "Cannot tell"
+          ],
+          "explanation": "Paint A is 2/5 = 0.4 red. Paint B is 4/9 = 0.44... red. So paint B has more red.",
+          "write": false,
+          "id": "c22-q06"
+        },
+        {
+          "stem": "The ratio 300 g : 1.5 kg is the same as 1 : 5.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "1.5 kg = 1500 g, and 300 : 1500 = 1 : 5.",
+          "id": "c22-q07"
+        },
+        {
+          "stem": "Simplify the aspect ratio 1920 : 1280.",
+          "answer": "3 : 2",
+          "options": [
+            "3 : 2",
+            "3 : 4",
+            "2 : 3",
+            "1920 : 1280"
+          ],
+          "explanation": "Divide both by 640: 3 : 2.",
+          "id": "c22-q08"
+        },
+        {
+          "stem": "Share 480 in the ratio 3 : 5 : 8. What is the smallest share?",
+          "answer": "90",
+          "options": [
+            "90",
+            "150",
+            "240",
+            "30"
+          ],
+          "explanation": "One part is 480 / 16 = 30. The smallest share is 3 x 30 = 90.",
+          "id": "c22-q09"
+        },
+        {
+          "stem": "A recipe uses flour to sugar in the ratio 3 : 1. How much sugar is needed for 300 g of flour?",
+          "answer": "100 g",
+          "options": [
+            "100 g",
+            "300 g",
+            "3 g",
+            "900 g"
+          ],
+          "explanation": "Flour is 3 parts and sugar is 1 part. 300 / 3 = 100 g of sugar.",
+          "id": "c22-q10"
+        },
+        {
+          "stem": "Which pack gives the lower price per 100 g: 500 g for $2.50 or 750 g for $3.45?",
+          "answer": "750 g pack",
+          "options": [
+            "750 g pack",
+            "500 g pack",
+            "They are the same",
+            "Cannot tell"
+          ],
+          "explanation": "500 g: $2.50 / 5 = $0.50 per 100 g. 750 g: $3.45 / 7.5 = $0.46 per 100 g. So the 750 g pack is cheaper per 100 g.",
+          "write": false,
+          "id": "c22-q11"
+        },
+        {
+          "stem": "A ratio 1 : 4 is shared from a total of 50. What is the first share?",
+          "answer": "10",
+          "options": [
+            "10",
+            "40",
+            "12.5",
+            "50"
+          ],
+          "explanation": "There are 5 parts. 50 / 5 = 10, so the first share is 10.",
+          "id": "c22-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 23,
+      "title": "Relationships and graphs",
+      "notes": [
+        {
+          "heading": "Linear equations and graphs",
+          "paragraphs": [
+            "A linear equation y = mx + c draws a straight line. m is the gradient and c is the y-intercept, where the line crosses the y-axis.",
+            "Make a table of values, choose several x values, work out y, plot the points and join them with a straight line. Plot at least two points, and a third to check.",
+            "Example: in y = 6x + 3, the gradient is 6 and the y-intercept is 3."
+          ]
+        },
+        {
+          "heading": "Gradient",
+          "paragraphs": [
+            "Gradient = increase in y / increase in x (rise over run). A positive gradient goes up from left to right. A negative gradient goes down.",
+            "Example: the gradient from (0, 6) to (2, 0) is (0 - 6) / (2 - 0) = -3.",
+            "A vertical line has no gradient. A horizontal line has gradient 0."
+          ]
+        },
+        {
+          "heading": "Intercepts",
+          "paragraphs": [
+            "The y-intercept is found by setting x = 0. The x-intercept is found by setting y = 0 and solving.",
+            "Example: y = 6 - 3x. Setting x = 0 gives y = 6. Setting y = 0 gives x = 2."
+          ]
+        },
+        {
+          "heading": "Real-life graphs and simultaneous equations",
+          "paragraphs": [
+            "Many real situations are linear, such as cost = fixed charge + rate x time. For example, C = 1 + 3t means a fixed charge of 1 plus 3 per hour.",
+            "The point where two graphs cross is the solution of both equations at once.",
+            "On a distance-time graph, a flat line means the object is stopped and a steeper line means faster. Average speed = total distance / total time."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "What is the gradient of the line y = 2x + 3?",
+          "answer": "2",
+          "options": [
+            "2",
+            "3",
+            "-2",
+            "5"
+          ],
+          "explanation": "In y = mx + c, the gradient m is 2.",
+          "id": "c23-q01"
+        },
+        {
+          "stem": "What is the y-intercept of y = 6x + 3?",
+          "answer": "3",
+          "options": [
+            "3",
+            "6",
+            "-3",
+            "9"
+          ],
+          "explanation": "The y-intercept is c = 3.",
+          "id": "c23-q02"
+        },
+        {
+          "stem": "Fill in the gap: The line y = 3 - x has gradient ____",
+          "blank": "The line y = 3 - x has gradient ____",
+          "answer": "-1",
+          "options": [
+            "-1",
+            "1",
+            "3",
+            "-3"
+          ],
+          "explanation": "Rewrite as y = -x + 3. The gradient is -1.",
+          "id": "c23-q03"
+        },
+        {
+          "stem": "What is the gradient of the line joining (0, 6) and (2, 0)?",
+          "answer": "-3",
+          "options": [
+            "-3",
+            "3",
+            "-6",
+            "-1/3"
+          ],
+          "explanation": "(0 - 6) / (2 - 0) = -6 / 2 = -3.",
+          "id": "c23-q04"
+        },
+        {
+          "stem": "Where does the line y = 6 - 3x cross the x-axis?",
+          "answer": "2",
+          "options": [
+            "2",
+            "6",
+            "-2",
+            "3"
+          ],
+          "explanation": "Set y = 0: 6 - 3x = 0, so x = 2.",
+          "id": "c23-q05"
+        },
+        {
+          "stem": "A taxi charges $1 plus $3 per hour. Write a formula for the cost C after t hours.",
+          "answer": "C = 3t + 1",
+          "options": [
+            "C = 3t + 1",
+            "C = t + 3",
+            "C = 3t - 1",
+            "C = t + 1"
+          ],
+          "explanation": "The rate is 3 per hour, so 3t, and the fixed charge is 1.",
+          "id": "c23-q06"
+        },
+        {
+          "stem": "Using C = 1 + 3t, for what value of t is C = 25?",
+          "answer": "8",
+          "options": [
+            "8",
+            "9",
+            "24",
+            "7"
+          ],
+          "explanation": "25 = 1 + 3t, so 3t = 24 and t = 8.",
+          "id": "c23-q07"
+        },
+        {
+          "stem": "The gradient of a vertical line is 0.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "A vertical line has no gradient (it is undefined). A horizontal line has gradient 0.",
+          "id": "c23-q08"
+        },
+        {
+          "stem": "Two lines cross at the point (2, 5). What is the solution of both equations?",
+          "answer": "x = 2, y = 5",
+          "options": [
+            "x = 2, y = 5",
+            "x = 5, y = 2",
+            "x = 2, y = 2",
+            "x = 0, y = 5"
+          ],
+          "explanation": "The point where two lines cross satisfies both equations, so x = 2 and y = 5.",
+          "id": "c23-q09"
+        },
+        {
+          "stem": "Company A charges y = 2x + 8, where x is the number of hours. For what number of hours does the cost reach 15?",
+          "answer": "3.5",
+          "options": [
+            "3.5",
+            "3",
+            "7",
+            "4.5"
+          ],
+          "explanation": "2x + 8 = 15, so 2x = 7 and x = 3.5.",
+          "id": "c23-q10"
+        },
+        {
+          "stem": "A candle's height is h = 20 - 1.5t. What is the gradient?",
+          "answer": "-1.5",
+          "options": [
+            "-1.5",
+            "20",
+            "1.5",
+            "-20"
+          ],
+          "explanation": "The gradient is the number in front of t, which is -1.5. The height goes down by 1.5 cm each hour.",
+          "id": "c23-q11"
+        },
+        {
+          "stem": "A car travels 120 km in 3 hours at a steady speed. What is its average speed?",
+          "answer": "40 km/h",
+          "options": [
+            "40 km/h",
+            "360 km/h",
+            "30 km/h",
+            "120 km/h"
+          ],
+          "explanation": "Average speed = 120 / 3 = 40 km/h.",
+          "id": "c23-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 24,
+      "title": "Thinking statistically",
+      "notes": [
+        {
+          "heading": "Pie charts and bar charts",
+          "paragraphs": [
+            "The largest sector of a pie chart is the most common category. The smallest sector is the least common.",
+            "Pie charts can have different totals. Find the actual numbers using the fraction of each total before comparing. For example, 1/3 of 120 = 40.",
+            "Dual and compound bar charts can compare groups. When totals differ, compare proportions rather than the heights of the bars."
+          ]
+        },
+        {
+          "heading": "Frequency diagrams and percentages",
+          "paragraphs": [
+            "Add the frequencies to find the total. A percentage is (part / total) x 100. For example, 90 out of 160 is 90 / 160 x 100 = 56% (to the nearest whole number).",
+            "The modal class is the tallest bar in a frequency diagram."
+          ]
+        },
+        {
+          "heading": "Averages and spread",
+          "paragraphs": [
+            "Averages (mean, median and mode) show whether one data set is typically bigger than another.",
+            "The range (largest minus smallest) shows spread. A smaller range means the values are closer together and the data is more consistent.",
+            "Example: Wednesday has median 17 250, mean 19 315 and range 14 436. Saturday has median 31 418, mean 34 192 and range 7 515. Saturday has higher averages, and Wednesday is more varied.",
+            "The range can be misleading when one extreme value (an outlier) is far from the rest of the data."
+          ]
+        },
+        {
+          "heading": "Mean from a frequency table",
+          "paragraphs": [
+            "Mean = sum of (value x frequency) / sum of frequencies."
+          ]
+        },
+        {
+          "heading": "Stem-and-leaf and missing values",
+          "paragraphs": [
+            "Use the key to read the values. For example, if 4 | 5 means 45%, then 6 | 8 means 68%.",
+            "If you know the minimum and the range, you can find the maximum: maximum = minimum + range."
+          ]
+        },
+        {
+          "heading": "Scatter graphs and conclusions",
+          "paragraphs": [
+            "Make a conclusion that answers the original question, and say what the data can and cannot tell you. Two statistics can make a decision hard, so compare both the averages and the spread."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Find the mean of 2, 4, 6, 8 and 10.",
+          "answer": "6",
+          "options": [
+            "6",
+            "5",
+            "30",
+            "4"
+          ],
+          "explanation": "Add: 30. Divide by 5: 6.",
+          "id": "c24-q01"
+        },
+        {
+          "stem": "A frequency table has value 1 with frequency 2 and value 2 with frequency 3. What is the mean?",
+          "answer": "1.6",
+          "options": [
+            "1.6",
+            "1.5",
+            "2",
+            "1.2"
+          ],
+          "explanation": "Sum of (value x frequency) = 2 + 6 = 8. Sum of frequencies = 5. Mean = 8 / 5 = 1.6.",
+          "id": "c24-q02"
+        },
+        {
+          "stem": "Find the median of 11, 3, 7 and 9.",
+          "answer": "8",
+          "options": [
+            "8",
+            "7",
+            "9",
+            "10"
+          ],
+          "explanation": "Put in order: 3, 7, 9, 11. The median is (7 + 9) / 2 = 8.",
+          "id": "c24-q03"
+        },
+        {
+          "stem": "A set of data has minimum 3 and range 31. What is the maximum?",
+          "answer": "34",
+          "options": [
+            "34",
+            "28",
+            "31",
+            "3"
+          ],
+          "explanation": "Range = maximum - minimum, so maximum = 31 + 3 = 34.",
+          "id": "c24-q04"
+        },
+        {
+          "stem": "Two data sets with the same range must have the same maximum value.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The range is the difference between the maximum and minimum. Two sets can have the same range but different minimum and maximum values.",
+          "id": "c24-q05"
+        },
+        {
+          "stem": "One third of 120 is what number?",
+          "answer": "40",
+          "options": [
+            "40",
+            "30",
+            "60",
+            "80"
+          ],
+          "explanation": "120 / 3 = 40.",
+          "id": "c24-q06"
+        },
+        {
+          "stem": "A stem-and-leaf key says 4 | 5 means 45%. What does 6 | 8 mean?",
+          "answer": "68%",
+          "options": [
+            "68%",
+            "86%",
+            "6.8%",
+            "608%"
+          ],
+          "explanation": "Stem 6 means 60 and leaf 8 means 8, so 68%.",
+          "id": "c24-q07"
+        },
+        {
+          "stem": "The mean pulse rate of a group goes from 70 before exercise to 100 after exercise. Did the mean pulse rate go up or down?",
+          "answer": "Up",
+          "options": [
+            "Up",
+            "Down",
+            "Stayed the same",
+            "Cannot tell"
+          ],
+          "explanation": "The mean went from 70 to 100, which is an increase.",
+          "id": "c24-q08"
+        },
+        {
+          "stem": "A data set has 10 values. The 5th and 6th values are 7 and 9. What is the median?",
+          "answer": "8",
+          "options": [
+            "8",
+            "7",
+            "9",
+            "16"
+          ],
+          "explanation": "With 10 values, the median is the average of the 5th and 6th values: (7 + 9) / 2 = 8.",
+          "id": "c24-q09"
+        },
+        {
+          "stem": "Class A has mean height 143 cm and range 52 cm. Class B has mean height 140 cm and range 28 cm. Which class has more consistent heights?",
+          "answer": "Class B",
+          "options": [
+            "Class B",
+            "Class A",
+            "They are the same",
+            "Cannot tell"
+          ],
+          "explanation": "A smaller range means the heights are closer together. Class B has the smaller range.",
+          "write": false,
+          "id": "c24-q10"
+        },
+        {
+          "stem": "9 out of 15 people chose tea. What percentage is this?",
+          "answer": "60%",
+          "options": [
+            "60%",
+            "9%",
+            "15%",
+            "67%"
+          ],
+          "explanation": "9 / 15 x 100 = 60%.",
+          "id": "c24-q11"
+        },
+        {
+          "stem": "A scatter graph has points that go down from left to right. What type of correlation is this?",
+          "answer": "Negative",
+          "options": [
+            "Negative",
+            "Positive",
+            "None",
+            "Cannot tell"
+          ],
+          "explanation": "When one variable goes down as the other goes up, the correlation is negative.",
+          "id": "c24-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 25,
+      "title": "Accurate drawing",
+      "notes": [
+        {
+          "heading": "Constructing triangles",
+          "paragraphs": [
+            "To construct means to draw accurately with a ruler, protractor and compasses.",
+            "The minimum information to construct a triangle is SAS (two sides and the included angle), ASA (two angles and the included side), SSS (three sides) or RHS (a right angle, the hypotenuse and one other side).",
+            "Three angles are not enough. They give many triangles of different sizes that are all similar."
+          ]
+        },
+        {
+          "heading": "Worked methods",
+          "paragraphs": [
+            "ASA: draw the base, use a protractor to measure the angles at each end, then extend the two lines until they meet.",
+            "SSS: draw one side. Open the compasses to the second side length and draw an arc from one end. Open them to the third length and draw an arc from the other end. Join the end to where the arcs cross.",
+            "RHS: draw a line, mark a point on it, make a right angle at the mark using arcs, then mark the height. Use the compasses to set the hypotenuse length and join."
+          ]
+        },
+        {
+          "heading": "Bisectors",
+          "paragraphs": [
+            "The midpoint of a line segment is the point halfway along it.",
+            "A perpendicular bisector cuts a line in half at a right angle. Draw arcs from both ends with the same radius, bigger than half the line. Join the two points where the arcs cross.",
+            "An angle bisector cuts an angle in half. Draw an arc from the vertex that crosses both arms. From the two crossing points, draw arcs of the same size that meet. Join the vertex to that meeting point."
+          ]
+        },
+        {
+          "heading": "Plans and elevations",
+          "paragraphs": [
+            "A plan is the view from above. A front elevation is the view from the front. A side elevation is the view from the side.",
+            "Scale drawings use a scale such as 1 : 200, which means 1 cm on the drawing is 200 cm (2 m) in real life. Divide real lengths by the scale factor to find drawing lengths. For example, 3 m at 1 : 200 is 300 cm / 200 = 1.5 cm."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Three side lengths of a triangle are given. Which construction type is this?",
+          "answer": "SSS",
+          "options": [
+            "SSS",
+            "SAS",
+            "ASA",
+            "AAA"
+          ],
+          "explanation": "SSS means three sides are given.",
+          "id": "c25-q01"
+        },
+        {
+          "stem": "Two angles and the side between them are given. Which construction type is this?",
+          "answer": "ASA",
+          "options": [
+            "ASA",
+            "SAS",
+            "SSS",
+            "RHS"
+          ],
+          "explanation": "ASA means angle, side, angle.",
+          "id": "c25-q02"
+        },
+        {
+          "stem": "Can one unique triangle be drawn from just three angles? Answer Yes or No.",
+          "answer": "No",
+          "options": [
+            "No",
+            "Yes",
+            "Sometimes",
+            "Always"
+          ],
+          "explanation": "Three angles give triangles of many sizes, all similar to each other.",
+          "id": "c25-q03"
+        },
+        {
+          "stem": "Fill in the gap: A ____ bisector of a line segment cuts it in half at a right angle.",
+          "blank": "A ____ bisector of a line segment cuts it in half at a right angle.",
+          "answer": "perpendicular",
+          "options": [
+            "perpendicular",
+            "angle",
+            "median",
+            "parallel"
+          ],
+          "explanation": "The perpendicular bisector meets the line at 90 degrees at its midpoint.",
+          "id": "c25-q04"
+        },
+        {
+          "stem": "An angle of 70 degrees is bisected. What size is each of the two new angles?",
+          "answer": "35",
+          "options": [
+            "35",
+            "70",
+            "140",
+            "17.5"
+          ],
+          "explanation": "An angle bisector cuts the angle in half: 70 / 2 = 35 degrees.",
+          "id": "c25-q05"
+        },
+        {
+          "stem": "You can find the midpoint of a line by constructing its angle bisector.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The midpoint is found using the perpendicular bisector. An angle bisector splits an angle, not a line.",
+          "id": "c25-q06"
+        },
+        {
+          "stem": "The plan (view from above) of a cube is what shape?",
+          "answer": "square",
+          "options": [
+            "square",
+            "circle",
+            "triangle",
+            "rectangle"
+          ],
+          "explanation": "Looking down on a cube, you see a square.",
+          "id": "c25-q07"
+        },
+        {
+          "stem": "A real length of 3 m is drawn on a plan with scale 1 : 200. How long is it on the drawing?",
+          "answer": "1.5 cm",
+          "options": [
+            "1.5 cm",
+            "15 cm",
+            "0.15 cm",
+            "6 cm"
+          ],
+          "explanation": "3 m = 300 cm. 300 / 200 = 1.5 cm.",
+          "id": "c25-q08"
+        },
+        {
+          "stem": "A drawing uses the scale 1 cm : 2 m. A line on the drawing is 4 cm long. How long is it in real life?",
+          "answer": "8 m",
+          "options": [
+            "8 m",
+            "2 m",
+            "4 m",
+            "6 m"
+          ],
+          "explanation": "4 x 2 = 8 m.",
+          "id": "c25-q09"
+        },
+        {
+          "stem": "A triangle has all three sides of length 5 cm. What type of triangle is it?",
+          "answer": "Equilateral",
+          "options": [
+            "Equilateral",
+            "Isosceles",
+            "Scalene",
+            "Right-angled"
+          ],
+          "explanation": "All three sides are equal, so it is equilateral.",
+          "id": "c25-q10"
+        },
+        {
+          "stem": "A line segment is 10 cm long. How far is its midpoint from either end?",
+          "answer": "5 cm",
+          "options": [
+            "5 cm",
+            "10 cm",
+            "2.5 cm",
+            "7 cm"
+          ],
+          "explanation": "The midpoint is halfway: 10 / 2 = 5 cm.",
+          "id": "c25-q11"
+        },
+        {
+          "stem": "A cylinder stands on its circular base. What shape is its plan (view from above)?",
+          "answer": "circle",
+          "options": [
+            "circle",
+            "square",
+            "rectangle",
+            "triangle"
+          ],
+          "explanation": "Looking down on the cylinder, you see its circular top.",
+          "id": "c25-q12"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,908 @@
+{
+  "chapters": [
+    {
+      "chapter": 16,
+      "title": "Fractions, decimals and percentages",
+      "notes": [
+        {
+          "heading": "Terminating and recurring decimals",
+          "paragraphs": [
+            "A terminating decimal stops, for example 0.6 or 0.375.",
+            "A recurring decimal repeats a digit or a block of digits forever. Show this with a dot over the repeating digit. For example, 0.2 with a dot over the 2 means 0.2222...",
+            "Both terminating and recurring decimals are rational numbers.",
+            "To convert a fraction to a decimal, divide the top by the bottom. A fraction whose bottom number has only the factors 2 and 5 gives a terminating decimal. For example, 3/8 = 0.375."
+          ]
+        },
+        {
+          "heading": "Repeating patterns",
+          "paragraphs": [
+            "A fraction with 9 on the bottom, such as n/9, gives a repeating decimal. For example, 4/9 = 0.4 with a dot over the 4, which means 0.4444...",
+            "7/9 = 0.7 with a dot over the 7, which means 0.7777..."
+          ]
+        },
+        {
+          "heading": "Comparing fractions and decimals",
+          "paragraphs": [
+            "For fractions with the same top number, the bigger the bottom number, the smaller the fraction.",
+            "For fractions with the same bottom number, the bigger the top number, the bigger the fraction.",
+            "For negative numbers, the one with the bigger size is smaller. For example, -3/4 is smaller than -3/5.",
+            "Changing every number to a decimal or a percentage makes comparing easy."
+          ]
+        },
+        {
+          "heading": "Percentages",
+          "paragraphs": [
+            "Percentage = (part / whole) x 100. For example, 3/8 = 37.5% and 1/4 = 25%.",
+            "To compare fractions, change them to percentages. For example, 47/800 = 5.875% and 36/710 = 5.07%, so 47/800 is bigger."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Write 7/9 as a decimal.",
+          "answer": "0.777...",
+          "options": [
+            "0.777...",
+            "0.79",
+            "0.7",
+            "0.9"
+          ],
+          "explanation": "7 divided by 9 gives 0.777..., the 7 repeats forever.",
+          "id": "c16-q01"
+        },
+        {
+          "stem": "Write 4/9 as a decimal.",
+          "answer": "0.444...",
+          "options": [
+            "0.444...",
+            "0.49",
+            "0.4",
+            "0.94"
+          ],
+          "explanation": "4/9 = 0.444..., the 4 repeats forever.",
+          "id": "c16-q02"
+        },
+        {
+          "stem": "Write 3/8 as a decimal.",
+          "answer": "0.375",
+          "options": [
+            "0.375",
+            "0.38",
+            "0.83",
+            "0.3"
+          ],
+          "explanation": "3 divided by 8 is 0.375. It terminates because 8 = 2 x 2 x 2.",
+          "id": "c16-q03"
+        },
+        {
+          "stem": "2/3 is equal to 0.666... (recurring).",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "2 divided by 3 gives 0.666..., so they are equal.",
+          "id": "c16-q04"
+        },
+        {
+          "stem": "Which is smaller: -3/4 or -3/5?",
+          "answer": "-3/4",
+          "options": [
+            "-3/4",
+            "-3/5",
+            "They are equal",
+            "Cannot tell"
+          ],
+          "explanation": "-3/4 = -0.75 and -3/5 = -0.6. The bigger size makes the negative number smaller.",
+          "id": "c16-q05"
+        },
+        {
+          "stem": "Write 37/750 as a percentage to 2 decimal places.",
+          "answer": "4.93%",
+          "options": [
+            "4.93%",
+            "5.07%",
+            "0.49%",
+            "49.3%"
+          ],
+          "explanation": "37 / 750 = 0.04933..., so 4.93%.",
+          "id": "c16-q06"
+        },
+        {
+          "stem": "Which is bigger: 47/800 or 36/710?",
+          "answer": "47/800",
+          "options": [
+            "47/800",
+            "36/710",
+            "They are equal",
+            "Cannot tell"
+          ],
+          "explanation": "47/800 = 5.875% and 36/710 = 5.07%, so 47/800 is bigger.",
+          "write": false,
+          "id": "c16-q07"
+        },
+        {
+          "stem": "Write 3/8 as a percentage.",
+          "answer": "37.5%",
+          "options": [
+            "37.5%",
+            "38%",
+            "83%",
+            "3.8%"
+          ],
+          "explanation": "3 / 8 = 0.375 = 37.5%.",
+          "id": "c16-q08"
+        },
+        {
+          "stem": "Fill in the gap: The fraction 1/4 is equal to ____%.",
+          "blank": "The fraction 1/4 is equal to ____%.",
+          "answer": "25",
+          "options": [
+            "25",
+            "4",
+            "14",
+            "75"
+          ],
+          "explanation": "1/4 = 0.25 = 25%.",
+          "id": "c16-q09"
+        },
+        {
+          "stem": "Write 0.6 as a percentage.",
+          "answer": "60%",
+          "options": [
+            "60%",
+            "6%",
+            "0.6%",
+            "600%"
+          ],
+          "explanation": "0.6 x 100 = 60%.",
+          "id": "c16-q10"
+        },
+        {
+          "stem": "The decimal 0.666... is a terminating decimal.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The 6 repeats forever, so it is a recurring decimal.",
+          "id": "c16-q11"
+        },
+        {
+          "stem": "Which fraction gives a terminating decimal?",
+          "answer": "3/8",
+          "options": [
+            "3/8",
+            "1/3",
+            "2/9",
+            "5/6"
+          ],
+          "explanation": "The bottom number of 3/8 is 8 = 2 x 2 x 2, so it terminates. The others recur.",
+          "id": "c16-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 17,
+      "title": "Presenting and interpreting data 2",
+      "notes": [
+        {
+          "heading": "Pie charts",
+          "paragraphs": [
+            "Each sector angle = (frequency / total) x 360 degrees. For example, 38 out of 80 gives 38/80 x 360 = 171 degrees.",
+            "The sector angles always add up to 360 degrees. A missing angle is 360 minus the other angles.",
+            "To find a number from a pie chart, work out the fraction of the sample from the angle (angle / 360), then multiply by the sample size.",
+            "A percentage can be changed to an angle: 28% of 360 = 100.8 degrees."
+          ]
+        },
+        {
+          "heading": "Infographics",
+          "paragraphs": [
+            "Pictograms use a key that shows how many people each symbol stands for. Read the key carefully.",
+            "Choropleth maps colour areas by bands of values. Treemaps show each share as an area."
+          ]
+        },
+        {
+          "heading": "Time series and trends",
+          "paragraphs": [
+            "A time series graph has time on the horizontal axis. A trend is the overall rise or fall. A seasonal pattern repeats over a fixed time.",
+            "The quarters of a year are Jan to Mar, Apr to Jun, Jul to Sep and Oct to Dec."
+          ]
+        },
+        {
+          "heading": "Scatter graphs and correlation",
+          "paragraphs": [
+            "A scatter graph can show positive correlation (points go up), negative correlation (points go down) or no correlation.",
+            "A line of best fit goes through the middle of the points, with about as many points above as below.",
+            "You can use a line of best fit to predict values inside the range of the data. Predictions outside the range are less reliable."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "A pie chart sector shows 38 out of 80 people. Find the angle of the sector.",
+          "answer": "171",
+          "options": [
+            "171",
+            "38",
+            "342",
+            "190"
+          ],
+          "explanation": "38 / 80 x 360 = 171 degrees.",
+          "id": "c17-q01"
+        },
+        {
+          "stem": "A sector angle is 90 degrees. What fraction of the sample does it show?",
+          "answer": "1/4",
+          "options": [
+            "1/4",
+            "1/3",
+            "1/9",
+            "1/2"
+          ],
+          "explanation": "90 / 360 = 1/4.",
+          "id": "c17-q02"
+        },
+        {
+          "stem": "What angle is 28% of a full pie chart?",
+          "answer": "100.8",
+          "options": [
+            "100.8",
+            "28",
+            "72",
+            "280"
+          ],
+          "explanation": "28% of 360 = 0.28 x 360 = 100.8 degrees.",
+          "id": "c17-q03"
+        },
+        {
+          "stem": "A sample of 200 people. A sector of 72 degrees. How many people are in the sector?",
+          "answer": "40",
+          "options": [
+            "40",
+            "72",
+            "20",
+            "144"
+          ],
+          "explanation": "72 / 360 = 1/5 and 1/5 of 200 = 40.",
+          "id": "c17-q04"
+        },
+        {
+          "stem": "Fill in the gap: The angles on a pie chart add up to ____ degrees.",
+          "blank": "The angles on a pie chart add up to ____ degrees.",
+          "answer": "360",
+          "options": [
+            "360",
+            "180",
+            "90",
+            "100"
+          ],
+          "explanation": "A full pie chart is a full turn, which is 360 degrees.",
+          "id": "c17-q05"
+        },
+        {
+          "stem": "A pie chart has three sectors of 120, 90 and 100 degrees. Find the fourth sector.",
+          "answer": "50",
+          "options": [
+            "50",
+            "40",
+            "60",
+            "70"
+          ],
+          "explanation": "360 - (120 + 90 + 100) = 360 - 310 = 50 degrees.",
+          "id": "c17-q06"
+        },
+        {
+          "stem": "What is the modal category in a pie chart?",
+          "answer": "the largest sector",
+          "options": [
+            "the largest sector",
+            "the smallest sector",
+            "the middle sector",
+            "the first sector"
+          ],
+          "explanation": "The modal category is the one with the most people, shown by the largest sector.",
+          "write": false,
+          "id": "c17-q07"
+        },
+        {
+          "stem": "A scatter graph whose points go up from left to right shows negative correlation.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "Points going up from left to right show positive correlation.",
+          "id": "c17-q08"
+        },
+        {
+          "stem": "Where should a line of best fit go on a scatter graph?",
+          "answer": "Through the middle of the points",
+          "options": [
+            "Through the middle of the points",
+            "Through the first point",
+            "Through the origin always",
+            "Through the last point"
+          ],
+          "explanation": "A line of best fit shows the general trend and goes through the middle of the points.",
+          "write": false,
+          "id": "c17-q09"
+        },
+        {
+          "stem": "Find the median of 10, 12, 17 and 22.",
+          "answer": "14.5",
+          "options": [
+            "14.5",
+            "12",
+            "17",
+            "19.5"
+          ],
+          "explanation": "There are four values. The median is (12 + 17) / 2 = 14.5.",
+          "id": "c17-q10"
+        },
+        {
+          "stem": "A quarter covers October to December. Which quarter number is this?",
+          "answer": "Q4",
+          "options": [
+            "Q4",
+            "Q1",
+            "Q2",
+            "Q3"
+          ],
+          "explanation": "Quarters are Jan-Mar (Q1), Apr-Jun (Q2), Jul-Sep (Q3) and Oct-Dec (Q4).",
+          "id": "c17-q11"
+        },
+        {
+          "stem": "A trend shows the overall direction of change in a time series.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "A trend is the general rise or fall over time, ignoring small ups and downs.",
+          "id": "c17-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 18,
+      "title": "Transformations",
+      "notes": [
+        {
+          "heading": "Translations",
+          "paragraphs": [
+            "A translation moves every point the same distance in the same direction. It is described by a column vector (x, y): x units across (positive is right) and y units up (positive is up).",
+            "The image is congruent to the object, which means it is the same shape and size."
+          ]
+        },
+        {
+          "heading": "Reflections",
+          "paragraphs": [
+            "A reflection flips a shape in a mirror line. Each point is the same distance from the mirror line as its image, on the other side.",
+            "Common mirror lines and their rules: x-axis (x, y) -> (x, -y); y-axis (x, y) -> (-x, y); y = x (x, y) -> (y, x); y = -x (x, y) -> (-y, -x)."
+          ]
+        },
+        {
+          "heading": "Rotations",
+          "paragraphs": [
+            "A rotation needs a centre, an angle (90, 180 or 270 degrees) and a direction (clockwise or anticlockwise).",
+            "About the origin: 90 degrees clockwise (x, y) -> (y, -x). 90 degrees anticlockwise (x, y) -> (-y, x). 180 degrees (x, y) -> (-x, -y)."
+          ]
+        },
+        {
+          "heading": "Enlargements",
+          "paragraphs": [
+            "An enlargement needs a centre and a scale factor. Each point moves so that its distance from the centre is multiplied by the scale factor.",
+            "Image point = centre + scale factor x (point - centre). The image is similar to the object, not congruent, unless the scale factor is 1.",
+            "Example: enlarge (3, 2) by scale factor 2 about the centre (6, 2). The image is (6, 2) + 2 x (-3, 0) = (0, 2)."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Translate the point (2, 3) by the vector (4, -1). What is the image?",
+          "answer": "(6, 2)",
+          "options": [
+            "(6, 2)",
+            "(-2, 4)",
+            "(6, 4)",
+            "(2, -1)"
+          ],
+          "explanation": "Add 4 to x and subtract 1 from y: (2 + 4, 3 - 1) = (6, 2).",
+          "id": "c18-q01"
+        },
+        {
+          "stem": "Fill in the gap: A reflection in the x-axis maps (x, y) to (x, ____).",
+          "blank": "A reflection in the x-axis maps (x, y) to (x, ____).",
+          "answer": "-y",
+          "options": [
+            "-y",
+            "y",
+            "x",
+            "-x"
+          ],
+          "explanation": "The y-coordinate changes sign when a point is reflected in the x-axis.",
+          "id": "c18-q02"
+        },
+        {
+          "stem": "Rotate the point (3, 1) by 90 degrees clockwise about the origin. What is the image?",
+          "answer": "(1, -3)",
+          "options": [
+            "(1, -3)",
+            "(-1, 3)",
+            "(-3, -1)",
+            "(3, -1)"
+          ],
+          "explanation": "The rule for 90 degrees clockwise is (x, y) -> (y, -x). So (3, 1) -> (1, -3).",
+          "id": "c18-q03"
+        },
+        {
+          "stem": "Rotate the point (3, 1) by 180 degrees about the origin. What is the image?",
+          "answer": "(-3, -1)",
+          "options": [
+            "(-3, -1)",
+            "(1, 3)",
+            "(-1, 3)",
+            "(3, -1)"
+          ],
+          "explanation": "A half turn about the origin gives (-x, -y) = (-3, -1).",
+          "id": "c18-q04"
+        },
+        {
+          "stem": "Enlarge the point (1, 2) by scale factor 3 about the origin. What is the image?",
+          "answer": "(3, 6)",
+          "options": [
+            "(3, 6)",
+            "(6, 3)",
+            "(4, 5)",
+            "(3, 2)"
+          ],
+          "explanation": "Multiply each coordinate by 3: (3, 6).",
+          "id": "c18-q05"
+        },
+        {
+          "stem": "Enlarge the point (3, 2) by scale factor 2 about the centre (6, 2). What is the image?",
+          "answer": "(0, 2)",
+          "options": [
+            "(0, 2)",
+            "(3, 2)",
+            "(-2, 2)",
+            "(0, 0)"
+          ],
+          "explanation": "Vector from the centre: (3 - 6, 2 - 2) = (-3, 0). Multiply by 2: (-6, 0). Add the centre: (0, 2).",
+          "id": "c18-q06"
+        },
+        {
+          "stem": "An enlargement with scale factor 2 gives an image that is congruent to the object.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The image is bigger, so it is similar, not congruent.",
+          "id": "c18-q07"
+        },
+        {
+          "stem": "Reflect the point (4, 1) in the y-axis. What is the image?",
+          "answer": "(-4, 1)",
+          "options": [
+            "(-4, 1)",
+            "(4, -1)",
+            "(-4, -1)",
+            "(1, 4)"
+          ],
+          "explanation": "A reflection in the y-axis changes the sign of x: (-4, 1).",
+          "id": "c18-q08"
+        },
+        {
+          "stem": "Reflect the point (2, 5) in the line y = x. What is the image?",
+          "answer": "(5, 2)",
+          "options": [
+            "(5, 2)",
+            "(-2, -5)",
+            "(2, -5)",
+            "(-5, 2)"
+          ],
+          "explanation": "Reflecting in y = x swaps the coordinates: (5, 2).",
+          "id": "c18-q09"
+        },
+        {
+          "stem": "Reflect the point (2, 5) in the line y = -x. What is the image?",
+          "answer": "(-5, -2)",
+          "options": [
+            "(-5, -2)",
+            "(5, 2)",
+            "(-2, 5)",
+            "(2, -5)"
+          ],
+          "explanation": "Reflecting in y = -x gives (-y, -x) = (-5, -2).",
+          "id": "c18-q10"
+        },
+        {
+          "stem": "Fill in the gap: A translation moves every point the same distance in the same ____.",
+          "blank": "A translation moves every point the same distance in the same ____.",
+          "answer": "direction",
+          "options": [
+            "direction",
+            "size",
+            "shape",
+            "angle"
+          ],
+          "explanation": "A translation slides the shape without turning or resizing it.",
+          "id": "c18-q11"
+        },
+        {
+          "stem": "Rotate the point (1, 0) by 90 degrees anticlockwise about the origin. What is the image?",
+          "answer": "(0, 1)",
+          "options": [
+            "(0, 1)",
+            "(0, -1)",
+            "(-1, 0)",
+            "(1, 0)"
+          ],
+          "explanation": "The rule for 90 degrees anticlockwise is (x, y) -> (-y, x). So (1, 0) -> (0, 1).",
+          "id": "c18-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 19,
+      "title": "Percentages",
+      "notes": [
+        {
+          "heading": "Percentage change",
+          "paragraphs": [
+            "Absolute change = new value - original value.",
+            "Percentage change = (absolute change / original value) x 100. An increase is positive and a decrease is negative."
+          ]
+        },
+        {
+          "heading": "Multipliers",
+          "paragraphs": [
+            "To increase by a percentage, multiply by (100 + the percentage) / 100. For example, an increase of 16% uses the multiplier 1.16.",
+            "To decrease by a percentage, multiply by (100 - the percentage) / 100. For example, a decrease of 21% uses 0.79.",
+            "Example: 200 g increased by 16% is 200 x 1.16 = 232 g. 260 m decreased by 21% is 260 x 0.79 = 205.4 m."
+          ]
+        },
+        {
+          "heading": "Careful with repeated changes",
+          "paragraphs": [
+            "Successive percentage changes are not added. An increase of 50% followed by another increase of 50% is a multiplier of 1.5 x 1.5 = 2.25, which is 125% more, not 100% more."
+          ]
+        },
+        {
+          "heading": "Reverse percentages",
+          "paragraphs": [
+            "To find the original value after a change, divide by the multiplier. For example, if a price rises by 10% to 110, the original price was 110 / 1.1 = 100."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Increase 200 g by 16%. What is the new mass?",
+          "answer": "232 g",
+          "options": [
+            "232 g",
+            "216 g",
+            "184 g",
+            "32 g"
+          ],
+          "explanation": "200 x 1.16 = 232 g.",
+          "id": "c19-q01"
+        },
+        {
+          "stem": "Decrease 260 m by 21%. What is the new length?",
+          "answer": "205.4 m",
+          "options": [
+            "205.4 m",
+            "239 m",
+            "220.4 m",
+            "54.6 m"
+          ],
+          "explanation": "260 x 0.79 = 205.4 m.",
+          "id": "c19-q02"
+        },
+        {
+          "stem": "What is the multiplier for an increase of 15%?",
+          "answer": "1.15",
+          "options": [
+            "1.15",
+            "0.15",
+            "0.85",
+            "1.5"
+          ],
+          "explanation": "An increase of 15% means 100% + 15% = 115%, so the multiplier is 1.15.",
+          "id": "c19-q03"
+        },
+        {
+          "stem": "What is the multiplier for a decrease of 8%?",
+          "answer": "0.92",
+          "options": [
+            "0.92",
+            "0.08",
+            "1.08",
+            "0.8"
+          ],
+          "explanation": "100% - 8% = 92%, so the multiplier is 0.92.",
+          "id": "c19-q04"
+        },
+        {
+          "stem": "Fill in the gap: A decrease of 100% gives a multiplier of ____.",
+          "blank": "A decrease of 100% gives a multiplier of ____.",
+          "answer": "0",
+          "options": [
+            "0",
+            "1",
+            "100",
+            "-1"
+          ],
+          "explanation": "100% - 100% = 0%, so the multiplier is 0.",
+          "id": "c19-q05"
+        },
+        {
+          "stem": "A price rises from 40 to 50. What is the percentage increase?",
+          "answer": "25%",
+          "options": [
+            "25%",
+            "20%",
+            "10%",
+            "80%"
+          ],
+          "explanation": "Change = 10. Percentage change = 10 / 40 x 100 = 25%.",
+          "id": "c19-q06"
+        },
+        {
+          "stem": "A value falls from 80 to 60. What is the percentage change?",
+          "answer": "-25%",
+          "options": [
+            "-25%",
+            "25%",
+            "-20%",
+            "-33%"
+          ],
+          "explanation": "Change = -20. -20 / 80 x 100 = -25%.",
+          "id": "c19-q07"
+        },
+        {
+          "stem": "A 50% increase followed by another 50% increase is the same as a 100% increase.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "1.5 x 1.5 = 2.25, which is a 125% increase overall.",
+          "id": "c19-q08"
+        },
+        {
+          "stem": "After a 10% increase, a value is 110. What was the original value?",
+          "answer": "100",
+          "options": [
+            "100",
+            "99",
+            "121",
+            "111"
+          ],
+          "explanation": "110 / 1.1 = 100.",
+          "id": "c19-q09"
+        },
+        {
+          "stem": "Shop A gives 34% off. Shop B gives one third off. Which shop gives the bigger discount?",
+          "answer": "Shop A",
+          "options": [
+            "Shop A",
+            "Shop B",
+            "They are the same",
+            "Cannot tell"
+          ],
+          "explanation": "34% is bigger than one third, which is about 33.3%, so Shop A gives the bigger discount.",
+          "write": false,
+          "id": "c19-q10"
+        },
+        {
+          "stem": "An item costs $80. Sales tax is 15%. What is the total cost?",
+          "answer": "92",
+          "options": [
+            "92",
+            "95",
+            "12",
+            "80"
+          ],
+          "explanation": "80 x 1.15 = 92.",
+          "id": "c19-q11"
+        },
+        {
+          "stem": "A salary of $2500 rises by 8%. What is the new salary?",
+          "answer": "2700",
+          "options": [
+            "2700",
+            "2508",
+            "2600",
+            "2200"
+          ],
+          "explanation": "2500 x 1.08 = 2700.",
+          "id": "c19-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 20,
+      "title": "Sequences",
+      "notes": [
+        {
+          "heading": "Term-to-term rules",
+          "paragraphs": [
+            "A term-to-term rule says how to get the next term from the one before. It can add, subtract, multiply or divide, and the number can be a fraction or a decimal.",
+            "Example: 1, 2, 4, 8 has the rule multiply by 2, so the next term is 16."
+          ]
+        },
+        {
+          "heading": "Linear sequences and the nth term",
+          "paragraphs": [
+            "A linear sequence goes up or down by the same amount each time. This amount is the coefficient of n in the nth term.",
+            "Method: find the difference d, then the constant = first term - d. For example, 3, 5, 7 has d = 2 and constant = 3 - 2 = 1, so the nth term is 2n + 1.",
+            "Check your nth term with a few terms. For example, 2, 6, 10 has d = 4 and constant = 2 - 4 = -2, so the nth term is 4n - 2."
+          ]
+        },
+        {
+          "heading": "Is a number in the sequence?",
+          "paragraphs": [
+            "To test a number, set the nth term equal to it and solve for n. If n is a positive whole number, the number is a term.",
+            "Example: 6n - 7 = 77 gives n = 14, so 77 is a term. 4n + 1 = 50 gives n = 49/4, which is not whole, so 50 is not a term."
+          ]
+        },
+        {
+          "heading": "Decreasing sequences and patterns",
+          "paragraphs": [
+            "A negative coefficient, such as -4n + 10, gives a decreasing sequence: 6, 2, -2 and so on.",
+            "In a pattern made of shapes, find how many pieces are added each step (the difference) and how many pieces the first shape needs (the start)."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "The sequence is 3, 7, 11, 15. What is the next term?",
+          "answer": "19",
+          "options": [
+            "19",
+            "18",
+            "21",
+            "22"
+          ],
+          "explanation": "The rule is add 4, so 15 + 4 = 19.",
+          "id": "c20-q01"
+        },
+        {
+          "stem": "What is the nth term of the sequence 2, 6, 10, 14?",
+          "answer": "4n - 2",
+          "options": [
+            "4n - 2",
+            "4n + 2",
+            "2n + 4",
+            "4n"
+          ],
+          "explanation": "The difference is 4 and the first term is 2, so the constant is 2 - 4 = -2. Check: n = 2 gives 6.",
+          "id": "c20-q02"
+        },
+        {
+          "stem": "What is the nth term of the sequence 3, 5, 7?",
+          "answer": "2n + 1",
+          "options": [
+            "2n + 1",
+            "2n + 3",
+            "3n + 1",
+            "n + 2"
+          ],
+          "explanation": "The difference is 2, and the constant is 3 - 2 = 1. Check: n = 2 gives 5.",
+          "id": "c20-q03"
+        },
+        {
+          "stem": "Fill in the gap: The nth term of a sequence is 3n + 2. The 10th term is ____.",
+          "blank": "The nth term of a sequence is 3n + 2. The 10th term is ____.",
+          "answer": "32",
+          "options": [
+            "32",
+            "30",
+            "33",
+            "28"
+          ],
+          "explanation": "3 x 10 + 2 = 32.",
+          "id": "c20-q04"
+        },
+        {
+          "stem": "The nth term is 6n - 7. Is 77 a term of this sequence? Answer Yes or No.",
+          "answer": "Yes",
+          "options": [
+            "Yes",
+            "No",
+            "Only if n = 13",
+            "Cannot tell"
+          ],
+          "explanation": "6n - 7 = 77 gives 6n = 84 and n = 14, a positive whole number.",
+          "id": "c20-q05"
+        },
+        {
+          "stem": "The nth term is 4n + 1. Is 50 a term of this sequence? Answer Yes or No.",
+          "answer": "No",
+          "options": [
+            "No",
+            "Yes",
+            "Only if rounded",
+            "Cannot tell"
+          ],
+          "explanation": "4n + 1 = 50 gives n = 49/4, which is not a whole number.",
+          "id": "c20-q06"
+        },
+        {
+          "stem": "The sequence with nth term -4n + 10 is decreasing.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The coefficient of n is negative, so each term is smaller than the one before.",
+          "id": "c20-q07"
+        },
+        {
+          "stem": "What is the next term of the sequence 1, 2, 4, 8?",
+          "answer": "16",
+          "options": [
+            "16",
+            "10",
+            "12",
+            "9"
+          ],
+          "explanation": "Each term is multiplied by 2, so 8 x 2 = 16.",
+          "id": "c20-q08"
+        },
+        {
+          "stem": "What is the nth term of the sequence 100, 90, 80?",
+          "answer": "-10n + 110",
+          "options": [
+            "-10n + 110",
+            "10n + 90",
+            "-10n + 100",
+            "110n - 10"
+          ],
+          "explanation": "The difference is -10. Constant = 100 - (-10) = 110. Check: n = 2 gives 90.",
+          "id": "c20-q09"
+        },
+        {
+          "stem": "The nth term is 5n - 3. Is 22 a term of this sequence? Answer Yes or No.",
+          "answer": "Yes",
+          "options": [
+            "Yes",
+            "No",
+            "Only if n = 4",
+            "Cannot tell"
+          ],
+          "explanation": "5n - 3 = 22 gives 5n = 25 and n = 5.",
+          "id": "c20-q10"
+        },
+        {
+          "stem": "A pattern starts with 5 sticks. Each step adds 3 sticks. What is the nth term?",
+          "answer": "3n + 2",
+          "options": [
+            "3n + 2",
+            "5n",
+            "3n + 5",
+            "5n + 3"
+          ],
+          "explanation": "Difference 3 and the constant is 5 - 3 = 2. So 3n + 2.",
+          "id": "c20-q11"
+        },
+        {
+          "stem": "A sequence starts 2, 6, 18. Each term is multiplied by 3. What is the next term?",
+          "answer": "54",
+          "options": [
+            "54",
+            "24",
+            "20",
+            "36"
+          ],
+          "explanation": "18 x 3 = 54. This is not a linear sequence, so the nth term rule does not apply.",
+          "id": "c20-q12"
+        }
+      ]
+    }
+  ]
+}

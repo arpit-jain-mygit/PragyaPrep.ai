@@ -1,0 +1,908 @@
+{
+  "chapters": [
+    {
+      "chapter": 6,
+      "title": "Angles",
+      "notes": [
+        {
+          "heading": "Angle facts",
+          "paragraphs": [
+            "Angles on a straight line add up to 180 degrees. Angles around a point add up to 360 degrees.",
+            "When two lines cross, vertically opposite angles are equal."
+          ]
+        },
+        {
+          "heading": "Parallel lines",
+          "paragraphs": [
+            "A transversal is a line that crosses two parallel lines.",
+            "Corresponding angles are in the same position (an F shape) and are equal.",
+            "Alternate angles are on opposite sides of the transversal (a Z shape) and are equal.",
+            "Co-interior angles are on the same side (a C shape) and add up to 180 degrees."
+          ]
+        },
+        {
+          "heading": "Angles in triangles and polygons",
+          "paragraphs": [
+            "The angles in a triangle add up to 180 degrees. The angles in a quadrilateral add up to 360 degrees.",
+            "An exterior angle of a triangle equals the sum of the two interior angles opposite it.",
+            "For a regular polygon, each exterior angle is 360 / n and each interior angle is 180 - the exterior angle. For a regular pentagon, each exterior angle is 72 degrees and each interior angle is 108 degrees."
+          ]
+        },
+        {
+          "heading": "Bearings",
+          "paragraphs": [
+            "A bearing is measured clockwise from North and is written with three figures, such as 045 or 240.",
+            "North is 000, East is 090, South is 180 and West is 270. A back bearing is found by adding or subtracting 180 degrees."
+          ]
+        },
+        {
+          "heading": "Giving reasons",
+          "paragraphs": [
+            "When you prove an angle fact, give a geometric reason at each step, such as 'alternate angles are equal' or 'angles on a straight line add up to 180 degrees'."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Two angles lie on a straight line. One is 115 degrees. What is the other?",
+          "answer": "65",
+          "options": [
+            "65",
+            "75",
+            "245",
+            "115"
+          ],
+          "explanation": "Angles on a straight line add up to 180. 180 - 115 = 65.",
+          "id": "c06-q01"
+        },
+        {
+          "stem": "Two angles in a triangle are 47 degrees and 68 degrees. Find the third angle.",
+          "answer": "65",
+          "options": [
+            "65",
+            "75",
+            "55",
+            "133"
+          ],
+          "explanation": "The angles in a triangle add to 180. 180 - 47 - 68 = 65.",
+          "id": "c06-q02"
+        },
+        {
+          "stem": "Four angles meet at a point. Three are 100, 120 and 95 degrees. Find the fourth.",
+          "answer": "45",
+          "options": [
+            "45",
+            "65",
+            "135",
+            "315"
+          ],
+          "explanation": "Angles around a point add to 360. 360 - (100 + 120 + 95) = 360 - 315 = 45.",
+          "id": "c06-q03"
+        },
+        {
+          "stem": "Two parallel lines are crossed by a transversal. One alternate angle is 58 degrees. What is the angle it is alternate to?",
+          "answer": "58",
+          "options": [
+            "58",
+            "122",
+            "32",
+            "180"
+          ],
+          "explanation": "Alternate angles on parallel lines are equal, so the other alternate angle is also 58 degrees.",
+          "id": "c06-q04"
+        },
+        {
+          "stem": "Fill in the gap: Corresponding angles on parallel lines are ____.",
+          "blank": "Corresponding angles on parallel lines are ____.",
+          "answer": "equal",
+          "options": [
+            "equal",
+            "supplementary",
+            "complementary",
+            "reflex"
+          ],
+          "explanation": "Corresponding angles (F shape) are equal when the lines are parallel.",
+          "id": "c06-q05"
+        },
+        {
+          "stem": "Co-interior angles on parallel lines add up to how many degrees?",
+          "answer": "180",
+          "options": [
+            "90",
+            "180",
+            "360",
+            "270"
+          ],
+          "explanation": "Co-interior (C shape) angles on parallel lines add to 180 degrees.",
+          "id": "c06-q06"
+        },
+        {
+          "stem": "Two lines cross. What is true about the two vertically opposite angles?",
+          "answer": "They are equal",
+          "options": [
+            "They are equal",
+            "They add to 90",
+            "They add to 180",
+            "They add to 360"
+          ],
+          "explanation": "Vertically opposite angles are always equal.",
+          "id": "c06-q07"
+        },
+        {
+          "stem": "A triangle has two interior angles of 40 degrees and 75 degrees at the other corners. Find the exterior angle at the third corner.",
+          "answer": "115",
+          "options": [
+            "115",
+            "105",
+            "35",
+            "140"
+          ],
+          "explanation": "An exterior angle equals the sum of the two opposite interior angles: 40 + 75 = 115.",
+          "id": "c06-q08"
+        },
+        {
+          "stem": "Find the size of one interior angle of a regular pentagon.",
+          "answer": "108",
+          "options": [
+            "108",
+            "72",
+            "540",
+            "120"
+          ],
+          "explanation": "The interior angles add to (5 - 2) x 180 = 540. Divide by 5 to get 108.",
+          "id": "c06-q09"
+        },
+        {
+          "stem": "Find the size of one exterior angle of a regular pentagon.",
+          "answer": "72",
+          "options": [
+            "72",
+            "108",
+            "36",
+            "60"
+          ],
+          "explanation": "Exterior angles add to 360. 360 / 5 = 72.",
+          "id": "c06-q10"
+        },
+        {
+          "stem": "What is the three-figure bearing of East?",
+          "answer": "090",
+          "options": [
+            "090",
+            "180",
+            "270",
+            "045"
+          ],
+          "explanation": "Bearings are measured clockwise from North. East is a quarter turn, which is 090.",
+          "id": "c06-q11"
+        },
+        {
+          "stem": "The angles of a triangle always add up to 360 degrees.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The angles in a triangle add up to 180 degrees. 360 degrees is for a quadrilateral.",
+          "id": "c06-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 7,
+      "title": "Place value, rounding and decimals",
+      "notes": [
+        {
+          "heading": "Multiplying and dividing by 0.1 and 0.01",
+          "paragraphs": [
+            "Multiplying by 0.1 divides by 10, so the digits move one place to the right in value. 45.6 x 0.1 = 4.56.",
+            "Multiplying by 0.01 divides by 100. Dividing by 0.1 multiplies by 10, and dividing by 0.01 multiplies by 100. 34.7 / 0.01 = 3470."
+          ]
+        },
+        {
+          "heading": "Significant figures",
+          "paragraphs": [
+            "The first non-zero digit is the first significant figure (s.f.). Zeros between or after non-zero digits count as significant.",
+            "0.05208 to 1 s.f. is 0.05. 32401 to 2 s.f. is 32000. 0.0602 to 2 s.f. is 0.060.",
+            "A zero at the end of a whole number may or may not be significant. For example, 800 to 1 s.f. is 800."
+          ]
+        },
+        {
+          "heading": "Decimal places",
+          "paragraphs": [
+            "Decimal places count digits after the point. 6.16052 to 3 d.p. is 6.161."
+          ]
+        },
+        {
+          "heading": "Multiplying and dividing decimals",
+          "paragraphs": [
+            "To multiply decimals, ignore the points, multiply as whole numbers, then place the point using an estimate. For example, 0.67 x (-9) = -6.03.",
+            "To divide by a decimal, multiply both numbers by 10 or 100 to make the divisor a whole number. For example, 2.76 / 0.8 = 27.6 / 8 = 3.45.",
+            "Estimate by rounding each number to 1 significant figure first."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Work out 45.6 x 0.1.",
+          "answer": "4.56",
+          "options": [
+            "4.56",
+            "456",
+            "0.456",
+            "0.0456"
+          ],
+          "explanation": "Multiplying by 0.1 divides by 10. 45.6 / 10 = 4.56.",
+          "id": "c07-q01"
+        },
+        {
+          "stem": "Fill in the gap: 34.7 / 0.01 = ____",
+          "blank": "34.7 / 0.01 = ____",
+          "answer": "3470",
+          "options": [
+            "3470",
+            "347",
+            "34.7",
+            "0.347"
+          ],
+          "explanation": "Dividing by 0.01 multiplies by 100. 34.7 x 100 = 3470.",
+          "id": "c07-q02"
+        },
+        {
+          "stem": "Round 0.05208 to 1 significant figure.",
+          "answer": "0.05",
+          "options": [
+            "0.05",
+            "0.052",
+            "0.1",
+            "0.0521"
+          ],
+          "explanation": "The first significant figure is 5. The next digit is 2, so round down to 0.05.",
+          "id": "c07-q03"
+        },
+        {
+          "stem": "Round 6.16052 to 3 decimal places.",
+          "answer": "6.161",
+          "options": [
+            "6.161",
+            "6.160",
+            "6.16",
+            "6.1605"
+          ],
+          "explanation": "The fourth decimal digit is 5, so round the third digit (0) up to 1, giving 6.161.",
+          "id": "c07-q04"
+        },
+        {
+          "stem": "Round 32401 to 2 significant figures.",
+          "answer": "32000",
+          "options": [
+            "32000",
+            "32400",
+            "30000",
+            "33000"
+          ],
+          "explanation": "The first two significant figures are 3 and 2. The next digit is 4, so round down and fill with zeros.",
+          "id": "c07-q05"
+        },
+        {
+          "stem": "Work out 0.67 x (-9).",
+          "answer": "-6.03",
+          "options": [
+            "-6.03",
+            "6.03",
+            "-60.3",
+            "-0.603"
+          ],
+          "explanation": "0.67 x 9 = 6.03. The signs are different, so the answer is negative.",
+          "id": "c07-q06"
+        },
+        {
+          "stem": "Work out 2.76 / 0.8.",
+          "answer": "3.45",
+          "options": [
+            "3.45",
+            "34.5",
+            "0.345",
+            "3.5"
+          ],
+          "explanation": "Multiply both numbers by 10: 27.6 / 8 = 3.45.",
+          "id": "c07-q07"
+        },
+        {
+          "stem": "Work out -6 / 0.4.",
+          "answer": "-15",
+          "options": [
+            "-15",
+            "15",
+            "-1.5",
+            "-0.15"
+          ],
+          "explanation": "Multiply both by 10: -60 / 4 = -15.",
+          "id": "c07-q08"
+        },
+        {
+          "stem": "800 rounded to 1 significant figure is 800.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "Rounding 800 to 1 significant figure gives 800, because the 8 is the only significant digit and the zeros keep the size.",
+          "id": "c07-q09"
+        },
+        {
+          "stem": "Round 4.5672 to 2 decimal places.",
+          "answer": "4.57",
+          "options": [
+            "4.57",
+            "4.56",
+            "4.6",
+            "4.5672"
+          ],
+          "explanation": "The third decimal digit is 7, so round the second decimal digit 6 up to 7.",
+          "id": "c07-q10"
+        },
+        {
+          "stem": "Work out 6.4 x 0.01.",
+          "answer": "0.064",
+          "options": [
+            "0.064",
+            "6.4",
+            "0.64",
+            "0.0064"
+          ],
+          "explanation": "Multiplying by 0.01 divides by 100. 6.4 / 100 = 0.064.",
+          "id": "c07-q11"
+        },
+        {
+          "stem": "Estimate 0.51 x 39 by rounding each number to 1 significant figure first.",
+          "answer": "20",
+          "options": [
+            "20",
+            "2",
+            "200",
+            "0.2"
+          ],
+          "explanation": "0.51 rounds to 0.5 and 39 rounds to 40. 0.5 x 40 = 20.",
+          "id": "c07-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 8,
+      "title": "Presenting and interpreting data 1",
+      "notes": [
+        {
+          "heading": "Frequency tables and class intervals",
+          "paragraphs": [
+            "Use class intervals of equal width. Write them with inequality signs, such as 40 <= t < 80. The value 40 is included, but 80 goes into the next class.",
+            "Use between 4 and 8 classes. A tally groups marks in fives: the fifth stroke crosses the other four."
+          ]
+        },
+        {
+          "heading": "Frequency diagrams",
+          "paragraphs": [
+            "For continuous data, the bars of a frequency diagram touch and the scale is continuous. For discrete data, leave gaps between the bars.",
+            "The modal class is the class with the highest frequency. A percentage is (frequency / total) x 100."
+          ]
+        },
+        {
+          "heading": "Bar charts",
+          "paragraphs": [
+            "A dual bar chart shows two groups side by side for each category.",
+            "A compound bar chart stacks the parts. The height of the whole bar is the total. Compare segments only within the same colour."
+          ]
+        },
+        {
+          "heading": "Stem-and-leaf diagrams",
+          "paragraphs": [
+            "In a stem-and-leaf diagram, the stem is the tens digit and the leaf is the units digit. A key tells you what the numbers mean, for example 3 | 5 means 35.",
+            "Put the leaves in order. The median is the middle value. If there is an even number of values, it is the average of the two middle values. The range is the largest value minus the smallest. The mode is the most frequent value."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "The class interval is 40 <= t < 80. Is the value 80 included in this class? Answer Yes or No.",
+          "answer": "No",
+          "options": [
+            "No",
+            "Yes",
+            "Only sometimes",
+            "Depends on rounding"
+          ],
+          "explanation": "The sign < means 80 is not included. It goes into the next class.",
+          "id": "c08-q01"
+        },
+        {
+          "stem": "In a tally chart, one complete gate of tally marks shows how many values?",
+          "answer": "5",
+          "options": [
+            "4",
+            "5",
+            "6",
+            "10"
+          ],
+          "explanation": "Four strokes are followed by a fifth stroke crossing them, which makes a gate of five.",
+          "id": "c08-q02"
+        },
+        {
+          "stem": "Find the mode of 2, 3, 3, 5, 7, 3.",
+          "answer": "3",
+          "options": [
+            "2",
+            "3",
+            "5",
+            "7"
+          ],
+          "explanation": "The value 3 appears most often (three times).",
+          "id": "c08-q03"
+        },
+        {
+          "stem": "Find the median of 4, 9, 2, 7, 6.",
+          "answer": "6",
+          "options": [
+            "6",
+            "7",
+            "4",
+            "5"
+          ],
+          "explanation": "Put in order: 2, 4, 6, 7, 9. The middle value is 6.",
+          "id": "c08-q04"
+        },
+        {
+          "stem": "Find the median of 3, 8, 5, 10.",
+          "answer": "6.5",
+          "options": [
+            "6.5",
+            "6",
+            "8",
+            "7"
+          ],
+          "explanation": "Put in order: 3, 5, 8, 10. The two middle values are 5 and 8. (5 + 8) / 2 = 6.5.",
+          "id": "c08-q05"
+        },
+        {
+          "stem": "Find the range of 12, 4, 19, 7.",
+          "answer": "15",
+          "options": [
+            "15",
+            "12",
+            "23",
+            "7"
+          ],
+          "explanation": "The range is the largest value minus the smallest: 19 - 4 = 15.",
+          "id": "c08-q06"
+        },
+        {
+          "stem": "In a stem-and-leaf diagram with the key 3 | 5 means 35, what number does 4 | 2 show?",
+          "answer": "42",
+          "options": [
+            "42",
+            "24",
+            "4.2",
+            "6"
+          ],
+          "explanation": "The stem is 4 (tens) and the leaf is 2 (units), so the number is 42.",
+          "id": "c08-q07"
+        },
+        {
+          "stem": "A sample of 50 people. 30% chose tea. How many people chose tea?",
+          "answer": "15",
+          "options": [
+            "15",
+            "30",
+            "20",
+            "35"
+          ],
+          "explanation": "30% of 50 = 0.3 x 50 = 15.",
+          "id": "c08-q08"
+        },
+        {
+          "stem": "There are 25 students and 9 are in one class interval. What percentage of students is that?",
+          "answer": "36%",
+          "options": [
+            "36%",
+            "9%",
+            "25%",
+            "40%"
+          ],
+          "explanation": "9 / 25 x 100 = 36%.",
+          "id": "c08-q09"
+        },
+        {
+          "stem": "Find the mean of 2, 4, 6 and 8.",
+          "answer": "5",
+          "options": [
+            "5",
+            "4",
+            "20",
+            "6"
+          ],
+          "explanation": "Add the values: 2 + 4 + 6 + 8 = 20. Divide by 4 to get 5.",
+          "id": "c08-q10"
+        },
+        {
+          "stem": "Fill in the gap: The class with the highest frequency is called the modal ____.",
+          "blank": "The class with the highest frequency is called the modal ____.",
+          "answer": "class",
+          "options": [
+            "class",
+            "median",
+            "range",
+            "mean"
+          ],
+          "explanation": "The modal class is the class interval with the highest frequency.",
+          "id": "c08-q11"
+        },
+        {
+          "stem": "The median of an even number of values is always one of the values.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "For an even number of values the median is the average of the two middle values. For 3, 5, 8, 10 the median is 6.5, which is not in the list.",
+          "id": "c08-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 9,
+      "title": "Functions and formulae",
+      "notes": [
+        {
+          "heading": "Functions",
+          "paragraphs": [
+            "A function gives exactly one output for each input. You can show a function as a function machine, a mapping diagram, an input-output table or a formula such as y = 3x - 4.",
+            "To find the rule from a table, look for the operations that take each input to its output."
+          ]
+        },
+        {
+          "heading": "Reversing a function machine",
+          "paragraphs": [
+            "To find an input from an output, undo each operation in the reverse order using the inverse operation. For example, if a machine multiplies by 3 and then subtracts 1 and the output is -4, the input is (-4 + 1) / 3 = -1."
+          ]
+        },
+        {
+          "heading": "Formulae",
+          "paragraphs": [
+            "A formula links quantities. To use it, define the letters, substitute the values with their units and follow BIDMAS.",
+            "Example: P = 2l + 2w. When l = 7 and w = 3, P = 14 + 6 = 20."
+          ]
+        },
+        {
+          "heading": "Changing the subject",
+          "paragraphs": [
+            "The subject of a formula is the letter on its own on one side. To change the subject, undo the operations on the other side, in reverse order. The new subject must appear only once.",
+            "Example: m = 4a - 11 gives a = (m + 11) / 4.",
+            "Example: F = 1.8C + 32. Temperature check: 0 C = 32 F and 100 C = 212 F."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "A machine takes an input, multiplies it by 3 and then subtracts 5. What is the output when the input is 4?",
+          "answer": "7",
+          "options": [
+            "7",
+            "17",
+            "-7",
+            "3"
+          ],
+          "explanation": "4 x 3 = 12, then 12 - 5 = 7.",
+          "id": "c09-q01"
+        },
+        {
+          "stem": "A machine subtracts 1 from the input and then multiplies the result by 3. The output is -12. Find the input.",
+          "answer": "-3",
+          "options": [
+            "-3",
+            "3",
+            "-4",
+            "-9"
+          ],
+          "explanation": "Undo the multiplication first: -12 / 3 = -4. Then undo the subtraction: -4 + 1 = -3.",
+          "id": "c09-q02"
+        },
+        {
+          "stem": "The inputs 1, 2 and 3 give outputs 1, 4 and 7. Which rule matches?",
+          "answer": "y = 3x - 2",
+          "options": [
+            "y = 3x - 2",
+            "y = 3x + 1",
+            "y = x + 3",
+            "y = 2x - 1"
+          ],
+          "explanation": "Check: 3 x 1 - 2 = 1, 3 x 2 - 2 = 4 and 3 x 3 - 2 = 7.",
+          "id": "c09-q03"
+        },
+        {
+          "stem": "A rectangle has length 7 and width 3. Use P = 2l + 2w to find P.",
+          "answer": "20",
+          "options": [
+            "20",
+            "17",
+            "26",
+            "12"
+          ],
+          "explanation": "P = 2 x 7 + 2 x 3 = 14 + 6 = 20.",
+          "id": "c09-q04"
+        },
+        {
+          "stem": "A formula is C = 15 + 3n. Find n when C = 33.",
+          "answer": "6",
+          "options": [
+            "6",
+            "16",
+            "18",
+            "11"
+          ],
+          "explanation": "33 = 15 + 3n, so 3n = 18 and n = 6.",
+          "id": "c09-q05"
+        },
+        {
+          "stem": "Make x the subject of y = mx + c.",
+          "answer": "x = (y - c) / m",
+          "options": [
+            "x = (y - c) / m",
+            "x = (y + c) / m",
+            "x = y - c - m",
+            "x = my - c"
+          ],
+          "explanation": "Subtract c from both sides, then divide both sides by m.",
+          "id": "c09-q06"
+        },
+        {
+          "stem": "Fill in the gap: Make a the subject of m = 4a - 11. Then a = (m + 11) / ____.",
+          "blank": "Make a the subject of m = 4a - 11. Then a = (m + 11) / ____.",
+          "answer": "4",
+          "options": [
+            "4",
+            "11",
+            "2",
+            "44"
+          ],
+          "explanation": "Add 11 to both sides, then divide by 4.",
+          "id": "c09-q07"
+        },
+        {
+          "stem": "The formula is F = 1.8C + 32. Find F when C = 100.",
+          "answer": "212",
+          "options": [
+            "212",
+            "180",
+            "132",
+            "100"
+          ],
+          "explanation": "1.8 x 100 + 32 = 180 + 32 = 212.",
+          "id": "c09-q08"
+        },
+        {
+          "stem": "Make r the subject of t = p(r - 2).",
+          "answer": "r = t / p + 2",
+          "options": [
+            "r = t / p + 2",
+            "r = t / p - 2",
+            "r = tp + 2",
+            "r = t - 2p"
+          ],
+          "explanation": "Divide both sides by p to get t / p = r - 2, then add 2 to both sides.",
+          "id": "c09-q09"
+        },
+        {
+          "stem": "A function is f(x) = 2x + 5. Find f(3).",
+          "answer": "11",
+          "options": [
+            "11",
+            "10",
+            "6",
+            "15"
+          ],
+          "explanation": "f(3) = 2 x 3 + 5 = 11.",
+          "id": "c09-q10"
+        },
+        {
+          "stem": "In a function, each input gives exactly one output.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "That is the definition of a function.",
+          "id": "c09-q11"
+        },
+        {
+          "stem": "The mapping shows 2 mapping to 5 and 2 mapping to 7. Is this a function? Answer Yes or No.",
+          "answer": "No",
+          "options": [
+            "No",
+            "Yes",
+            "Only sometimes",
+            "Cannot tell"
+          ],
+          "explanation": "The input 2 has two different outputs, so it is not a function.",
+          "id": "c09-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 10,
+      "title": "Fractions",
+      "notes": [
+        {
+          "heading": "Subtracting mixed numbers",
+          "paragraphs": [
+            "Work with the whole numbers and the fractions. If the fraction you are subtracting is bigger, borrow 1 whole from the whole number and write it as a fraction.",
+            "Example: 3 1/4 - 1 5/8 = 13/4 - 13/8 = 26/8 - 13/8 = 13/8 = 1 5/8.",
+            "Estimate first by rounding to the nearest whole number."
+          ]
+        },
+        {
+          "heading": "Multiplying a whole number by a mixed number",
+          "paragraphs": [
+            "Split the mixed number into its whole part and fraction part, then multiply each part. Example: 3 x 2 3/4 = 3 x 2 + 3 x 3/4 = 6 + 9/4 = 8 1/4."
+          ]
+        },
+        {
+          "heading": "Reciprocals and division",
+          "paragraphs": [
+            "The reciprocal of a fraction is the fraction turned upside down. The reciprocal of 2/3 is 3/2. A number times its reciprocal is 1.",
+            "To divide by a fraction, multiply by its reciprocal. For example, 2 / (2/5) = 2 x 5/2 = 5 and 2 / (3/5) = 10/3 = 3 1/3."
+          ]
+        },
+        {
+          "heading": "Size of the answer",
+          "paragraphs": [
+            "Dividing an integer by a proper fraction gives an answer bigger than the integer. Multiplying an integer of 1 or more by a mixed number gives an answer at least as big as the integer."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Work out 3 1/4 - 1 5/8.",
+          "answer": "1 5/8",
+          "options": [
+            "1 5/8",
+            "2 5/8",
+            "1 3/8",
+            "2 3/8"
+          ],
+          "explanation": "13/4 = 26/8 and 13/8 is 1 5/8. 26/8 - 13/8 = 13/8 = 1 5/8.",
+          "id": "c10-q01"
+        },
+        {
+          "stem": "Work out 3 x 2 3/4.",
+          "answer": "8 1/4",
+          "options": [
+            "8 1/4",
+            "6 3/4",
+            "9 1/4",
+            "8 3/4"
+          ],
+          "explanation": "3 x 2 = 6 and 3 x 3/4 = 9/4 = 2 1/4. Total 8 1/4.",
+          "id": "c10-q02"
+        },
+        {
+          "stem": "What is the reciprocal of 2/3?",
+          "answer": "3/2",
+          "options": [
+            "3/2",
+            "2/3",
+            "-2/3",
+            "3/5"
+          ],
+          "explanation": "Turn the fraction upside down: 3/2.",
+          "id": "c10-q03"
+        },
+        {
+          "stem": "Work out 2 / (2/5).",
+          "answer": "5",
+          "options": [
+            "5",
+            "4/5",
+            "1/5",
+            "10"
+          ],
+          "explanation": "Multiply by the reciprocal: 2 x 5/2 = 5.",
+          "id": "c10-q04"
+        },
+        {
+          "stem": "Work out 2 / (3/5).",
+          "answer": "3 1/3",
+          "options": [
+            "3 1/3",
+            "1 1/5",
+            "10 3",
+            "6 2/5"
+          ],
+          "explanation": "2 x 5/3 = 10/3 = 3 1/3.",
+          "id": "c10-q05"
+        },
+        {
+          "stem": "Fill in the gap: Dividing by a fraction is the same as multiplying by its ____.",
+          "blank": "Dividing by a fraction is the same as multiplying by its ____.",
+          "answer": "reciprocal",
+          "options": [
+            "reciprocal",
+            "square",
+            "integer",
+            "denominator"
+          ],
+          "explanation": "Dividing by a fraction means multiplying by its reciprocal.",
+          "id": "c10-q06"
+        },
+        {
+          "stem": "Work out 4 1/2 x 2/3.",
+          "answer": "3",
+          "options": [
+            "3",
+            "6",
+            "2 1/3",
+            "4 1/3"
+          ],
+          "explanation": "9/2 x 2/3 = 18/6 = 3.",
+          "id": "c10-q07"
+        },
+        {
+          "stem": "Work out 3 3/4 - 1 1/2.",
+          "answer": "2 1/4",
+          "options": [
+            "2 1/4",
+            "2 3/4",
+            "1 1/4",
+            "2 1/2"
+          ],
+          "explanation": "3 3/4 - 1 1/2 = 3 3/4 - 1 2/4 = 2 1/4.",
+          "id": "c10-q08"
+        },
+        {
+          "stem": "Dividing an integer by a proper fraction gives an answer bigger than the integer.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "For example, 2 / (1/2) = 4, which is bigger than 2.",
+          "id": "c10-q09"
+        },
+        {
+          "stem": "Work out 6 / (1/3).",
+          "answer": "18",
+          "options": [
+            "18",
+            "2",
+            "6 1/3",
+            "3"
+          ],
+          "explanation": "6 x 3 = 18.",
+          "id": "c10-q10"
+        },
+        {
+          "stem": "Work out 5 x 1 1/2.",
+          "answer": "7 1/2",
+          "options": [
+            "7 1/2",
+            "6 1/2",
+            "5 1/2",
+            "7 1/4"
+          ],
+          "explanation": "5 x 1 = 5 and 5 x 1/2 = 2 1/2. Total 7 1/2.",
+          "id": "c10-q11"
+        },
+        {
+          "stem": "Work out 2 1/2 x 2 2/5.",
+          "answer": "6",
+          "options": [
+            "6",
+            "5",
+            "6 1/2",
+            "4 4/5"
+          ],
+          "explanation": "5/2 x 12/5 = 60/10 = 6.",
+          "id": "c10-q12"
+        }
+      ]
+    }
+  ]
+}

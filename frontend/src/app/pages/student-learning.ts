@@ -23,6 +23,8 @@ import { InfoTip } from '../ui/info-tip';
       @if (showVocabulary()) {
         <a class="tab with-icon" id="tab-vocabulary" [routerLink]="['/', tenants.slug(), 'learning', 'vocabulary']" routerLinkActive="active"><app-icon name="book" [size]="16" /> Vocabulary</a>
       }
+      <!-- Study Hub: Wren & Martin, Cambridge Maths and Cambridge English. Shown to every student for now (beta); the rule for who sees it is still to be decided. -->
+      <a class="tab with-icon" id="tab-study-hub" [routerLink]="['/', tenants.slug(), 'learning', 'study-hub']" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }"><app-icon name="book" [size]="16" /> Study Hub</a>
     </nav>
     <router-outlet />
   `,

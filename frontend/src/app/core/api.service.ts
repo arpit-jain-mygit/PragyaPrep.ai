@@ -3,7 +3,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TenantService } from './tenant.service';
-import { AskLog, FeatureRow, MyLeaderboard, MyYesterdayWinners, ReleaseHistory, QuestionViewer, AnalyseFilters, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow } from './models';
+import { AskLog, FeatureRow, MyLeaderboard, MyYesterdayWinners, ReleaseHistory, QuestionViewer, AnalyseFilters, MyTopicTests, ReleaseList, ReleaseSchedule, Release, TodayReleases, MyOranges, MyWordOfDay, WordEntry, FreeSample, FreeState, SignupForm, Access, Batch, StudentQuick, MyBatch, MyInstitute, MyProfile, StudentPhotoStart, RegistrationReceived, AdminCourse, ApiError, CourseAccess, CourseFile, AdminBehind, Announcement, LiveClass, LiveClassInput, LiveImport, StudentImport, WelcomeResult, AnnouncementInput, MyNotices, ReminderResult, AdminHomeCounts, CopyChoice, CourseProgress, CourseStuck, StudentProgress, AdminParent, ChildDetail, ChildSummary, ParentImport, ParentInput, StudentCoursework, StudyAnswer, StudySearch, StudentLiveCourse, CopyResult, CourseworkPlan, WorkSubtopicInput, CodeResult, Course, DecisionAction, DecisionResult, FileLink, FileStart, GrantRequestedResult, Institute, InstituteCreate, InstituteResult, InstituteUpdate, Member, AdminAttempt, AttemptResult, AttemptView, AutoPickResult, MyResults, StudentTestCard, Paper, TestDetail, TestResults, TestInput, TestSummary, Passage, Picture, Question, QuestionImport, QuestionInput, Registration, RegistrationEdit, RegistrationForm, Session, TenantInfo, UploadForm, TestKind, VocabPack, VocabQuestion, VocabMarked, PastPaperCard, SyllabusTable, FilterTopicGroup, AnalyseView, SwotView, Application, ApplicationInput, PiBankView, PiQuestionRow, PiQuestionInput, EligibilityCollege, CollegeRule, AdminCollege, CutoffView, CutoffRow, HubWmNote, HubWmChapter, HubWmQuestion, HubWmAnswerResult, HubCmChapter, HubCmNote, HubCmQuiz, HubTestItem, HubTestResult } from './models';
 
 /** Turn whatever went wrong into one simple shape the screens can show. */
 export function toApiError(error: unknown): ApiError {
@@ -559,6 +559,50 @@ export class ApiService {
 
   setOrangesTarget(target: number): Promise<{ target: number }> {
     return this.call(firstValueFrom(this.http.put<{ target: number }>(`${this.base}/api/admin/oranges-target`, { target })));
+  }
+
+  // ---- Study Hub (student): Wren & Martin grammar and Cambridge Maths Stage 8. Nothing is saved on the server. ----
+
+  hubWmNotes(): Promise<{ notes: HubWmNote[] }> {
+    return this.get('/api/my/study-hub/wm/notes');
+  }
+
+  hubWmChapters(): Promise<{ chapters: HubWmChapter[] }> {
+    return this.get('/api/my/study-hub/wm/chapters');
+  }
+
+  hubWmQuestions(chapter: number): Promise<{ chapter: number; title: string; questions: HubWmQuestion[] }> {
+    return this.get(`/api/my/study-hub/wm/chapters/${chapter}/questions`);
+  }
+
+  /** Marks one Wren & Martin quiz answer. The right answer is only told after the student has answered. */
+  hubWmAnswer(chapter: number, questionId: string, choice: number): Promise<HubWmAnswerResult> {
+    return this.post('/api/my/study-hub/wm/answers', { chapter, question_id: questionId, choice });
+  }
+
+  hubCmChapters(): Promise<{ chapters: HubCmChapter[] }> {
+    return this.get('/api/my/study-hub/cm/chapters');
+  }
+
+  hubCmChapter(chapter: number): Promise<HubCmNote> {
+    return this.get(`/api/my/study-hub/cm/chapters/${chapter}`);
+  }
+
+  hubCmQuiz(chapter: number): Promise<HubCmQuiz> {
+    return this.get(`/api/my/study-hub/cm/chapters/${chapter}/quiz`);
+  }
+
+  /** A student-made test for one subject ('wm' or 'cm'). Chapters empty = all chapters. */
+  hubBuildTest(subject: 'wm' | 'cm', chapters: number[], formats: string[], count: number): Promise<{ items: HubTestItem[] }> {
+    return this.get(`/api/my/study-hub/${subject}/tests/build`, {
+      chapters: chapters.join(','),
+      formats: formats.join(''),
+      count: String(count),
+    });
+  }
+
+  hubGradeTest(subject: 'wm' | 'cm', items: { id: string; answer: string }[]): Promise<HubTestResult> {
+    return this.post(`/api/my/study-hub/${subject}/tests/grade`, { items });
   }
 
   /** Today's pack in Vocabulary or Idioms, with the calendar around it. */

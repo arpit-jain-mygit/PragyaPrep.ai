@@ -1,0 +1,887 @@
+{
+  "chapters": [
+    {
+      "chapter": 11,
+      "title": "Length, area and volume",
+      "notes": [
+        {
+          "heading": "Miles and kilometres",
+          "paragraphs": [
+            "1 mile is about 1.6 km, so 1 km is about 0.625 miles.",
+            "If the number of miles is a multiple of 5, multiply by 8 and divide by 5 to get km. Example: 40 miles = 40 x 8 / 5 = 64 km.",
+            "If the number of km is a multiple of 8, multiply by 5 and divide by 8 to get miles. Example: 80 km = 80 x 5 / 8 = 50 miles."
+          ]
+        },
+        {
+          "heading": "Area of 2D shapes",
+          "paragraphs": [
+            "Rectangle: area = length x width.",
+            "Triangle: area = 1/2 x base x perpendicular height. Use the perpendicular height, not a slanted side.",
+            "Parallelogram: area = base x perpendicular height.",
+            "Trapezium: area = 1/2 (a + b) x h, where a and b are the parallel sides and h is the perpendicular height."
+          ]
+        },
+        {
+          "heading": "Volume of prisms",
+          "paragraphs": [
+            "A prism has the same cross-section all the way along its length. Volume = area of cross-section x length.",
+            "Example: a triangle with base 6 cm and height 8 cm has area 24 cm^2. A prism of length 9 cm has volume 24 x 9 = 216 cm^3."
+          ]
+        },
+        {
+          "heading": "Surface area",
+          "paragraphs": [
+            "The surface area is the total area of all the faces. Draw a net and add up the area of each face.",
+            "Example: a square pyramid with base 7 cm and slant triangles of height 12 cm has area 7 x 7 + 4 x (1/2 x 7 x 12) = 49 + 168 = 217 cm^2."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Convert 40 miles to kilometres. Use 1 mile = 1.6 km.",
+          "answer": "64 km",
+          "options": [
+            "64 km",
+            "25 km",
+            "40 km",
+            "16 km"
+          ],
+          "explanation": "40 x 1.6 = 64 km.",
+          "id": "c11-q01"
+        },
+        {
+          "stem": "Convert 80 km to miles.",
+          "answer": "50 miles",
+          "options": [
+            "50 miles",
+            "128 miles",
+            "40 miles",
+            "125 miles"
+          ],
+          "explanation": "80 x 5 / 8 = 50 miles.",
+          "id": "c11-q02"
+        },
+        {
+          "stem": "Find the area of a parallelogram with base 9 cm and perpendicular height 4 cm.",
+          "answer": "36 cm^2",
+          "options": [
+            "36 cm^2",
+            "13 cm^2",
+            "18 cm^2",
+            "72 cm^2"
+          ],
+          "explanation": "Area = base x perpendicular height = 9 x 4 = 36 cm^2.",
+          "id": "c11-q03"
+        },
+        {
+          "stem": "Find the area of a triangle with base 6 cm and perpendicular height 8 cm.",
+          "answer": "24 cm^2",
+          "options": [
+            "24 cm^2",
+            "48 cm^2",
+            "14 cm^2",
+            "7 cm^2"
+          ],
+          "explanation": "Area = 1/2 x 6 x 8 = 24 cm^2.",
+          "id": "c11-q04"
+        },
+        {
+          "stem": "Find the area of a trapezium with parallel sides 5 cm and 9 cm and height 4 cm.",
+          "answer": "28 cm^2",
+          "options": [
+            "28 cm^2",
+            "56 cm^2",
+            "14 cm^2",
+            "36 cm^2"
+          ],
+          "explanation": "Area = 1/2 x (5 + 9) x 4 = 28 cm^2.",
+          "id": "c11-q05"
+        },
+        {
+          "stem": "Fill in the gap: A rectangle has length 7 cm and width 3 cm. Its area is ____ cm^2.",
+          "blank": "A rectangle has length 7 cm and width 3 cm. Its area is ____ cm^2.",
+          "answer": "21",
+          "options": [
+            "21",
+            "20",
+            "10",
+            "42"
+          ],
+          "explanation": "Area = 7 x 3 = 21 cm^2.",
+          "id": "c11-q06"
+        },
+        {
+          "stem": "A triangular prism has a cross-section of area 12 cm^2 and a length of 9 cm. Find its volume.",
+          "answer": "108 cm^3",
+          "options": [
+            "108 cm^3",
+            "21 cm^3",
+            "54 cm^3",
+            "216 cm^3"
+          ],
+          "explanation": "Volume = cross-section area x length = 12 x 9 = 108 cm^3.",
+          "id": "c11-q07"
+        },
+        {
+          "stem": "A square pyramid has a base of side 7 cm. Each of the four triangular faces has height 12 cm. Find the total surface area.",
+          "answer": "217 cm^2",
+          "options": [
+            "217 cm^2",
+            "49 cm^2",
+            "168 cm^2",
+            "266 cm^2"
+          ],
+          "explanation": "Base 7 x 7 = 49. Each triangle is 1/2 x 7 x 12 = 42, and four of them make 168. Total 49 + 168 = 217 cm^2.",
+          "id": "c11-q08"
+        },
+        {
+          "stem": "The area of a parallelogram is found using the length of its slanted side.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The area uses the base and the perpendicular height, not the slanted side.",
+          "id": "c11-q09"
+        },
+        {
+          "stem": "A triangular prism has a cross-section of area 15 cm^2 and length 10 cm. Find its volume.",
+          "answer": "150 cm^3",
+          "options": [
+            "150 cm^3",
+            "25 cm^3",
+            "75 cm^3",
+            "300 cm^3"
+          ],
+          "explanation": "Volume = 15 x 10 = 150 cm^3.",
+          "id": "c11-q10"
+        },
+        {
+          "stem": "Find the volume of a cuboid measuring 4 cm by 3 cm by 2 cm.",
+          "answer": "24 cm^3",
+          "options": [
+            "24 cm^3",
+            "9 cm^3",
+            "18 cm^3",
+            "26 cm^3"
+          ],
+          "explanation": "Volume = 4 x 3 x 2 = 24 cm^3.",
+          "id": "c11-q11"
+        },
+        {
+          "stem": "A triangle has base 10 cm and area 35 cm^2. Find its perpendicular height.",
+          "answer": "7 cm",
+          "options": [
+            "7 cm",
+            "3.5 cm",
+            "17.5 cm",
+            "70 cm"
+          ],
+          "explanation": "1/2 x 10 x h = 35, so 5h = 35 and h = 7 cm.",
+          "id": "c11-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 12,
+      "title": "Probability 1",
+      "notes": [
+        {
+          "heading": "Complementary events",
+          "paragraphs": [
+            "The probability of an event and the probability of its complement add up to 1. P(not A) = 1 - P(A).",
+            "If a percentage is given, use 100% as the whole. For example, if the chance of a flat is 23%, the chance of not flat is 77%."
+          ]
+        },
+        {
+          "heading": "Theoretical and experimental probability",
+          "paragraphs": [
+            "Theoretical probability = number of favourable outcomes / number of possible outcomes, when all outcomes are equally likely.",
+            "Experimental (relative frequency) probability = number of times an event happened / total number of trials.",
+            "More trials usually give a better estimate of the probability."
+          ]
+        },
+        {
+          "heading": "Using probabilities",
+          "paragraphs": [
+            "The probabilities of all outcomes add up to 1.",
+            "Expected number = probability x number of trials. For example, 0.25 x 200 = 50.",
+            "To judge whether a dice or spinner is fair, compare the experimental results with the theoretical probability."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "The probability of rain is 0.3. What is the probability of no rain?",
+          "answer": "0.7",
+          "options": [
+            "0.7",
+            "0.3",
+            "0.6",
+            "1.3"
+          ],
+          "explanation": "1 - 0.3 = 0.7.",
+          "id": "c12-q01"
+        },
+        {
+          "stem": "The chance of a flat is 23%. What is the chance of not a flat, as a percentage?",
+          "answer": "77%",
+          "options": [
+            "77%",
+            "23%",
+            "73%",
+            "0.77%"
+          ],
+          "explanation": "100% - 23% = 77%.",
+          "id": "c12-q02"
+        },
+        {
+          "stem": "Fill in the gap: A bag has probabilities 0.2, 0.5 and 0.1 for three colours. The fourth colour has probability ____.",
+          "blank": "A bag has probabilities 0.2, 0.5 and 0.1 for three colours. The fourth colour has probability ____.",
+          "answer": "0.2",
+          "options": [
+            "0.2",
+            "0.3",
+            "0.8",
+            "0.1"
+          ],
+          "explanation": "The probabilities add to 1. 0.2 + 0.5 + 0.1 = 0.8, so the fourth is 1 - 0.8 = 0.2.",
+          "id": "c12-q03"
+        },
+        {
+          "stem": "A coin is tossed 50 times and lands on heads 20 times. What is the relative frequency of heads?",
+          "answer": "0.4",
+          "options": [
+            "0.4",
+            "0.6",
+            "0.2",
+            "20"
+          ],
+          "explanation": "20 / 50 = 0.4.",
+          "id": "c12-q04"
+        },
+        {
+          "stem": "What is the theoretical probability of rolling a 6 on a fair dice?",
+          "answer": "1/6",
+          "options": [
+            "1/6",
+            "1/3",
+            "1/2",
+            "6"
+          ],
+          "explanation": "There is 1 favourable outcome out of 6 equally likely outcomes.",
+          "id": "c12-q05"
+        },
+        {
+          "stem": "A spinner has 8 equal sections and 3 are red. What is the probability of red?",
+          "answer": "3/8",
+          "options": [
+            "3/8",
+            "5/8",
+            "3/5",
+            "1/3"
+          ],
+          "explanation": "3 red sections out of 8 equal sections.",
+          "id": "c12-q06"
+        },
+        {
+          "stem": "Experimental probability can be different from theoretical probability.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "Experimental results vary, especially with a small number of trials.",
+          "id": "c12-q07"
+        },
+        {
+          "stem": "A class has 30 students and 12 are girls. A student is picked at random. What is the probability that the student is a boy?",
+          "answer": "3/5",
+          "options": [
+            "3/5",
+            "2/5",
+            "3/2",
+            "1/2"
+          ],
+          "explanation": "There are 18 boys. 18/30 = 3/5.",
+          "id": "c12-q08"
+        },
+        {
+          "stem": "In 30 rolls of a dice, a 6 came up 4 times. What is the relative frequency of a 6?",
+          "answer": "2/15",
+          "options": [
+            "2/15",
+            "1/6",
+            "4/26",
+            "1/4"
+          ],
+          "explanation": "4 / 30 = 2/15.",
+          "id": "c12-q09"
+        },
+        {
+          "stem": "The probability of a result is 0.25 and there are 200 trials. How many results do you expect?",
+          "answer": "50",
+          "options": [
+            "50",
+            "25",
+            "75",
+            "800"
+          ],
+          "explanation": "Expected number = 0.25 x 200 = 50.",
+          "id": "c12-q10"
+        },
+        {
+          "stem": "The probability of rolling an even number on a fair dice is 1/2. What is the probability of rolling an odd number?",
+          "answer": "1/2",
+          "options": [
+            "1/2",
+            "1/3",
+            "2/3",
+            "1/6"
+          ],
+          "explanation": "The even and odd outcomes are complementary, so 1 - 1/2 = 1/2.",
+          "id": "c12-q11"
+        },
+        {
+          "stem": "The probabilities of four outcomes are 0.1, 0.4, 0.3 and x. They add up to 1. Find x.",
+          "answer": "0.2",
+          "options": [
+            "0.2",
+            "0.3",
+            "0.8",
+            "0.5"
+          ],
+          "explanation": "0.1 + 0.4 + 0.3 = 0.8, so x = 1 - 0.8 = 0.2.",
+          "id": "c12-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 13,
+      "title": "Calculations",
+      "notes": [
+        {
+          "heading": "Order of operations",
+          "paragraphs": [
+            "Use BIDMAS: Brackets, Indices (powers and roots), Division and Multiplication from left to right, then Addition and Subtraction from left to right.",
+            "The root sign covers everything under it. sqrt(9 + 16) = sqrt(25) = 5, but sqrt(9) + sqrt(16) = 3 + 4 = 7.",
+            "Treat the top and bottom of a fraction as if they were in brackets. For example, (20 - cube root of 8) / (2 x 3) = (20 - 2) / 6 = 3."
+          ]
+        },
+        {
+          "heading": "Laws of arithmetic",
+          "paragraphs": [
+            "Commutative law: a x b = b x a and a + b = b + a.",
+            "Associative law: (a + b) + c = a + (b + c) and (a x b) x c = a x (b x c).",
+            "Use these laws to put numbers in an easy order. For example, 0.25 x 4 x 37 = 1 x 37 = 37."
+          ]
+        },
+        {
+          "heading": "Efficient methods",
+          "paragraphs": [
+            "Split numbers to make them easy. For example, 18 x 0.99 = 18 x (1 - 0.01) = 18 - 0.18 = 17.82.",
+            "Factorise to make it simpler. For example, 0.4 x 28 + 0.6 x 28 = (0.4 + 0.6) x 28 = 28."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Work out 3 + 4 x 5^2.",
+          "answer": "103",
+          "options": [
+            "103",
+            "175",
+            "83",
+            "225"
+          ],
+          "explanation": "Indices first: 5^2 = 25. Then 4 x 25 = 100. Then 3 + 100 = 103.",
+          "id": "c13-q01"
+        },
+        {
+          "stem": "Work out the square root of (9 + 16).",
+          "answer": "5",
+          "options": [
+            "5",
+            "7",
+            "25",
+            "3"
+          ],
+          "explanation": "Add inside the root first: sqrt(25) = 5.",
+          "id": "c13-q02"
+        },
+        {
+          "stem": "Work out (20 - cube root of 8) / (2 x 3).",
+          "answer": "3",
+          "options": [
+            "3",
+            "2",
+            "6",
+            "18"
+          ],
+          "explanation": "Cube root of 8 is 2. (20 - 2) / 6 = 18 / 6 = 3.",
+          "id": "c13-q03"
+        },
+        {
+          "stem": "Work out 0.4 x 28 + 0.6 x 28 using an efficient method.",
+          "answer": "28",
+          "options": [
+            "28",
+            "56",
+            "2.8",
+            "280"
+          ],
+          "explanation": "Factorise: (0.4 + 0.6) x 28 = 1 x 28 = 28.",
+          "id": "c13-q04"
+        },
+        {
+          "stem": "Fill in the gap: Work out 2 x (18 + 13) = ____",
+          "blank": "Work out 2 x (18 + 13) = ____",
+          "answer": "62",
+          "options": [
+            "62",
+            "49",
+            "31",
+            "113"
+          ],
+          "explanation": "The brackets come first: 18 + 13 = 31, then 2 x 31 = 62.",
+          "id": "c13-q05"
+        },
+        {
+          "stem": "Work out 18 x 0.99.",
+          "answer": "17.82",
+          "options": [
+            "17.82",
+            "17.28",
+            "18.99",
+            "178.2"
+          ],
+          "explanation": "18 x (1 - 0.01) = 18 - 0.18 = 17.82.",
+          "id": "c13-q06"
+        },
+        {
+          "stem": "Work out 49 x 0.7 - 19 x 0.7.",
+          "answer": "21",
+          "options": [
+            "21",
+            "210",
+            "2.1",
+            "68.6"
+          ],
+          "explanation": "Factorise: 0.7 x (49 - 19) = 0.7 x 30 = 21.",
+          "id": "c13-q07"
+        },
+        {
+          "stem": "Work out 0.25 x 4 x 37.",
+          "answer": "37",
+          "options": [
+            "37",
+            "148",
+            "9.25",
+            "3.7"
+          ],
+          "explanation": "0.25 x 4 = 1, so the answer is 37.",
+          "id": "c13-q08"
+        },
+        {
+          "stem": "The answer to 2 x (3 + 4) is 10.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "The brackets come first: 3 + 4 = 7, then 2 x 7 = 14.",
+          "id": "c13-q09"
+        },
+        {
+          "stem": "Work out 5 + 6 x 2 - 8 / 4.",
+          "answer": "15",
+          "options": [
+            "15",
+            "6",
+            "7",
+            "20"
+          ],
+          "explanation": "6 x 2 = 12 and 8 / 4 = 2. Then 5 + 12 - 2 = 15.",
+          "id": "c13-q10"
+        },
+        {
+          "stem": "Work out (3 + 5)^2 / 4.",
+          "answer": "16",
+          "options": [
+            "16",
+            "8",
+            "64",
+            "4"
+          ],
+          "explanation": "Brackets first: 8^2 = 64. Then 64 / 4 = 16.",
+          "id": "c13-q11"
+        },
+        {
+          "stem": "Work out 12 - 2 x (3 + 1).",
+          "answer": "4",
+          "options": [
+            "4",
+            "32",
+            "20",
+            "-4"
+          ],
+          "explanation": "Brackets: 3 + 1 = 4. Then 2 x 4 = 8. Then 12 - 8 = 4.",
+          "id": "c13-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 14,
+      "title": "Equations and inequalities",
+      "notes": [
+        {
+          "heading": "Solving equations",
+          "paragraphs": [
+            "Expand brackets first. Then undo the operations in reverse order: add or subtract first, then multiply or divide. Example: 3(3x + 2) = 42 gives 9x + 6 = 42, so 9x = 36 and x = 4.",
+            "Check your answer by putting it back into the original equation."
+          ]
+        },
+        {
+          "heading": "Unknowns on both sides",
+          "paragraphs": [
+            "Collect the unknowns on one side by moving the smaller unknown term across. Example: 1 + 2x = 5x - 8 gives 9 = 3x, so x = 3.",
+            "Some equations have no solution, for example x + 3 = x + 5. Some are true for every value, for example 6x + 12 = 6x + 12, which has infinitely many solutions."
+          ]
+        },
+        {
+          "heading": "Constructing equations",
+          "paragraphs": [
+            "Use a letter for the unknown, write expressions for each part, then set them equal. Example: if Ali has 4x + 2 and Ben has 2x + 10, and they are equal, then 2x = 8 and x = 4.",
+            "Consecutive integers are n and n + 1. Consecutive even numbers are 2n and 2n + 2."
+          ]
+        },
+        {
+          "heading": "Inequalities",
+          "paragraphs": [
+            "x >= 7 means x is greater than or equal to 7. A closed circle is used for >= and <=. An open circle is used for > and <.",
+            "You can add or subtract the same number on both sides. You can multiply or divide both sides by a positive number. If you multiply or divide by a negative number, you must reverse the inequality sign.",
+            "Example: 2x > 8 gives x > 4."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Solve 3x + 2 = 14.",
+          "answer": "4",
+          "options": [
+            "4",
+            "5",
+            "12",
+            "16"
+          ],
+          "explanation": "3x = 12, so x = 4.",
+          "id": "c14-q01"
+        },
+        {
+          "stem": "Solve 3(3x + 2) = 42.",
+          "answer": "4",
+          "options": [
+            "4",
+            "3",
+            "14",
+            "40"
+          ],
+          "explanation": "9x + 6 = 42, so 9x = 36 and x = 4.",
+          "id": "c14-q02"
+        },
+        {
+          "stem": "Solve 4/5 y + 4 = 14.",
+          "answer": "12.5",
+          "options": [
+            "12.5",
+            "12",
+            "22.5",
+            "7.5"
+          ],
+          "explanation": "4/5 y = 10, so y = 10 x 5/4 = 12.5.",
+          "id": "c14-q03"
+        },
+        {
+          "stem": "Solve 1 + 2x = 5x - 8.",
+          "answer": "3",
+          "options": [
+            "3",
+            "2",
+            "-3",
+            "4"
+          ],
+          "explanation": "Subtract 2x from both sides: 1 = 3x - 8. Add 8: 9 = 3x, so x = 3.",
+          "id": "c14-q04"
+        },
+        {
+          "stem": "Fill in the gap: The equation 6x + 12 = 6x + 12 has ____ solutions.",
+          "blank": "The equation 6x + 12 = 6x + 12 has ____ solutions.",
+          "answer": "infinitely many",
+          "options": [
+            "infinitely many",
+            "one",
+            "no",
+            "two"
+          ],
+          "explanation": "Both sides are always equal, so every value of x works.",
+          "id": "c14-q05"
+        },
+        {
+          "stem": "How many solutions does x + 3 = x + 5 have?",
+          "answer": "None",
+          "options": [
+            "None",
+            "One",
+            "Two",
+            "Infinitely many"
+          ],
+          "explanation": "Subtracting x from both sides gives 3 = 5, which is never true.",
+          "id": "c14-q06"
+        },
+        {
+          "stem": "Ali has 4x + 2 and Ben has 2x + 10. They have the same amount. Find x.",
+          "answer": "4",
+          "options": [
+            "4",
+            "6",
+            "2",
+            "8"
+          ],
+          "explanation": "4x + 2 = 2x + 10, so 2x = 8 and x = 4.",
+          "id": "c14-q07"
+        },
+        {
+          "stem": "Two consecutive integers add up to 47. Find the smaller integer.",
+          "answer": "23",
+          "options": [
+            "23",
+            "24",
+            "22",
+            "46"
+          ],
+          "explanation": "n + (n + 1) = 47, so 2n = 46 and n = 23.",
+          "id": "c14-q08"
+        },
+        {
+          "stem": "Multiplying both sides of an inequality by a negative number keeps the inequality sign the same.",
+          "answer": "False",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "Multiplying or dividing by a negative number reverses the inequality sign.",
+          "id": "c14-q09"
+        },
+        {
+          "stem": "Solve 2x > 8.",
+          "answer": "x > 4",
+          "options": [
+            "x > 4",
+            "x < 4",
+            "x > 16",
+            "x >= 4"
+          ],
+          "explanation": "Divide both sides by 2: x > 4. The value 4 is not included.",
+          "id": "c14-q10"
+        },
+        {
+          "stem": "Solve 2x + 3 = 15 - x.",
+          "answer": "4",
+          "options": [
+            "4",
+            "6",
+            "3",
+            "12"
+          ],
+          "explanation": "Add x to both sides: 3x + 3 = 15, so 3x = 12 and x = 4.",
+          "id": "c14-q11"
+        },
+        {
+          "stem": "Write this as an inequality: x is greater than or equal to 7.",
+          "answer": "x >= 7",
+          "options": [
+            "x >= 7",
+            "x > 7",
+            "x <= 7",
+            "x = 7"
+          ],
+          "explanation": "'Greater than or equal to' is written as >=.",
+          "id": "c14-q12"
+        }
+      ]
+    },
+    {
+      "chapter": 15,
+      "title": "Midpoints",
+      "notes": [
+        {
+          "heading": "Midpoint of a line segment",
+          "paragraphs": [
+            "The midpoint of a line segment is halfway between its ends. For points (x1, y1) and (x2, y2), the midpoint is ((x1 + x2) / 2, (y1 + y2) / 2).",
+            "Example: the midpoint of A(-2, 5) and B(4, 2) is (1, 3.5)."
+          ]
+        },
+        {
+          "heading": "Finding an end point",
+          "paragraphs": [
+            "If M is the midpoint of AB and you know A and M, then B = 2M - A. Work each coordinate separately.",
+            "Example: if M = (5, 4) and A = (2, 1), then B = (8, 7)."
+          ]
+        },
+        {
+          "heading": "Diagonals and medians",
+          "paragraphs": [
+            "In a parallelogram, the diagonals cross at the midpoint of each diagonal.",
+            "A median of a triangle joins a vertex to the midpoint of the opposite side. The three medians meet at one point called the centroid."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "stem": "Find the midpoint of A(-2, 5) and B(4, 2).",
+          "answer": "(1, 3.5)",
+          "options": [
+            "(1, 3.5)",
+            "(1, 3)",
+            "(2, 3.5)",
+            "(-1, 3.5)"
+          ],
+          "explanation": "x: (-2 + 4) / 2 = 1. y: (5 + 2) / 2 = 3.5.",
+          "id": "c15-q01"
+        },
+        {
+          "stem": "Find the midpoint of (0, 0) and (6, 8).",
+          "answer": "(3, 4)",
+          "options": [
+            "(3, 4)",
+            "(6, 8)",
+            "(3, 8)",
+            "(6, 4)"
+          ],
+          "explanation": "(0 + 6) / 2 = 3 and (0 + 8) / 2 = 4.",
+          "id": "c15-q02"
+        },
+        {
+          "stem": "M is the midpoint of AB. A = (2, 1) and M = (5, 4). Find B.",
+          "answer": "(8, 7)",
+          "options": [
+            "(8, 7)",
+            "(3, 3)",
+            "(7, 5)",
+            "(10, 8)"
+          ],
+          "explanation": "B = 2M - A = (10 - 2, 8 - 1) = (8, 7).",
+          "id": "c15-q03"
+        },
+        {
+          "stem": "Fill in the gap: The midpoint of (1, 1) and (5, 7) is (3, ____).",
+          "blank": "The midpoint of (1, 1) and (5, 7) is (3, ____).",
+          "answer": "4",
+          "options": [
+            "4",
+            "3",
+            "6",
+            "8"
+          ],
+          "explanation": "(1 + 7) / 2 = 4.",
+          "id": "c15-q04"
+        },
+        {
+          "stem": "Is the midpoint of (-4, 2) and (4, -2) equal to (0, 0)? Answer True or False.",
+          "answer": "True",
+          "options": [
+            "True",
+            "False"
+          ],
+          "explanation": "(-4 + 4) / 2 = 0 and (2 - 2) / 2 = 0.",
+          "id": "c15-q05"
+        },
+        {
+          "stem": "In a parallelogram, the diagonals cross at the ____ of each diagonal.",
+          "answer": "midpoint",
+          "options": [
+            "midpoint",
+            "endpoint",
+            "edge",
+            "vertex"
+          ],
+          "explanation": "The diagonals of a parallelogram cut each other in half, so they meet at the midpoint of each.",
+          "id": "c15-q06",
+          "blank": "In a parallelogram, the diagonals cross at the ____ of each diagonal."
+        },
+        {
+          "stem": "Find the midpoint of (-3, -7) and (1, 5).",
+          "answer": "(-1, -1)",
+          "options": [
+            "(-1, -1)",
+            "(-2, -6)",
+            "(2, 6)",
+            "(-1, -6)"
+          ],
+          "explanation": "(-3 + 1) / 2 = -1 and (-7 + 5) / 2 = -1.",
+          "id": "c15-q07"
+        },
+        {
+          "stem": "Find the midpoint of (2.5, 3) and (4.5, 9).",
+          "answer": "(3.5, 6)",
+          "options": [
+            "(3.5, 6)",
+            "(3.5, 12)",
+            "(7, 12)",
+            "(2, 3)"
+          ],
+          "explanation": "(2.5 + 4.5) / 2 = 3.5 and (3 + 9) / 2 = 6.",
+          "id": "c15-q08"
+        },
+        {
+          "stem": "What is the midpoint of (10, -4) and (2, 8)?",
+          "answer": "(6, 2)",
+          "options": [
+            "(6, 2)",
+            "(8, -2)",
+            "(6, 6)",
+            "(12, 4)"
+          ],
+          "explanation": "(10 + 2) / 2 = 6 and (-4 + 8) / 2 = 2.",
+          "id": "c15-q09"
+        },
+        {
+          "stem": "The midpoint of AB is (3, 2). A is (1, 6). Find B.",
+          "answer": "(5, -2)",
+          "options": [
+            "(5, -2)",
+            "(2, 4)",
+            "(4, -4)",
+            "(5, 8)"
+          ],
+          "explanation": "B = 2 x (3, 2) - (1, 6) = (6 - 1, 4 - 6) = (5, -2).",
+          "id": "c15-q10"
+        },
+        {
+          "stem": "Find the midpoint of (0, 3) and (0, 9).",
+          "answer": "(0, 6)",
+          "options": [
+            "(0, 6)",
+            "(0, 12)",
+            "(3, 6)",
+            "(0, 3)"
+          ],
+          "explanation": "(3 + 9) / 2 = 6 and the x-coordinate stays 0.",
+          "id": "c15-q11"
+        },
+        {
+          "stem": "Find the midpoint of (-6, 4) and (2, -10).",
+          "answer": "(-2, -3)",
+          "options": [
+            "(-2, -3)",
+            "(-4, -7)",
+            "(-2, 7)",
+            "(-8, 14)"
+          ],
+          "explanation": "(-6 + 2) / 2 = -2 and (4 - 10) / 2 = -3.",
+          "id": "c15-q12"
+        }
+      ]
+    }
+  ]
+}

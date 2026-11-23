@@ -172,6 +172,16 @@ export const routes: Routes = [
           { path: 'results', loadComponent: () => import('./pages/student-results').then((m) => m.StudentResults) },
           // The English Vocabulary app (Word Wizard), shown inside My Learning.
           { path: 'vocabulary', loadComponent: () => import('./pages/student-vocabulary').then((m) => m.StudentVocabulary) },
+          // Study Hub: Wren & Martin grammar, Cambridge Maths and Cambridge English, built into the app (no iframe).
+          // 'english' comes before ':subject' so it is not read as a subject.
+          { path: 'study-hub', loadComponent: () => import('./pages/study-hub-home').then((m) => m.StudyHubHome) },
+          { path: 'study-hub/english', loadComponent: () => import('./pages/study-hub-english').then((m) => m.StudyHubEnglish) },
+          { path: 'study-hub/:subject', loadComponent: () => import('./pages/study-hub-subject').then((m) => m.StudyHubSubject) },
+          { path: 'study-hub/:subject/learn', loadComponent: () => import('./pages/study-hub-learn-list').then((m) => m.StudyHubLearnList) },
+          { path: 'study-hub/:subject/learn/:chapter', loadComponent: () => import('./pages/study-hub-learn-chapter').then((m) => m.StudyHubLearnChapter) },
+          { path: 'study-hub/:subject/quiz', loadComponent: () => import('./pages/study-hub-quiz-map').then((m) => m.StudyHubQuizMap) },
+          { path: 'study-hub/:subject/quiz/:chapter', loadComponent: () => import('./pages/study-hub-quiz-play').then((m) => m.StudyHubQuizPlay) },
+          { path: 'study-hub/:subject/tests', loadComponent: () => import('./pages/study-hub-test').then((m) => m.StudyHubTest) },
         ],
       },
       {
