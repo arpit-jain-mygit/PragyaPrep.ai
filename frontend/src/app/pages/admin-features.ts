@@ -55,6 +55,11 @@ import { Icon } from '../ui/icon';
     .mock[data-look='mentor'] .mock-tabs { display: flex; align-items: center; padding: 6px 0; background: #ffffff; border-top: 1px solid #f3e8dc; }
     .mock[data-look='mentor'] .mock-tabs i:first-child { background: #c2410c; }
     .mock[data-look='study'] { background: #f8fafc; color: #475569; }
+    .mock[data-look='studyhub'] { background: #fbf8f3; color: #5b6375; }
+    .mock[data-look='studyhub'] .mock-top { background: #2f6fdd; }
+    .mock[data-look='studyhub'] .mock-side { background: #ffffff; border-right: 1px solid #e4dfd5; }
+    .mock[data-look='studyhub'] .mock-hero { background: #2f6fdd; }
+    .mock[data-look='studyhub'] .mock-cards i { background: #ffffff; border-color: #e4dfd5; }
     .mock[data-look='study'] .mock-top { background: #3730a3; }
     .mock[data-look='study'] .mock-side { background: #ffffff; border-right: 1px solid #e2e8f0; }
     .mock[data-look='study'] .mock-hero { background: #3730a3; }

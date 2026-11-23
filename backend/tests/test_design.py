@@ -17,7 +17,7 @@ def test_a_new_institute_starts_with_exam_mode_and_students_see_it(client, admin
     assert client.get("/api/tenant", headers=TENANT).json()["design"] == "exam"
     body = client.get(URL, headers=admin).json()
     assert body["design"] == "exam"
-    assert [option["key"] for option in body["options"]] == ["exam", "warm", "mentor", "study", "arena"]
+    assert [option["key"] for option in body["options"]] == ["exam", "warm", "mentor", "study", "arena", "studyhub"]
 
 
 def test_the_admin_can_pick_any_listed_design(client, admin):
@@ -26,6 +26,7 @@ def test_the_admin_can_pick_any_listed_design(client, admin):
     assert response.json()["design"] == "mentor"
     assert client.get("/api/tenant", headers=TENANT).json()["design"] == "mentor"
     assert client.put(URL, json={"design": "arena"}, headers=admin).json()["design"] == "arena"
+    assert client.put(URL, json={"design": "StudyHub"}, headers=admin).json()["design"] == "studyhub"
 
 
 def test_a_design_not_listed_is_refused(client, admin):
@@ -46,4 +47,4 @@ def test_saving_other_settings_keeps_the_design(client, admin):
 
 
 def test_the_designs_are_the_ones_the_website_knows(client):
-    assert [option["key"] for option in features.DESIGNS] == ["exam", "warm", "mentor", "study", "arena"]
+    assert [option["key"] for option in features.DESIGNS] == ["exam", "warm", "mentor", "study", "arena", "studyhub"]

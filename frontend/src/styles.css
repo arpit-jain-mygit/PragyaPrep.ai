@@ -888,3 +888,26 @@ img.qimg { cursor: zoom-in; }
 [data-design='arena'] .dashboard-progress .progress-track { background: #4c1d95; }
 [data-design='arena'] .dashboard-progress .progress-fill { background: #bef264; }
 [data-design='arena'] .btn { background: #bef264; color: #1a2e05; border: 2px solid #1a2e05; border-radius: 14px; font-weight: 800; }
+
+/* Study Hub design: the cream-and-blue look of the Study Hub app, with rounded cards and Baloo headings. */
+[data-design='studyhub'] {
+  display: block;
+  min-height: 100vh;
+  --page: #fbf8f3;
+  --card: #ffffff;
+  --ink: #1d2330;
+  --muted: #5b6375;
+  --line: #e4dfd5;
+  --brand: #2f6fdd;
+  --brand-text: #ffffff;
+  background: var(--page);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+[data-design='studyhub'] .page { width: 100%; max-width: 72rem; }
+[data-design='studyhub'] h1, [data-design='studyhub'] h2 { font-family: 'Baloo 2', 'Inter', system-ui, sans-serif; }
+[data-design='studyhub'] .card { border-radius: 18px; }
+[data-design='studyhub'] .dashboard-progress { background: var(--brand); color: var(--brand-text); border-color: transparent; border-radius: 22px; }
+[data-design='studyhub'] .dashboard-progress h2 { color: var(--brand-text); }
+[data-design='studyhub'] .dashboard-progress .muted { color: inherit; opacity: 0.85; }
+

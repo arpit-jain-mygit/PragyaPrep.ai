@@ -130,6 +130,7 @@ DESIGNS = [
     {"key": "mentor", "name": "Friendly Mentor", "text": "Mobile-first. One column, a bottom menu, and a daily plan at hand."},
     {"key": "study", "name": "Study Planner", "text": "Crisp and structured. A weekly timetable and a syllabus map."},
     {"key": "arena", "name": "Arena", "text": "Gamified. XP, leagues, daily challenges and badges."},
+    {"key": "studyhub", "name": "Study Hub", "text": "Cream and blue, with rounded tiles. The look of the Study Hub, with points and candies."},
 ]
 DEFAULT_DESIGN = DESIGNS[0]["key"]
 _DESIGN_KEYS = {option["key"] for option in DESIGNS}
